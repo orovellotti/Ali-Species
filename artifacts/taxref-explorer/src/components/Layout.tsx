@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Leaf } from "lucide-react";
 import nsLogo from "@/assets/images/logo-natural-solutions.svg";
-import patrinatLogo from "@/assets/images/logo-patrinat.svg";
+import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +20,7 @@ export function Layout({ children }: LayoutProps) {
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
-            <a href="https://inpn.mnhn.fr/accueil/recherche-de-donnees/taxref" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">TAXREF</a>
+            <Link href="/a-propos" className="hover:text-foreground transition-colors">A propos</Link>
             <a href="https://www.natural-solutions.eu/" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">Natural Solutions</a>
           </nav>
         </div>

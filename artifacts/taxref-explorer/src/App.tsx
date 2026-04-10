@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TaxonDetail from "@/pages/taxon";
+import About from "@/pages/about";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/a-propos" component={About} />
       <Route path="/taxon/:cdNom" component={TaxonDetail} />
       <Route component={NotFound} />
     </Switch>
