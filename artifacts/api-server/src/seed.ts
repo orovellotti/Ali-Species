@@ -38,17 +38,23 @@ async function insertBatch(client: any, batch: string[][]) {
   await client.query(sql, params);
 }
 
+const EXPECTED_COUNT = 708685;
+
 export async function seedIfEmpty() {
   try {
     const countResult = await pool.query("SELECT COUNT(*)::int as count FROM taxons");
     const count = countResult.rows[0].count;
 
-    if (count > 0) {
-      logger.info({ count }, "Database already has data, skipping seed");
+    if (count >= EXPECTED_COUNT) {
+      logger.info({ count }, "Database has all data, skipping seed");
       return;
     }
 
-    logger.info("Database is empty, starting TAXREF import...");
+    if (count > 0) {
+      logger.info({ count, expected: EXPECTED_COUNT }, "Database has partial data, resuming import...");
+    } else {
+      logger.info("Database is empty, starting TAXREF import...");
+    }
 
     const possiblePaths = [
       path.resolve(process.cwd(), "data/TAXREFv18.txt"),
