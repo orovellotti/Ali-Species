@@ -12,7 +12,7 @@ import {
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TaxonDetail() {
@@ -118,59 +118,117 @@ export default function TaxonDetail() {
                   {taxon.lbAuteur}
                 </p>
               )}
+
+              {taxon.nomComplet && taxon.nomComplet !== taxon.lbNom && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  <span className="font-medium text-foreground/60">Nom complet :</span>{" "}
+                  <span className="italic">{taxon.nomComplet}</span>
+                </p>
+              )}
+
+              {taxon.nomValide && taxon.nomValide !== taxon.nomComplet && taxon.cdRef !== taxon.cdNom && (
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Link2 className="w-4 h-4 text-amber-600" />
+                    <span className="font-medium text-amber-800 dark:text-amber-400">Synonyme</span>
+                  </div>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    Nom valide de reference :{" "}
+                    <Link href={`/taxon/${taxon.cdRef}`} className="italic underline underline-offset-4 hover:text-amber-900">
+                      {taxon.nomValide}
+                    </Link>
+                  </p>
+                </div>
+              )}
             </div>
 
-            {(taxon.nomVern || taxon.nomVernEng || taxon.habitat || taxon.fr) && (
-              <div className="grid sm:grid-cols-2 gap-6 p-6 bg-card rounded-2xl border border-border shadow-sm">
-                {(taxon.nomVern || taxon.nomVernEng) && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                      <Tag className="w-4 h-4 text-primary" />
-                      Noms vernaculaires
-                    </div>
-                    <div className="space-y-2">
-                      {taxon.nomVern && (
-                        <div className="text-muted-foreground">
-                          <span className="text-xs font-medium uppercase mr-2 text-foreground/50">FR</span>
-                          {taxon.nomVern}
-                        </div>
-                      )}
-                      {taxon.nomVernEng && (
-                        <div className="text-muted-foreground">
-                          <span className="text-xs font-medium uppercase mr-2 text-foreground/50">EN</span>
-                          {taxon.nomVernEng}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {taxon.habitat && (
-                    <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                        <MapPin className="w-4 h-4 text-primary" />
-                        Habitat
-                      </div>
-                      <div className="text-muted-foreground">
-                        {formatHabitat(taxon.habitat)}
-                      </div>
-                    </div>
+            {(taxon.group1Inpn || taxon.group2Inpn || taxon.group3Inpn) && (
+              <div className="p-5 bg-card rounded-2xl border border-border shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
+                  <Layers className="w-4 h-4 text-primary" />
+                  Groupes INPN
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {taxon.group1Inpn && (
+                    <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                      {taxon.group1Inpn}
+                    </span>
                   )}
-                  {taxon.fr && (
-                    <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                        <Globe className="w-4 h-4 text-primary" />
-                        Statut en France
-                      </div>
-                      <div className="text-muted-foreground">
-                        {formatStatus(taxon.fr)}
-                      </div>
-                    </div>
+                  {taxon.group2Inpn && (
+                    <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                      {taxon.group2Inpn}
+                    </span>
+                  )}
+                  {taxon.group3Inpn && (
+                    <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-sm font-medium">
+                      {taxon.group3Inpn}
+                    </span>
                   )}
                 </div>
               </div>
             )}
+
+            <div className="grid sm:grid-cols-2 gap-6 p-6 bg-card rounded-2xl border border-border shadow-sm">
+              {(taxon.nomVern || taxon.nomVernEng) && (
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                    <Tag className="w-4 h-4 text-primary" />
+                    Noms vernaculaires
+                  </div>
+                  <div className="space-y-2">
+                    {taxon.nomVern && (
+                      <div className="text-muted-foreground">
+                        <span className="text-xs font-medium uppercase mr-2 text-foreground/50">FR</span>
+                        {taxon.nomVern}
+                      </div>
+                    )}
+                    {taxon.nomVernEng && (
+                      <div className="text-muted-foreground">
+                        <span className="text-xs font-medium uppercase mr-2 text-foreground/50">EN</span>
+                        {taxon.nomVernEng}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {taxon.habitat && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      Habitat
+                    </div>
+                    <div className="text-muted-foreground">
+                      {formatHabitat(taxon.habitat)}
+                    </div>
+                  </div>
+                )}
+                {taxon.fr && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                      <Globe className="w-4 h-4 text-primary" />
+                      Statut en France
+                    </div>
+                    <div className="text-muted-foreground">
+                      {formatStatus(taxon.fr)}
+                    </div>
+                  </div>
+                )}
+
+                {taxon.nomComplet && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                      <FileText className="w-4 h-4 text-primary" />
+                      Nom complet
+                    </div>
+                    <div className="text-muted-foreground italic text-sm">
+                      {taxon.nomComplet}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-6 flex items-center justify-between border-b border-border pb-2">
