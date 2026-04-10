@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "TAXREF Explorer"
+version = "1.0.0"
+id = "artifacts/taxref-explorer"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18514
+
+[services.development]
+run = "pnpm --filter @workspace/taxref-explorer run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/taxref-explorer", "run", "build" ]
+publicDir = "artifacts/taxref-explorer/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18514"
+BASE_PATH = "/"

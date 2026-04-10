@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TAXREF taxonomy browser API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: taxons
+    description: Taxon operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,138 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /taxons/search:
+    get:
+      operationId: searchTaxons
+      tags: [taxons]
+      summary: Search taxons with autocomplete
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (name or vernacular name)
+        - name: regne
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by kingdom
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Max results
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaxonSummary"
+  /taxons/{cdNom}:
+    get:
+      operationId: getTaxon
+      tags: [taxons]
+      summary: Get taxon details
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Taxon details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonDetail"
+        "404":
+          description: Taxon not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /taxons/{cdNom}/children:
+    get:
+      operationId: getTaxonChildren
+      tags: [taxons]
+      summary: Get children taxa
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM of parent taxon
+      responses:
+        "200":
+          description: Children taxa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaxonSummary"
+  /taxons/{cdNom}/classification:
+    get:
+      operationId: getTaxonClassification
+      tags: [taxons]
+      summary: Get full classification hierarchy
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Classification path from root to taxon
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaxonSummary"
+  /taxons/stats:
+    get:
+      operationId: getTaxonStats
+      tags: [taxons]
+      summary: Get taxonomy statistics
+      responses:
+        "200":
+          description: Statistics about the database
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonStats"
+  /taxons/{cdNom}/media:
+    get:
+      operationId: getTaxonMedia
+      tags: [taxons]
+      summary: Get media for a taxon from INPN
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Media URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonMedia"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +167,151 @@ components:
           type: string
       required:
         - status
-
+    TaxonSummary:
+      type: object
+      properties:
+        cdNom:
+          type: integer
+        cdRef:
+          type: integer
+        lbNom:
+          type: string
+        nomVern:
+          type: string
+          nullable: true
+        rang:
+          type: string
+          nullable: true
+        famille:
+          type: string
+          nullable: true
+        regne:
+          type: string
+          nullable: true
+      required:
+        - cdNom
+        - cdRef
+        - lbNom
+    TaxonDetail:
+      type: object
+      properties:
+        cdNom:
+          type: integer
+        cdRef:
+          type: integer
+        cdSup:
+          type: integer
+          nullable: true
+        regne:
+          type: string
+          nullable: true
+        phylum:
+          type: string
+          nullable: true
+        classe:
+          type: string
+          nullable: true
+        ordre:
+          type: string
+          nullable: true
+        famille:
+          type: string
+          nullable: true
+        group1Inpn:
+          type: string
+          nullable: true
+        group2Inpn:
+          type: string
+          nullable: true
+        group3Inpn:
+          type: string
+          nullable: true
+        rang:
+          type: string
+          nullable: true
+        lbNom:
+          type: string
+        lbAuteur:
+          type: string
+          nullable: true
+        nomComplet:
+          type: string
+          nullable: true
+        nomValide:
+          type: string
+          nullable: true
+        nomVern:
+          type: string
+          nullable: true
+        nomVernEng:
+          type: string
+          nullable: true
+        habitat:
+          type: string
+          nullable: true
+        fr:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+      required:
+        - cdNom
+        - cdRef
+        - lbNom
+    TaxonMedia:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              title:
+                type: string
+                nullable: true
+              author:
+                type: string
+                nullable: true
+            required:
+              - url
+      required:
+        - images
+    TaxonStats:
+      type: object
+      properties:
+        totalTaxons:
+          type: integer
+        totalSpecies:
+          type: integer
+        totalGenera:
+          type: integer
+        totalFamilies:
+          type: integer
+        kingdomCounts:
+          type: array
+          items:
+            type: object
+            properties:
+              regne:
+                type: string
+              count:
+                type: integer
+            required:
+              - regne
+              - count
+      required:
+        - totalTaxons
+        - totalSpecies
+        - totalGenera
+        - totalFamilies
+        - kingdomCounts
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+TAXREF Explorer - A web application for browsing the French national taxonomic reference (TAXREF v18) with autocomplete search and taxon images from Wikipedia.
 
 ## Stack
 
@@ -12,9 +12,36 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Routing**: wouter (frontend), Express (backend)
+
+## Architecture
+
+### Data Pipeline
+- TAXREF v18 data (708,685 taxa) imported from TSV file into PostgreSQL
+- Import script: `scripts/src/import-taxref.ts`
+- Source data: `data/TAXREFv18.txt` (extracted from attached ZIP)
+- Trigram indexes (pg_trgm) for fast ILIKE search
+
+### API Endpoints
+- `GET /api/taxons/search?q=...&regne=...&limit=...` — Autocomplete search by scientific or vernacular name
+- `GET /api/taxons/:cdNom` — Get full taxon details
+- `GET /api/taxons/:cdNom/children` — Get subordinate taxa
+- `GET /api/taxons/:cdNom/classification` — Get classification hierarchy (breadcrumbs)
+- `GET /api/taxons/:cdNom/media` — Get images from Wikipedia/Wikimedia Commons
+- `GET /api/taxons/stats` — Get database statistics
+
+### Frontend Pages
+- `/` — Home page with search bar, statistics, and featured kingdoms
+- `/taxon/:cdNom` — Taxon detail page with classification, images, vernacular names, children
+
+### Media
+- Images fetched from Wikipedia REST API (`/api/rest_v1/page/summary/`)
+- Fallback to Wikimedia Commons API
+- Uses scientific name for lookup
 
 ## Key Commands
 
@@ -23,5 +50,21 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm --filter @workspace/scripts run import-taxref` — import TAXREF data into DB
+
+## Database Schema
+
+### taxons table
+- `cd_nom` (int, PK) — TAXREF identifier
+- `cd_ref` (int) — Reference taxon identifier
+- `cd_sup` (int, nullable) — Parent taxon identifier
+- `regne`, `phylum`, `classe`, `ordre`, `famille` — Classification
+- `group1_inpn`, `group2_inpn`, `group3_inpn` — INPN groupings
+- `rang` — Taxonomic rank code (KD, PH, CL, OR, FM, GN, ES, SSES, etc.)
+- `lb_nom` — Scientific name
+- `lb_auteur` — Author citation
+- `nom_complet`, `nom_valide` — Complete/valid names
+- `nom_vern`, `nom_vern_eng` — Vernacular names (FR/EN)
+- `habitat`, `fr`, `url` — Additional metadata
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

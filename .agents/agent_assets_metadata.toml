@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "zPmkPUvbR6Sm4Pm7X1D36"
+uri = "file://artifacts/taxref-explorer/src/assets/images/animalia.png"
+type = "image"
+title = "Animalia botanical illustration style"
+
+[[generated]]
+id = "QB9TGbJ90BuONPWaNA0X-"
+uri = "file://artifacts/taxref-explorer/src/assets/images/plantae.png"
+type = "image"
+title = "Plantae botanical illustration style"
+
+[[generated]]
+id = "kfrF64R4d6c_39D-jZex-"
+uri = "file://artifacts/taxref-explorer/src/assets/images/fungi.png"
+type = "image"
+title = "Fungi botanical illustration style"
