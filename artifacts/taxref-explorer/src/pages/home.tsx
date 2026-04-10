@@ -14,7 +14,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="relative pt-24 pb-32 px-4 overflow-hidden">
+      <section className="relative pt-24 pb-32 px-4 overflow-visible">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         
         <div className="container mx-auto max-w-4xl text-center relative z-10">
