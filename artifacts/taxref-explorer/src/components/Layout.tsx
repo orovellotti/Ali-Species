@@ -1,14 +1,13 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { Leaf } from "lucide-react";
+import nsLogo from "@/assets/images/logo-natural-solutions.svg";
+import patrinatLogo from "@/assets/images/logo-patrinat.svg";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const [logoError, setLogoError] = useState(false);
-
   return (
     <div className="min-h-[100dvh] flex flex-col selection:bg-primary/20 selection:text-primary">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -33,18 +32,20 @@ export function Layout({ children }: LayoutProps) {
 
       <footer className="py-10 border-t border-border bg-card/50 mt-auto">
         <div className="container mx-auto px-4 space-y-6">
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center justify-center gap-10 flex-wrap">
+            <a href="https://www.natural-solutions.eu/" target="_blank" rel="noreferrer" className="block hover:opacity-80 transition-opacity">
+              <img 
+                src={nsLogo} 
+                alt="Natural Solutions" 
+                className="h-12 object-contain"
+              />
+            </a>
             <a href="https://www.patrinat.fr/" target="_blank" rel="noreferrer" className="block hover:opacity-80 transition-opacity">
-              {logoError ? (
-                <span className="text-xl font-bold text-primary font-serif">PatriNat</span>
-              ) : (
-                <img 
-                  src="https://www.patrinat.fr/sites/patrinat/files/logo_patrinat_0.png" 
-                  alt="PatriNat" 
-                  className="h-16 object-contain"
-                  onError={() => setLogoError(true)}
-                />
-              )}
+              <img 
+                src={patrinatLogo} 
+                alt="PatriNat" 
+                className="h-14 object-contain"
+              />
             </a>
           </div>
 

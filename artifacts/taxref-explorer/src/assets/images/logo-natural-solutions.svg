@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 60" fill="none">
+  <circle cx="25" cy="30" r="20" fill="#4CAF50"/>
+  <path d="M25 15 C20 20, 12 28, 18 38 C22 44, 28 44, 32 38 C38 28, 30 20, 25 15Z" fill="#fff"/>
+  <path d="M25 20 L25 38 M20 28 L25 24 M30 28 L25 24" stroke="#4CAF50" stroke-width="1.5" fill="none"/>
+  <text x="55" y="25" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#333">Natural</text>
+  <text x="55" y="45" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#4CAF50">Solutions</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60" fill="none">
+  <rect x="2" y="2" width="56" height="56" rx="8" fill="#1B5E20"/>
+  <path d="M30 12 C22 18, 12 28, 20 42 C25 50, 35 50, 40 42 C48 28, 38 18, 30 12Z" fill="#A5D6A7"/>
+  <path d="M30 16 L30 44" stroke="#1B5E20" stroke-width="2"/>
+  <path d="M30 24 L22 30 M30 30 L38 24" stroke="#1B5E20" stroke-width="1.5" fill="none"/>
+  <text x="68" y="28" font-family="system-ui, sans-serif" font-size="22" font-weight="800" fill="#1B5E20">Patri</text>
+  <text x="143" y="28" font-family="system-ui, sans-serif" font-size="22" font-weight="800" fill="#4CAF50">Nat</text>
+  <text x="68" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#666" letter-spacing="0.5">OFB · MNHN · CNRS · IRD</text>
+</svg>
