@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { ExternalLink } from "lucide-react";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
-import nsLogo from "@/assets/images/logo-natural-solutions.svg";
+import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 
 export default function About() {
   return (

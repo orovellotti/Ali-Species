@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Leaf } from "lucide-react";
-import nsLogo from "@/assets/images/logo-natural-solutions.svg";
+import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 
 interface LayoutProps {
