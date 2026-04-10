@@ -31,12 +31,13 @@ export function SearchAutocomplete() {
         </div>
         <Input
           type="text"
-          placeholder="Search by scientific or common name..."
+          placeholder="Rechercher par nom scientifique ou nom commun..."
           className="flex-1 border-0 bg-transparent h-14 px-4 text-base focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none placeholder:text-muted-foreground/70"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          data-testid="input-search"
         />
         {isLoading && debouncedQuery.length > 1 && (
           <div className="pr-5 text-muted-foreground">
@@ -48,23 +49,24 @@ export function SearchAutocomplete() {
       {isFocused && debouncedQuery.length > 1 && results && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           {results.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              No taxonomic records found for "{debouncedQuery}".
+            <div className="p-8 text-center text-muted-foreground text-sm" data-testid="text-no-results">
+              Aucun taxon trouve pour "{debouncedQuery}".
             </div>
           ) : (
-            <ul className="py-2">
+            <ul className="py-2" data-testid="list-search-results">
               {results.map((taxon) => (
                 <li key={taxon.cdNom}>
                   <button
                     className="w-full px-5 py-3 text-left hover:bg-muted flex items-center justify-between group transition-colors"
                     onClick={() => handleSelect(taxon.cdNom)}
+                    data-testid={`button-taxon-${taxon.cdNom}`}
                   >
                     <div>
                       <div className="font-medium text-foreground flex items-center gap-2">
                         {taxon.lbNom}
                         {taxon.nomVern && (
                           <span className="text-sm font-normal text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
-                            • {taxon.nomVern}
+                            - {taxon.nomVern}
                           </span>
                         )}
                       </div>

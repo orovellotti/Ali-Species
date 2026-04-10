@@ -10,9 +10,9 @@ import {
   getGetTaxonChildrenQueryKey
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
-import { formatRank } from "@/lib/constants";
+import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Image as ImageIcon, MapPin, Tag } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TaxonDetail() {
@@ -48,10 +48,10 @@ export default function TaxonDetail() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-24 text-center max-w-xl">
-          <h1 className="text-3xl font-serif text-foreground mb-4">Taxon Not Found</h1>
-          <p className="text-muted-foreground mb-8">We couldn't find the record for identifier {cdNom}.</p>
+          <h1 className="text-3xl font-serif text-foreground mb-4">Taxon introuvable</h1>
+          <p className="text-muted-foreground mb-8">Aucun enregistrement trouve pour l'identifiant {cdNom}.</p>
           <Link href="/" className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">
-            Return Home
+            Retour a l'accueil
           </Link>
         </div>
       </Layout>
@@ -62,7 +62,6 @@ export default function TaxonDetail() {
 
   return (
     <Layout>
-      {/* Breadcrumb Classification */}
       <div className="bg-muted/30 border-b border-border">
         <div className="container mx-auto px-4 py-3 max-w-6xl overflow-x-auto whitespace-nowrap scrollbar-hide">
           <div className="flex items-center text-sm">
@@ -84,7 +83,7 @@ export default function TaxonDetail() {
                 </div>
               ))
             ) : (
-              <span className="text-muted-foreground">Root classification</span>
+              <span className="text-muted-foreground">Classification racine</span>
             )}
           </div>
         </div>
@@ -93,17 +92,19 @@ export default function TaxonDetail() {
       <div className="container mx-auto px-4 py-12 max-w-6xl">
         <div className="grid lg:grid-cols-[1fr_400px] gap-12 items-start">
           
-          {/* Main Info */}
           <div className="space-y-10">
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <Badge variant="secondary" className="font-mono text-xs tracking-wider uppercase bg-primary/10 text-primary hover:bg-primary/20">
                   {formatRank(taxon.rang)}
                 </Badge>
-                <span className="text-sm font-mono text-muted-foreground">ID: {taxon.cdNom}</span>
+                <span className="text-sm font-mono text-muted-foreground">CD_NOM: {taxon.cdNom}</span>
+                {taxon.cdRef !== taxon.cdNom && (
+                  <span className="text-sm font-mono text-muted-foreground">CD_REF: {taxon.cdRef}</span>
+                )}
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-2 italic">
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-2 italic" data-testid="text-taxon-name">
                 {taxon.lbNom}
               </h1>
               
@@ -114,13 +115,13 @@ export default function TaxonDetail() {
               )}
             </div>
 
-            {(taxon.nomVern || taxon.nomVernEng || taxon.habitat) && (
+            {(taxon.nomVern || taxon.nomVernEng || taxon.habitat || taxon.fr) && (
               <div className="grid sm:grid-cols-2 gap-6 p-6 bg-card rounded-2xl border border-border shadow-sm">
                 {(taxon.nomVern || taxon.nomVernEng) && (
                   <div>
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
                       <Tag className="w-4 h-4 text-primary" />
-                      Vernacular Names
+                      Noms vernaculaires
                     </div>
                     <div className="space-y-2">
                       {taxon.nomVern && (
@@ -139,25 +140,37 @@ export default function TaxonDetail() {
                   </div>
                 )}
 
-                {taxon.habitat && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      Habitat
+                <div className="space-y-4">
+                  {taxon.habitat && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        Habitat
+                      </div>
+                      <div className="text-muted-foreground">
+                        {formatHabitat(taxon.habitat)}
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      {taxon.habitat}
+                  )}
+                  {taxon.fr && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                        <Globe className="w-4 h-4 text-primary" />
+                        Statut en France
+                      </div>
+                      <div className="text-muted-foreground">
+                        {formatStatus(taxon.fr)}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Children Taxa */}
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-6 flex items-center justify-between border-b border-border pb-2">
-                <span>Subordinate Taxa</span>
-                {children && <span className="text-sm font-sans font-normal text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full">{children.length} found</span>}
+                <span>Taxons subordonne</span>
+                {children && <span className="text-sm font-sans font-normal text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full">{children.length} trouve{children.length > 1 ? "s" : ""}</span>}
               </h2>
               
               {childrenLoading ? (
@@ -173,12 +186,13 @@ export default function TaxonDetail() {
                       key={child.cdNom} 
                       href={`/taxon/${child.cdNom}`}
                       className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all group"
+                      data-testid={`link-child-${child.cdNom}`}
                     >
                       <div className="truncate pr-4">
                         <div className="font-medium text-foreground truncate italic">{child.lbNom}</div>
                         <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                           <span className="uppercase text-[10px] font-bold tracking-wider">{formatRank(child.rang)}</span>
-                          {child.nomVern && <span className="truncate">· {child.nomVern}</span>}
+                          {child.nomVern && <span className="truncate">- {child.nomVern}</span>}
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
@@ -187,13 +201,12 @@ export default function TaxonDetail() {
                 </div>
               ) : (
                 <div className="text-center py-8 bg-muted/30 rounded-2xl border border-dashed border-border text-muted-foreground">
-                  No subordinate taxa found.
+                  Aucun taxon subordonne.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Sidebar / Media */}
           <div className="space-y-6">
             {mediaLoading ? (
               <Skeleton className="w-full aspect-[4/3] rounded-2xl" />
@@ -206,11 +219,12 @@ export default function TaxonDetail() {
                       alt={img.title || taxon.lbNom} 
                       className="w-full h-auto object-cover object-center max-h-[500px]"
                       loading={i === 0 ? "eager" : "lazy"}
+                      data-testid={`img-taxon-${i}`}
                     />
                     {(img.title || img.author) && (
                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                         {img.title && <p className="text-white text-sm font-medium line-clamp-1">{img.title}</p>}
-                        {img.author && <p className="text-white/80 text-xs mt-1">© {img.author}</p>}
+                        {img.author && <p className="text-white/80 text-xs mt-1">{img.author}</p>}
                       </div>
                     )}
                   </div>
@@ -219,7 +233,7 @@ export default function TaxonDetail() {
             ) : (
               <div className="aspect-[4/3] rounded-2xl bg-muted border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
                 <ImageIcon className="w-12 h-12 mb-4 opacity-20" />
-                <p>No media available for this taxon.</p>
+                <p>Aucune image disponible pour ce taxon.</p>
               </div>
             )}
 
@@ -229,8 +243,9 @@ export default function TaxonDetail() {
                 target="_blank" 
                 rel="noreferrer"
                 className="block w-full py-4 px-6 bg-card hover:bg-muted text-center border border-border rounded-xl font-medium transition-colors"
+                data-testid="link-inpn"
               >
-                View on INPN Website
+                Voir sur le site INPN
               </a>
             )}
           </div>
