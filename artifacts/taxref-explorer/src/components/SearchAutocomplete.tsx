@@ -70,10 +70,12 @@ export function SearchAutocomplete() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary font-medium text-[10px] uppercase tracking-wider">
                           {formatRank(taxon.rang)}
                         </span>
+                        <span className="font-mono text-[10px]">CD_NOM: {taxon.cdNom}</span>
+                        <span className="font-mono text-[10px]">CD_REF: {taxon.cdRef}</span>
                         {taxon.famille && <span>{taxon.famille}</span>}
                       </div>
                     </div>
