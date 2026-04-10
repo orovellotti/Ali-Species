@@ -77,16 +77,19 @@ export default function Home() {
             title="Animalia" 
             desc="Des invertebres microscopiques aux mammiferes."
             fallbackImage={animaliaImg}
+            cdNom={183716}
           />
           <FeaturedCard 
             title="Plantae" 
             desc="Plantes a fleurs, fougeres, mousses et algues vertes."
             fallbackImage={plantaeImg}
+            cdNom={187079}
           />
           <FeaturedCard 
             title="Fungi" 
             desc="Champignons, moisissures et levures."
             fallbackImage={fungiImg}
+            cdNom={187496}
           />
         </div>
       </section>
@@ -106,9 +109,9 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode, value: string
   );
 }
 
-function FeaturedCard({ title, desc, fallbackImage }: { title: string, desc: string, fallbackImage: string }) {
+function FeaturedCard({ title, desc, fallbackImage, cdNom }: { title: string, desc: string, fallbackImage: string, cdNom: number }) {
   return (
-    <Link href={`/?q=${title}`} className="group block">
+    <Link href={`/taxon/${cdNom}`} className="group block">
       <div className="relative h-64 rounded-2xl overflow-hidden mb-4 bg-muted">
         <img 
           src={fallbackImage} 
