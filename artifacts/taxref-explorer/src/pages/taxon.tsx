@@ -63,25 +63,30 @@ export default function TaxonDetail() {
   return (
     <Layout>
       <div className="bg-muted/30 border-b border-border">
-        <div className="container mx-auto px-4 py-3 max-w-6xl overflow-x-auto whitespace-nowrap scrollbar-hide">
-          <div className="flex items-center text-sm">
+        <div className="container mx-auto px-4 py-2 max-w-6xl overflow-x-auto scrollbar-hide">
+          <div className="flex items-center text-xs flex-wrap gap-y-1">
             {classLoading ? (
-              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-48" />
             ) : classification && classification.length > 0 ? (
-              classification.map((node, i) => (
-                <div key={node.cdNom} className="flex items-center">
-                  <Link 
-                    href={`/taxon/${node.cdNom}`}
-                    className="hover:text-primary hover:underline underline-offset-4 text-muted-foreground transition-colors flex items-center gap-1.5"
-                  >
-                    <span className="text-[10px] font-medium bg-border/50 text-foreground px-1 rounded uppercase">{node.rang}</span>
-                    {node.lbNom}
-                  </Link>
-                  {i < classification.length - 1 && (
-                    <ChevronRight className="w-4 h-4 mx-2 text-muted-foreground/50 shrink-0" />
-                  )}
-                </div>
-              ))
+              (() => {
+                const mainRanks = ["KD", "PH", "CL", "OR", "FM", "GN", "ES", "SSES"];
+                const filtered = classification.filter(n => mainRanks.includes(n.rang));
+                const items = filtered.length > 0 ? filtered : classification.slice(-5);
+                return items.map((node, i) => (
+                  <div key={node.cdNom} className="flex items-center">
+                    <Link 
+                      href={`/taxon/${node.cdNom}`}
+                      className="hover:text-primary hover:underline underline-offset-4 text-muted-foreground transition-colors flex items-center gap-1"
+                    >
+                      <span className="text-[9px] font-medium text-foreground/60 uppercase">{node.rang}</span>
+                      <span className="truncate max-w-[120px]">{node.lbNom}</span>
+                    </Link>
+                    {i < items.length - 1 && (
+                      <ChevronRight className="w-3 h-3 mx-1 text-muted-foreground/40 shrink-0" />
+                    )}
+                  </div>
+                ));
+              })()
             ) : (
               <span className="text-muted-foreground">Classification racine</span>
             )}
