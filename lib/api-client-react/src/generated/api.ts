@@ -15,12 +15,14 @@ import type {
 
 import type {
   Error,
+  GbifInfo,
   HealthStatus,
   SearchTaxonsParams,
   TaxonDetail,
   TaxonMedia,
   TaxonStats,
   TaxonSummary,
+  WikipediaInfo,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -530,6 +532,181 @@ export function useGetTaxonStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTaxonStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get Wikipedia extract for a taxon
+ */
+export const getGetTaxonWikipediaUrl = (cdNom: number) => {
+  return `/api/taxons/${cdNom}/wikipedia`;
+};
+
+export const getTaxonWikipedia = async (
+  cdNom: number,
+  options?: RequestInit,
+): Promise<WikipediaInfo> => {
+  return customFetch<WikipediaInfo>(getGetTaxonWikipediaUrl(cdNom), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTaxonWikipediaQueryKey = (cdNom: number) => {
+  return [`/api/taxons/${cdNom}/wikipedia`] as const;
+};
+
+export const getGetTaxonWikipediaQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTaxonWikipedia>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonWikipedia>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTaxonWikipediaQueryKey(cdNom);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTaxonWikipedia>>
+  > = ({ signal }) => getTaxonWikipedia(cdNom, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!cdNom,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTaxonWikipedia>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTaxonWikipediaQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTaxonWikipedia>>
+>;
+export type GetTaxonWikipediaQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Wikipedia extract for a taxon
+ */
+
+export function useGetTaxonWikipedia<
+  TData = Awaited<ReturnType<typeof getTaxonWikipedia>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonWikipedia>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTaxonWikipediaQueryOptions(cdNom, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get GBIF data for a taxon
+ */
+export const getGetTaxonGbifUrl = (cdNom: number) => {
+  return `/api/taxons/${cdNom}/gbif`;
+};
+
+export const getTaxonGbif = async (
+  cdNom: number,
+  options?: RequestInit,
+): Promise<GbifInfo> => {
+  return customFetch<GbifInfo>(getGetTaxonGbifUrl(cdNom), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTaxonGbifQueryKey = (cdNom: number) => {
+  return [`/api/taxons/${cdNom}/gbif`] as const;
+};
+
+export const getGetTaxonGbifQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTaxonGbif>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonGbif>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTaxonGbifQueryKey(cdNom);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonGbif>>> = ({
+    signal,
+  }) => getTaxonGbif(cdNom, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!cdNom,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTaxonGbif>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTaxonGbifQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTaxonGbif>>
+>;
+export type GetTaxonGbifQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get GBIF data for a taxon
+ */
+
+export function useGetTaxonGbif<
+  TData = Awaited<ReturnType<typeof getTaxonGbif>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonGbif>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTaxonGbifQueryOptions(cdNom, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

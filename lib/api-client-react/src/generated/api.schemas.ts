@@ -66,6 +66,21 @@ export interface TaxonStats {
   kingdomCounts: TaxonStatsKingdomCountsItem[];
 }
 
+export interface WikipediaInfo {
+  extract?: string | null;
+  url?: string | null;
+  title?: string | null;
+}
+
+export interface GbifInfo {
+  gbifKey?: number | null;
+  occurrenceCount?: number | null;
+  iucnCategory?: string | null;
+  iucnCategoryLabel?: string | null;
+  gbifUrl?: string | null;
+  distributionCountries?: string[] | null;
+}
+
 export interface Error {
   error: string;
 }

@@ -139,6 +139,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaxonStats"
+  /taxons/{cdNom}/wikipedia:
+    get:
+      operationId: getTaxonWikipedia
+      tags: [taxons]
+      summary: Get Wikipedia extract for a taxon
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Wikipedia extract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikipediaInfo"
+  /taxons/{cdNom}/gbif:
+    get:
+      operationId: getTaxonGbif
+      tags: [taxons]
+      summary: Get GBIF data for a taxon
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: GBIF data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GbifInfo"
   /taxons/{cdNom}/media:
     get:
       operationId: getTaxonMedia
@@ -308,6 +346,41 @@ components:
         - totalGenera
         - totalFamilies
         - kingdomCounts
+    WikipediaInfo:
+      type: object
+      properties:
+        extract:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+    GbifInfo:
+      type: object
+      properties:
+        gbifKey:
+          type: integer
+          nullable: true
+        occurrenceCount:
+          type: integer
+          nullable: true
+        iucnCategory:
+          type: string
+          nullable: true
+        iucnCategoryLabel:
+          type: string
+          nullable: true
+        gbifUrl:
+          type: string
+          nullable: true
+        distributionCountries:
+          type: array
+          items:
+            type: string
+          nullable: true
     Error:
       type: object
       properties:

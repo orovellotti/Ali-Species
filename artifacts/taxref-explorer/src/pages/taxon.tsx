@@ -4,15 +4,19 @@ import {
   useGetTaxonClassification, 
   useGetTaxonMedia, 
   useGetTaxonChildren,
+  useGetTaxonWikipedia,
+  useGetTaxonGbif,
   getGetTaxonQueryKey,
   getGetTaxonClassificationQueryKey,
   getGetTaxonMediaQueryKey,
-  getGetTaxonChildrenQueryKey
+  getGetTaxonChildrenQueryKey,
+  getGetTaxonWikipediaQueryKey,
+  getGetTaxonGbifQueryKey
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2 } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TaxonDetail() {
@@ -23,6 +27,8 @@ export default function TaxonDetail() {
   const { data: classification, isLoading: classLoading } = useGetTaxonClassification(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonClassificationQueryKey(cdNom) } });
   const { data: media, isLoading: mediaLoading } = useGetTaxonMedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonMediaQueryKey(cdNom) } });
   const { data: children, isLoading: childrenLoading } = useGetTaxonChildren(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonChildrenQueryKey(cdNom) } });
+  const { data: wikipedia, isLoading: wikiLoading } = useGetTaxonWikipedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonWikipediaQueryKey(cdNom) } });
+  const { data: gbif, isLoading: gbifLoading } = useGetTaxonGbif(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonGbifQueryKey(cdNom) } });
 
   if (taxonLoading) {
     return (
@@ -70,7 +76,7 @@ export default function TaxonDetail() {
             ) : classification && classification.length > 0 ? (
               (() => {
                 const mainRanks = ["KD", "PH", "CL", "OR", "FM", "GN", "ES", "SSES"];
-                const filtered = classification.filter(n => mainRanks.includes(n.rang));
+                const filtered = classification.filter(n => n.rang ? mainRanks.includes(n.rang) : false);
                 const items = filtered.length > 0 ? filtered : classification.slice(-5);
                 return items.map((node, i) => (
                   <div key={node.cdNom} className="flex items-center">
@@ -229,6 +235,87 @@ export default function TaxonDetail() {
                 )}
               </div>
             </div>
+
+            {wikiLoading ? (
+              <Skeleton className="h-40 w-full rounded-2xl" />
+            ) : wikipedia?.extract ? (
+              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  Description
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{wikipedia.extract}</p>
+                {wikipedia.url && (
+                  <a
+                    href={wikipedia.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Lire sur Wikipedia
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            ) : null}
+
+            {gbifLoading ? (
+              <Skeleton className="h-32 w-full rounded-2xl" />
+            ) : gbif?.gbifKey ? (
+              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  Donnees GBIF
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {gbif.occurrenceCount != null && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Globe className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-foreground">{gbif.occurrenceCount.toLocaleString("fr-FR")}</div>
+                        <div className="text-xs text-muted-foreground">Observations mondiales</div>
+                      </div>
+                    </div>
+                  )}
+                  {gbif.iucnCategoryLabel && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                        gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "bg-red-100 dark:bg-red-950" :
+                        gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "bg-orange-100 dark:bg-orange-950" :
+                        gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "bg-yellow-100 dark:bg-yellow-950" :
+                        gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "bg-amber-100 dark:bg-amber-950" :
+                        "bg-green-100 dark:bg-green-950"
+                      }`}>
+                        <Shield className={`w-5 h-5 ${
+                          gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "text-red-600" :
+                          gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "text-orange-600" :
+                          gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "text-yellow-600" :
+                          gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "text-amber-600" :
+                          "text-green-600"
+                        }`} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-foreground">{gbif.iucnCategoryLabel}</div>
+                        <div className="text-xs text-muted-foreground">Statut UICN</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {gbif.gbifUrl && (
+                  <a
+                    href={gbif.gbifUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Voir sur GBIF.org
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            ) : null}
 
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-6 flex items-center justify-between border-b border-border pb-2">

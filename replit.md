@@ -32,16 +32,20 @@ TAXREF Explorer - A web application for browsing the French national taxonomic r
 - `GET /api/taxons/:cdNom/children` — Get subordinate taxa
 - `GET /api/taxons/:cdNom/classification` — Get classification hierarchy (breadcrumbs)
 - `GET /api/taxons/:cdNom/media` — Get images from Wikipedia/Wikimedia Commons
+- `GET /api/taxons/:cdNom/wikipedia` — Get Wikipedia FR extract (with EN fallback)
+- `GET /api/taxons/:cdNom/gbif` — Get GBIF data (occurrence count, IUCN Red List status)
 - `GET /api/taxons/stats` — Get database statistics
 
 ### Frontend Pages
-- `/` — Home page with search bar, statistics, and featured kingdoms
-- `/taxon/:cdNom` — Taxon detail page with classification, images, vernacular names, children
+- `/` — Home page with search bar, statistics, and featured kingdoms (Animalia/183716, Plantae/187079, Fungi/187496)
+- `/taxon/:cdNom` — Taxon detail page with classification, images, vernacular names, Wikipedia description, GBIF data, children
+- `/a-propos` — About page with PatriNat and Natural Solutions credits
 
-### Media
-- Images fetched from Wikipedia REST API (`/api/rest_v1/page/summary/`)
-- Fallback to Wikimedia Commons API
-- Uses scientific name for lookup
+### External APIs
+- **Wikipedia REST API** — FR/EN page summaries for taxon descriptions (`/api/rest_v1/page/summary/`)
+- **Wikipedia/Wikimedia Commons** — Taxon images (fallback chain)
+- **GBIF Species API** — Species matching, occurrence counts, IUCN Red List categories
+- Note: TAXREF LD (MNHN) is unavailable due to cyberattack since summer 2025
 
 ## Key Commands
 

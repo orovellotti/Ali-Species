@@ -195,6 +195,176 @@ router.get("/taxons/:cdNom/classification", async (req, res): Promise<void> => {
   res.json(path);
 });
 
+router.get("/taxons/:cdNom/wikipedia", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
+  const cdNom = parseInt(raw, 10);
+
+  if (isNaN(cdNom)) {
+    res.status(400).json({ error: "Invalid cdNom" });
+    return;
+  }
+
+  const [taxon] = await db
+    .select({ lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide })
+    .from(taxonsTable)
+    .where(eq(taxonsTable.cdNom, cdNom));
+
+  if (!taxon) {
+    res.json({ extract: null, url: null, title: null });
+    return;
+  }
+
+  const searchName = taxon.nomValide?.split(" ").slice(0, 2).join(" ") || taxon.lbNom;
+
+  try {
+    const wikiRes = await fetch(
+      `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`,
+      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
+    );
+
+    if (wikiRes.ok) {
+      const data = await wikiRes.json() as {
+        extract?: string;
+        content_urls?: { desktop?: { page?: string } };
+        title?: string;
+        type?: string;
+      };
+
+      if (data.type !== "disambiguation" && data.extract) {
+        res.json({
+          extract: data.extract,
+          url: data.content_urls?.desktop?.page || null,
+          title: data.title || null,
+        });
+        return;
+      }
+    }
+
+    const wikiResEn = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`,
+      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
+    );
+
+    if (wikiResEn.ok) {
+      const data = await wikiResEn.json() as {
+        extract?: string;
+        content_urls?: { desktop?: { page?: string } };
+        title?: string;
+        type?: string;
+      };
+
+      if (data.type !== "disambiguation" && data.extract) {
+        res.json({
+          extract: data.extract,
+          url: data.content_urls?.desktop?.page || null,
+          title: data.title || null,
+        });
+        return;
+      }
+    }
+
+    res.json({ extract: null, url: null, title: null });
+  } catch {
+    res.json({ extract: null, url: null, title: null });
+  }
+});
+
+const IUCN_LABELS: Record<string, string> = {
+  EX: "Eteint (EX)",
+  EW: "Eteint a l'etat sauvage (EW)",
+  CR: "En danger critique (CR)",
+  EN: "En danger (EN)",
+  VU: "Vulnerable (VU)",
+  NT: "Quasi menace (NT)",
+  LC: "Preoccupation mineure (LC)",
+  DD: "Donnees insuffisantes (DD)",
+  NE: "Non evalue (NE)",
+  LEAST_CONCERN: "Preoccupation mineure (LC)",
+  NEAR_THREATENED: "Quasi menace (NT)",
+  VULNERABLE: "Vulnerable (VU)",
+  ENDANGERED: "En danger (EN)",
+  CRITICALLY_ENDANGERED: "En danger critique (CR)",
+  EXTINCT: "Eteint (EX)",
+  EXTINCT_IN_THE_WILD: "Eteint a l'etat sauvage (EW)",
+  DATA_DEFICIENT: "Donnees insuffisantes (DD)",
+  NOT_EVALUATED: "Non evalue (NE)",
+};
+
+router.get("/taxons/:cdNom/gbif", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
+  const cdNom = parseInt(raw, 10);
+
+  if (isNaN(cdNom)) {
+    res.status(400).json({ error: "Invalid cdNom" });
+    return;
+  }
+
+  const [taxon] = await db
+    .select({ lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide, regne: taxonsTable.regne })
+    .from(taxonsTable)
+    .where(eq(taxonsTable.cdNom, cdNom));
+
+  if (!taxon) {
+    res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
+    return;
+  }
+
+  const searchName = taxon.nomValide?.split(" ").slice(0, 2).join(" ") || taxon.lbNom;
+
+  try {
+    const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(searchName)}${taxon.regne ? `&kingdom=${encodeURIComponent(taxon.regne)}` : ""}`;
+    const matchRes = await fetch(matchUrl);
+
+    if (!matchRes.ok) {
+      res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
+      return;
+    }
+
+    const matchData = await matchRes.json() as { usageKey?: number; matchType?: string };
+
+    if (!matchData.usageKey || matchData.matchType === "NONE") {
+      res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
+      return;
+    }
+
+    const gbifKey = matchData.usageKey;
+
+    const [countRes, iucnRes] = await Promise.all([
+      fetch(`https://api.gbif.org/v1/occurrence/count?taxonKey=${gbifKey}`),
+      fetch(`https://api.gbif.org/v1/species/${gbifKey}/iucnRedListCategory`),
+    ]);
+
+    let occurrenceCount: number | null = null;
+    if (countRes.ok) {
+      const countText = await countRes.text();
+      const parsed = parseInt(countText, 10);
+      occurrenceCount = Number.isNaN(parsed) ? null : parsed;
+    }
+
+    let iucnCategory: string | null = null;
+    let iucnCategoryLabel: string | null = null;
+    if (iucnRes.ok) {
+      const iucnData = await iucnRes.json() as { category?: string; code?: string };
+      const code = iucnData.code || iucnData.category;
+      if (code) {
+        iucnCategory = code;
+        iucnCategoryLabel = IUCN_LABELS[code] || IUCN_LABELS[iucnData.category || ""] || code;
+      }
+    }
+
+    res.json({
+      gbifKey,
+      occurrenceCount,
+      iucnCategory,
+      iucnCategoryLabel,
+      gbifUrl: `https://www.gbif.org/species/${gbifKey}`,
+      distributionCountries: null,
+    });
+  } catch {
+    res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
+  }
+});
+
 router.get("/taxons/:cdNom/media", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
   const cdNom = parseInt(raw, 10);

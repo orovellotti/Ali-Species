@@ -126,6 +126,35 @@ export const GetTaxonStatsResponse = zod.object({
 });
 
 /**
+ * @summary Get Wikipedia extract for a taxon
+ */
+export const GetTaxonWikipediaParams = zod.object({
+  cdNom: zod.coerce.number().describe("CD_NOM identifier"),
+});
+
+export const GetTaxonWikipediaResponse = zod.object({
+  extract: zod.string().nullish(),
+  url: zod.string().nullish(),
+  title: zod.string().nullish(),
+});
+
+/**
+ * @summary Get GBIF data for a taxon
+ */
+export const GetTaxonGbifParams = zod.object({
+  cdNom: zod.coerce.number().describe("CD_NOM identifier"),
+});
+
+export const GetTaxonGbifResponse = zod.object({
+  gbifKey: zod.number().nullish(),
+  occurrenceCount: zod.number().nullish(),
+  iucnCategory: zod.string().nullish(),
+  iucnCategoryLabel: zod.string().nullish(),
+  gbifUrl: zod.string().nullish(),
+  distributionCountries: zod.array(zod.string()).nullish(),
+});
+
+/**
  * @summary Get media for a taxon from INPN
  */
 export const GetTaxonMediaParams = zod.object({

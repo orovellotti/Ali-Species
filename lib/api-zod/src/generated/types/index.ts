@@ -7,6 +7,7 @@
  */
 
 export * from "./error";
+export * from "./gbifInfo";
 export * from "./healthStatus";
 export * from "./searchTaxonsParams";
 export * from "./taxonDetail";
@@ -15,3 +16,4 @@ export * from "./taxonMediaImagesItem";
 export * from "./taxonStats";
 export * from "./taxonStatsKingdomCountsItem";
 export * from "./taxonSummary";
+export * from "./wikipediaInfo";
