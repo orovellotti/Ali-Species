@@ -285,7 +285,7 @@ export default function TaxonDetail() {
             <CollapsibleSection
               icon={<FileText className="w-4 h-4 text-primary" />}
               title="Informations taxonomiques"
-              defaultOpen={false}
+              defaultOpen={true}
             >
               <div className="grid sm:grid-cols-2 gap-6">
                 {(taxon.nomVern || taxon.nomVernEng) && (
