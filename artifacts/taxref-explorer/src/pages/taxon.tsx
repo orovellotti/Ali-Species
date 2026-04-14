@@ -462,6 +462,29 @@ const LR_CODE_COLORS: Record<string, string> = {
   NE: "bg-gray-200 text-gray-600",
 };
 
+function sanitizeCitation(html: string): string {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  const allowed = new Set(["EM", "I", "B", "STRONG", "BR"]);
+  const walk = (node: Node) => {
+    for (let i = node.childNodes.length - 1; i >= 0; i--) {
+      const child = node.childNodes[i];
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const el = child as Element;
+        if (!allowed.has(el.tagName)) {
+          while (el.firstChild) el.parentNode!.insertBefore(el.firstChild, el);
+          el.remove();
+        } else {
+          while (el.attributes.length > 0) el.removeAttribute(el.attributes[0].name);
+          walk(el);
+        }
+      }
+    }
+  };
+  walk(div);
+  return div.innerHTML;
+}
+
 function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
   const grouped = new Map<string, BdcStatut[]>();
 
@@ -505,13 +528,29 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                       {s.codeStatut}
                     </span>
                   ) : null}
-                  <div className="min-w-0">
-                    <span className="text-foreground/90">
-                      <span className="font-medium">{s.lbTypeStatut}</span>
-                      {s.labelStatut && s.labelStatut !== "true" && <> — {s.labelStatut}</>}
-                    </span>
-                    {s.lbAdmTr && (
-                      <span className="text-muted-foreground text-xs ml-1">({s.lbAdmTr})</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-foreground/90">
+                        <span className="font-medium">{s.lbTypeStatut}</span>
+                        {s.labelStatut && s.labelStatut !== "true" && <> — {s.labelStatut}</>}
+                      </span>
+                      {s.lbAdmTr && (
+                        <span className="text-muted-foreground text-xs">({s.lbAdmTr})</span>
+                      )}
+                      {s.docUrl && /^https?:\/\//i.test(s.docUrl) && (
+                        <a
+                          href={s.docUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Consulter le texte de référence"
+                          className="inline-flex items-center text-primary hover:text-primary/80 transition-colors shrink-0"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                    {s.fullCitation && (
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeCitation(s.fullCitation) }} />
                     )}
                   </div>
                 </div>
