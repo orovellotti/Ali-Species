@@ -1,0 +1,265 @@
+Here’s a **clean, product-oriented description** of how the scoring feature should appear and behave on a **Taxon page**, assuming you already display all statuses.
+
+---
+
+# 🧩 Feature on Taxon Page
+
+**Sensitivity Score Panel**
+
+## 1. Placement in UI
+
+Position the feature as a **new block near existing statuses**, not replacing them.
+
+👉 Recommended layout:
+
+```
+[Taxon name]
+
+[Statuses badges: Red List, Protection, Directives, etc.]
+
+[NEW] Sensitivity Score Panel
+
+[Other taxon info...]
+```
+
+---
+
+# 🎯 2. What the user sees (simple mode)
+
+## A. Main score (prominent)
+
+* Large number: **82 / 100**
+* Color-coded background:
+
+  * 🟢 Low
+  * 🟡 Moderate
+  * 🟠 High
+  * 🔴 Critical
+
+## B. Label
+
+* “High sensitivity”
+* “Critical sensitivity”
+
+---
+
+## C. Quick explanation (1–2 lines)
+
+Example:
+
+> High sensitivity due to endangered status, national protection, and EU directive listing.
+
+---
+
+## D. Key badges (reuse existing ones)
+
+Display the **top contributing statuses only**:
+
+* EN (orange)
+* Protected (blue)
+* Annex IV (indigo)
+* ZNIEFF (green)
+
+👉 Don’t duplicate all badges — just highlight the drivers
+
+---
+
+# 🔍 3. Expandable “Why this score?” panel (expert mode)
+
+Click → expands a detailed breakdown:
+
+## A. Dimension scores
+
+```
+Ecological        ████████░░ 0.8
+Regulatory        ██████████ 1.0
+Territorial       ██████░░░░ 0.6
+Management        ██░░░░░░░░ 0.2
+```
+
+(or radar chart if you want)
+
+---
+
+## B. Contribution details
+
+Example:
+
+* Red List EN → increases ecological sensitivity
+* National protection → increases regulatory sensitivity
+* Habitat Directive Annex IV → increases regulatory sensitivity
+* ZNIEFF determinant → increases territorial sensitivity
+* No invasive status → low management pressure
+
+---
+
+## C. DPSIR hint (optional but strong)
+
+Small label:
+
+```
+State/Impact: High
+Response: Very high
+Pressure: Low
+```
+
+---
+
+# ⚙️ 4. How to compute it (implementation logic)
+
+## Step 1 — Extract statuses from existing data
+
+You already have:
+
+* red_list
+* protection
+* directives
+* conventions
+* regulation
+* pna
+* znieff
+
+---
+
+## Step 2 — Normalize each status
+
+Map to values (0–1):
+
+Example:
+
+```js
+redListScore = {
+  CR: 1.0,
+  EN: 0.8,
+  VU: 0.6,
+  NT: 0.4,
+  LC: 0.2,
+  DD: 0.3
+}
+```
+
+Same idea for:
+
+* protection
+* directives
+* etc.
+
+---
+
+## Step 3 — Compute dimension scores
+
+```js
+ecological = redListScore
+
+regulatory = max(
+  protectionScore,
+  directiveScore,
+  conventionScore
+)
+
+territorial = average(
+  znieffScore,
+  pnaScore
+)
+
+management = invasiveScore
+```
+
+👉 Use:
+
+* **max** for legal (strongest constraint wins)
+* **average** for contextual signals
+
+---
+
+## Step 4 — Aggregate global score
+
+```js
+global =
+0.4 * ecological +
+0.3 * regulatory +
+0.2 * territorial +
+0.1 * management
+```
+
+Then:
+
+```js
+score100 = Math.round(global * 100)
+```
+
+---
+
+## Step 5 — Generate explanation
+
+Rule-based:
+
+```js
+if (redList === "EN")
+  explanation.push("Endangered status increases ecological sensitivity")
+
+if (protection === "national")
+  explanation.push("National protection increases regulatory sensitivity")
+```
+
+👉 Keep it simple and deterministic
+
+---
+
+## 🧠 5. Smart UX behaviors
+
+### Highlight inconsistencies (very valuable)
+
+Example:
+
+* High ecological + low regulatory → show:
+
+  > “High ecological risk with limited legal protection”
+
+---
+
+### Handle missing data
+
+* If no Red List:
+  → reduce ecological confidence
+  → show: “Limited ecological data”
+
+---
+
+### Avoid duplication
+
+You already show statuses →
+👉 the score should **summarize, not repeat**
+
+---
+
+# 🎯 6. What this adds to your product
+
+On the taxon page, the feature becomes:
+
+👉 a **synthesis layer** on top of raw statuses
+
+Instead of:
+
+* many badges (hard to interpret)
+
+You provide:
+
+* one clear signal
+* with explanation
+* without losing detail
+
+---
+
+# 🧩 Final mental model
+
+* Badges = **raw data**
+* Score = **interpreted signal**
+* Panel = **decision support**
+
+---
+
+If you want next step, I can:
+
+* write the **exact React component**
+* or give you a **JS scoring function plug-and-play** for your TAXREF data structure

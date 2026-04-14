@@ -19,7 +19,8 @@ import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText } from "lucide-react";
+import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TaxonDetail() {
@@ -324,7 +325,10 @@ export default function TaxonDetail() {
             {statutsLoading ? (
               <Skeleton className="h-40 w-full rounded-2xl" />
             ) : statuts && statuts.length > 0 ? (
-              <StatutsSection statuts={statuts} />
+              <>
+                <SensitivityScorePanel statuts={statuts} />
+                <StatutsSection statuts={statuts} />
+              </>
             ) : null}
 
             <div>
@@ -461,6 +465,300 @@ const LR_CODE_COLORS: Record<string, string> = {
   NA: "bg-gray-300 text-gray-700",
   NE: "bg-gray-200 text-gray-600",
 };
+
+const RED_LIST_SCORES: Record<string, number> = {
+  EX: 1.0, EW: 1.0, CR: 1.0, EN: 0.8, VU: 0.6, NT: 0.4, LC: 0.2, DD: 0.3, NA: 0.1, NE: 0.0,
+};
+
+interface SensitivityResult {
+  score: number;
+  ecological: number;
+  regulatory: number;
+  territorial: number;
+  management: number;
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  ringColor: string;
+  drivers: { label: string; badgeClass: string; code?: string }[];
+  explanations: string[];
+  inconsistencies: string[];
+  missingData: string[];
+}
+
+function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
+  let bestRedList = 0;
+  let bestRedListCode = "";
+  let protectionScore = 0;
+  let directiveScore = 0;
+  let conventionScore = 0;
+  let znieffScore = 0;
+  let pnaScore = 0;
+  let invasiveScore = 0;
+  let hasRedList = false;
+  let hasProtection = false;
+  let hasDirective = false;
+  let hasConvention = false;
+  let hasZnieff = false;
+  let hasPna = false;
+
+  const drivers: SensitivityResult["drivers"] = [];
+  const explanations: string[] = [];
+  const inconsistencies: string[] = [];
+  const missingData: string[] = [];
+
+  for (const s of statuts) {
+    const group = s.regroupementType || "";
+    const code = s.codeStatut || "";
+    const type = s.cdTypeStatut || "";
+
+    if (group === "Liste rouge") {
+      hasRedList = true;
+      const score = RED_LIST_SCORES[code] ?? 0;
+      if (score > bestRedList) {
+        bestRedList = score;
+        bestRedListCode = code;
+      }
+    } else if (group === "Protection") {
+      hasProtection = true;
+      if (type === "PN") protectionScore = Math.max(protectionScore, 1.0);
+      else if (type === "PR") protectionScore = Math.max(protectionScore, 0.8);
+      else if (type === "PD") protectionScore = Math.max(protectionScore, 0.7);
+      else if (type === "POM") protectionScore = Math.max(protectionScore, 0.9);
+      else protectionScore = Math.max(protectionScore, 0.5);
+    } else if (group === "Directives européennes") {
+      hasDirective = true;
+      directiveScore = Math.max(directiveScore, 0.8);
+    } else if (group === "Conventions internationales") {
+      hasConvention = true;
+      conventionScore = Math.max(conventionScore, 0.7);
+    } else if (group === "ZNIEFF") {
+      hasZnieff = true;
+      znieffScore = 0.6;
+    } else if (group === "Plan national") {
+      hasPna = true;
+      if (type === "PNA") pnaScore = Math.max(pnaScore, 0.8);
+      else if (type === "exPNA") pnaScore = Math.max(pnaScore, 0.4);
+    } else if (group === "Réglementation") {
+      if (type === "REGLII" || type === "REGLLUTTE") {
+        invasiveScore = Math.max(invasiveScore, 0.7);
+      }
+    }
+  }
+
+  const ecological = bestRedList;
+  const regulatory = Math.max(protectionScore, directiveScore, conventionScore);
+  const territorial = (hasZnieff || hasPna) ? (znieffScore + pnaScore) / ((hasZnieff ? 1 : 0) + (hasPna ? 1 : 0)) : 0;
+  const management = invasiveScore;
+
+  const global = 0.4 * ecological + 0.3 * regulatory + 0.2 * territorial + 0.1 * management;
+  const score = Math.round(global * 100);
+
+  if (bestRedListCode && bestRedList >= 0.6) {
+    const codeLabel: Record<string, string> = { CR: "En danger critique", EN: "En danger", VU: "Vulnerable" };
+    drivers.push({ label: codeLabel[bestRedListCode] || bestRedListCode, badgeClass: LR_CODE_COLORS[bestRedListCode] || "bg-gray-200 text-gray-700", code: bestRedListCode });
+    explanations.push(`Statut Liste rouge ${bestRedListCode} : augmente la sensibilite ecologique`);
+  } else if (bestRedListCode && bestRedList >= 0.3) {
+    explanations.push(`Statut Liste rouge ${bestRedListCode} : sensibilite ecologique moderee`);
+  }
+
+  if (hasProtection) {
+    drivers.push({ label: "Protege", badgeClass: "bg-blue-100 text-blue-800" });
+    const level = protectionScore >= 1.0 ? "nationale" : protectionScore >= 0.8 ? "regionale" : "departementale";
+    explanations.push(`Protection ${level} : augmente la sensibilite reglementaire`);
+  }
+
+  if (hasDirective) {
+    drivers.push({ label: "Directive UE", badgeClass: "bg-indigo-100 text-indigo-800" });
+    explanations.push("Directive europeenne Habitat/Oiseaux : augmente la sensibilite reglementaire");
+  }
+
+  if (hasConvention) {
+    explanations.push("Convention internationale : renforce le cadre reglementaire");
+  }
+
+  if (hasZnieff) {
+    drivers.push({ label: "ZNIEFF", badgeClass: "bg-emerald-100 text-emerald-800" });
+    explanations.push("Determinante ZNIEFF : augmente la sensibilite territoriale");
+  }
+
+  if (hasPna) {
+    drivers.push({ label: "PNA", badgeClass: "bg-teal-100 text-teal-800" });
+    explanations.push("Plan national d'actions : augmente la sensibilite territoriale");
+  }
+
+  if (invasiveScore > 0) {
+    explanations.push("Reglementation d'introduction/lutte : pression de gestion identifiee");
+  }
+
+  if (ecological >= 0.6 && regulatory < 0.3) {
+    inconsistencies.push("Risque ecologique eleve avec une protection juridique limitee");
+  }
+  if (regulatory >= 0.8 && ecological < 0.3) {
+    inconsistencies.push("Fort cadre reglementaire malgre un risque ecologique faible");
+  }
+
+  if (!hasRedList) missingData.push("Pas de donnees Liste rouge");
+  if (!hasProtection && !hasDirective && !hasConvention) missingData.push("Pas de statut de protection connu");
+
+  let label: string, color: string, bgColor: string, borderColor: string, ringColor: string;
+  if (score >= 75) {
+    label = "Sensibilite critique";
+    color = "text-red-700";
+    bgColor = "bg-red-50";
+    borderColor = "border-red-200";
+    ringColor = "stroke-red-500";
+  } else if (score >= 50) {
+    label = "Sensibilite elevee";
+    color = "text-orange-700";
+    bgColor = "bg-orange-50";
+    borderColor = "border-orange-200";
+    ringColor = "stroke-orange-500";
+  } else if (score >= 25) {
+    label = "Sensibilite moderee";
+    color = "text-yellow-700";
+    bgColor = "bg-yellow-50";
+    borderColor = "border-yellow-200";
+    ringColor = "stroke-yellow-500";
+  } else {
+    label = "Sensibilite faible";
+    color = "text-green-700";
+    bgColor = "bg-green-50";
+    borderColor = "border-green-200";
+    ringColor = "stroke-green-500";
+  }
+
+  return { score, ecological, regulatory, territorial, management, label, color, bgColor, borderColor, ringColor, drivers, explanations, inconsistencies, missingData };
+}
+
+function ScoreRing({ score, ringColor, size = 80 }: { score: number; ringColor: string; size?: number }) {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" className="text-muted/30" strokeWidth={6} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" className={ringColor} strokeWidth={6} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+    </svg>
+  );
+}
+
+function DimensionBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.round(value * 100);
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-28 text-muted-foreground shrink-0">{label}</span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%`, transition: "width 0.5s ease" }} />
+      </div>
+      <span className="w-8 text-right text-xs font-mono text-muted-foreground">{value.toFixed(1)}</span>
+    </div>
+  );
+}
+
+function SensitivityScorePanel({ statuts }: { statuts: BdcStatut[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const result = useMemo(() => computeSensitivity(statuts), [statuts]);
+
+  if (result.score === 0 && result.missingData.length > 1) return null;
+
+  const summaryParts: string[] = [];
+  if (result.ecological >= 0.6) summaryParts.push("statut menace");
+  if (result.regulatory >= 0.7) summaryParts.push("protection reglementaire");
+  if (result.territorial >= 0.5) summaryParts.push("enjeu territorial");
+  if (result.management >= 0.5) summaryParts.push("pression de gestion");
+  const summary = summaryParts.length > 0
+    ? `${result.label} en raison de : ${summaryParts.join(", ")}.`
+    : result.missingData.length > 0
+      ? `Donnees insuffisantes pour une evaluation complete.`
+      : `Aucune sensibilite particuliere identifiee.`;
+
+  return (
+    <div className={`p-6 rounded-2xl border shadow-sm ${result.bgColor} ${result.borderColor}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
+        <Activity className="w-4 h-4 text-primary" />
+        Score de sensibilite
+      </div>
+
+      <div className="flex items-center gap-6">
+        <div className="relative shrink-0">
+          <ScoreRing score={result.score} ringColor={result.ringColor} />
+          <div className="absolute inset-0 flex items-center justify-center rotate-0">
+            <span className={`text-2xl font-bold ${result.color}`}>{result.score}</span>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className={`text-lg font-semibold ${result.color}`}>{result.label}</div>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{summary}</p>
+
+          {result.drivers.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {result.drivers.map((d, i) => (
+                <span key={i} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
+                  {d.code ? `${d.code} ` : ""}{d.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {result.inconsistencies.length > 0 && (
+        <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-100/60 border border-amber-200 text-amber-800 text-sm">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>{result.inconsistencies.map((t, i) => <p key={i}>{t}</p>)}</div>
+        </div>
+      )}
+
+      {result.missingData.length > 0 && (
+        <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>{result.missingData.join(" · ")}</span>
+        </div>
+      )}
+
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="mt-4 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        {expanded ? "Masquer le detail" : "Pourquoi ce score ?"}
+      </button>
+
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-border/50 space-y-5">
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dimensions</h4>
+            <DimensionBar label="Ecologique" value={result.ecological} color="bg-red-400" />
+            <DimensionBar label="Reglementaire" value={result.regulatory} color="bg-blue-400" />
+            <DimensionBar label="Territorial" value={result.territorial} color="bg-emerald-400" />
+            <DimensionBar label="Gestion" value={result.management} color="bg-orange-400" />
+          </div>
+
+          {result.explanations.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contributions</h4>
+              <ul className="space-y-1.5">
+                {result.explanations.map((e, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                    <span className="text-primary mt-0.5">·</span>
+                    {e}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="text-[10px] text-muted-foreground/60 pt-2 border-t border-border/30">
+            Score = 0.4 × ecologique + 0.3 × reglementaire + 0.2 × territorial + 0.1 × gestion
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function sanitizeCitation(html: string): string {
   const div = document.createElement("div");
