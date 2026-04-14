@@ -891,7 +891,7 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
   return (
     <CollapsibleSection
       icon={<ScrollText className="w-4 h-4 text-primary" />}
-      title="Statuts BDC"
+      title="Statuts"
       count={statuts.length}
       defaultOpen={false}
     >
