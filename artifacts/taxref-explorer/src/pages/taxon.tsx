@@ -19,9 +19,36 @@ import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info } from "lucide-react";
-import { useState, useMemo } from "react";
+import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users } from "lucide-react";
+import { useState, useMemo, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+
+function CollapsibleSection({ icon, title, count, children, defaultOpen = false, className = "" }: {
+  icon: ReactNode;
+  title: string;
+  count?: number | string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={`bg-card rounded-2xl border border-border shadow-sm overflow-hidden ${className}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 p-5 text-left hover:bg-muted/30 transition-colors"
+      >
+        {icon}
+        <span className="text-sm font-semibold text-foreground uppercase tracking-wider flex-1">{title}</span>
+        {count != null && (
+          <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{count}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="px-5 pb-5 border-t border-border/50 pt-4">{children}</div>}
+    </div>
+  );
+}
 
 export default function TaxonDetail() {
   const params = useParams();
@@ -108,7 +135,7 @@ export default function TaxonDetail() {
       <div className="container mx-auto px-4 py-12 max-w-6xl">
         <div className="grid lg:grid-cols-[1fr_400px] gap-12 items-start">
           
-          <div className="space-y-10">
+          <div className="space-y-6">
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <Badge variant="secondary" className="font-mono text-xs tracking-wider uppercase bg-primary/10 text-primary hover:bg-primary/20">
@@ -130,11 +157,8 @@ export default function TaxonDetail() {
                 </p>
               )}
 
-              {taxon.nomComplet && taxon.nomComplet !== taxon.lbNom && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  <span className="font-medium text-foreground/60">Nom complet :</span>{" "}
-                  <span className="italic">{taxon.nomComplet}</span>
-                </p>
+              {taxon.nomVern && (
+                <p className="text-base text-foreground/70 mt-1">{taxon.nomVern}</p>
               )}
 
               {taxon.nomValide && taxon.nomValide !== taxon.nomComplet && taxon.cdRef !== taxon.cdNom && (
@@ -153,102 +177,55 @@ export default function TaxonDetail() {
               )}
             </div>
 
-            {(taxon.group1Inpn || taxon.group2Inpn || taxon.group3Inpn) && (
-              <div className="p-5 bg-card rounded-2xl border border-border shadow-sm">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                  <Layers className="w-4 h-4 text-primary" />
-                  Groupes INPN
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {taxon.group1Inpn && (
-                    <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                      {taxon.group1Inpn}
-                    </span>
-                  )}
-                  {taxon.group2Inpn && (
-                    <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                      {taxon.group2Inpn}
-                    </span>
-                  )}
-                  {taxon.group3Inpn && (
-                    <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-sm font-medium">
-                      {taxon.group3Inpn}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
+            {statutsLoading ? (
+              <Skeleton className="h-32 w-full rounded-2xl" />
+            ) : statuts && statuts.length > 0 ? (
+              <SensitivityScorePanel statuts={statuts} />
+            ) : null}
 
-            <div className="grid sm:grid-cols-2 gap-6 p-6 bg-card rounded-2xl border border-border shadow-sm">
-              {(taxon.nomVern || taxon.nomVernEng) && (
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                    <Tag className="w-4 h-4 text-primary" />
-                    Noms vernaculaires
-                  </div>
-                  <div className="space-y-2">
-                    {taxon.nomVern && (
-                      <div className="text-muted-foreground">
-                        <span className="text-xs font-medium uppercase mr-2 text-foreground/50">FR</span>
-                        {taxon.nomVern}
-                      </div>
-                    )}
-                    {taxon.nomVernEng && (
-                      <div className="text-muted-foreground">
-                        <span className="text-xs font-medium uppercase mr-2 text-foreground/50">EN</span>
-                        {taxon.nomVernEng}
-                      </div>
-                    )}
-                  </div>
-                </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              {taxon.group1Inpn && (
+                <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium">{taxon.group1Inpn}</span>
               )}
-
-              <div className="space-y-4">
-                {taxon.habitat && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      Habitat
-                    </div>
-                    <div className="text-muted-foreground">
-                      {formatHabitat(taxon.habitat)}
-                    </div>
-                  </div>
-                )}
-                {taxon.fr && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                      <Globe className="w-4 h-4 text-primary" />
-                      Statut en France
-                    </div>
-                    <div className="text-muted-foreground">
-                      {formatStatus(taxon.fr)}
-                    </div>
-                  </div>
-                )}
-
-                {taxon.nomComplet && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
-                      <FileText className="w-4 h-4 text-primary" />
-                      Nom complet
-                    </div>
-                    <div className="text-muted-foreground italic text-sm">
-                      {taxon.nomComplet}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {taxon.group2Inpn && (
+                <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium">{taxon.group2Inpn}</span>
+              )}
+              {taxon.habitat && (
+                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" />{formatHabitat(taxon.habitat)}
+                </span>
+              )}
+              {taxon.fr && (
+                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
+                  <Globe className="w-3 h-3" />{formatStatus(taxon.fr)}
+                </span>
+              )}
+              {gbif?.iucnCategoryLabel && (
+                <span className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 ${
+                  gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "bg-red-100 text-red-800" :
+                  gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "bg-orange-100 text-orange-800" :
+                  gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "bg-yellow-100 text-yellow-800" :
+                  gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "bg-amber-100 text-amber-800" :
+                  "bg-green-100 text-green-800"
+                }`}>
+                  <Shield className="w-3 h-3" />UICN: {gbif.iucnCategory}
+                </span>
+              )}
+              {gbif?.occurrenceCount != null && (
+                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
+                  <BarChart3 className="w-3 h-3" />{gbif.occurrenceCount.toLocaleString("fr-FR")} obs. GBIF
+                </span>
+              )}
             </div>
 
             {wikiLoading ? (
-              <Skeleton className="h-40 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
             ) : wikipedia?.extract ? (
-              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                  <BookOpen className="w-4 h-4 text-primary" />
-                  Description
-                </div>
+              <CollapsibleSection
+                icon={<BookOpen className="w-4 h-4 text-primary" />}
+                title="Description"
+                defaultOpen={true}
+              >
                 <p className="text-muted-foreground leading-relaxed">{wikipedia.extract}</p>
                 {wikipedia.url && (
                   <a
@@ -261,17 +238,90 @@ export default function TaxonDetail() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
-              </div>
+              </CollapsibleSection>
             ) : null}
 
-            {gbifLoading ? (
-              <Skeleton className="h-32 w-full rounded-2xl" />
-            ) : gbif?.gbifKey ? (
-              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  Donnees GBIF
+            <CollapsibleSection
+              icon={<FileText className="w-4 h-4 text-primary" />}
+              title="Informations taxonomiques"
+              defaultOpen={false}
+            >
+              <div className="grid sm:grid-cols-2 gap-6">
+                {(taxon.nomVern || taxon.nomVernEng) && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3 uppercase tracking-wider">
+                      <Tag className="w-4 h-4 text-primary" />
+                      Noms vernaculaires
+                    </div>
+                    <div className="space-y-2">
+                      {taxon.nomVern && (
+                        <div className="text-muted-foreground">
+                          <span className="text-xs font-medium uppercase mr-2 text-foreground/50">FR</span>
+                          {taxon.nomVern}
+                        </div>
+                      )}
+                      {taxon.nomVernEng && (
+                        <div className="text-muted-foreground">
+                          <span className="text-xs font-medium uppercase mr-2 text-foreground/50">EN</span>
+                          {taxon.nomVernEng}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-4">
+                  {taxon.habitat && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2 uppercase tracking-wider">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        Habitat
+                      </div>
+                      <div className="text-muted-foreground">{formatHabitat(taxon.habitat)}</div>
+                    </div>
+                  )}
+                  {taxon.fr && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2 uppercase tracking-wider">
+                        <Globe className="w-4 h-4 text-primary" />
+                        Statut en France
+                      </div>
+                      <div className="text-muted-foreground">{formatStatus(taxon.fr)}</div>
+                    </div>
+                  )}
+                  {taxon.nomComplet && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2 uppercase tracking-wider">
+                        <FileText className="w-4 h-4 text-primary" />
+                        Nom complet
+                      </div>
+                      <div className="text-muted-foreground italic text-sm">{taxon.nomComplet}</div>
+                    </div>
+                  )}
+                  {(taxon.group1Inpn || taxon.group2Inpn || taxon.group3Inpn) && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2 uppercase tracking-wider">
+                        <Layers className="w-4 h-4 text-primary" />
+                        Groupes INPN
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {taxon.group1Inpn && <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">{taxon.group1Inpn}</span>}
+                        {taxon.group2Inpn && <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">{taxon.group2Inpn}</span>}
+                        {taxon.group3Inpn && <span className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">{taxon.group3Inpn}</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
+            </CollapsibleSection>
+
+            {gbifLoading ? (
+              <Skeleton className="h-16 w-full rounded-2xl" />
+            ) : gbif?.gbifKey ? (
+              <CollapsibleSection
+                icon={<BarChart3 className="w-4 h-4 text-primary" />}
+                title="Donnees GBIF"
+                defaultOpen={false}
+              >
                 <div className="grid sm:grid-cols-2 gap-4">
                   {gbif.occurrenceCount != null && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
@@ -319,56 +369,49 @@ export default function TaxonDetail() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
-              </div>
+              </CollapsibleSection>
             ) : null}
 
             {statutsLoading ? (
               <Skeleton className="h-40 w-full rounded-2xl" />
             ) : statuts && statuts.length > 0 ? (
-              <>
-                <SensitivityScorePanel statuts={statuts} />
-                <StatutsSection statuts={statuts} />
-              </>
+              <StatutsSection statuts={statuts} />
             ) : null}
 
-            <div>
-              <h2 className="text-2xl font-serif font-semibold mb-6 flex items-center justify-between border-b border-border pb-2">
-                <span>Taxons subordonne</span>
-                {children && <span className="text-sm font-sans font-normal text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full">{children.length} trouve{children.length > 1 ? "s" : ""}</span>}
-              </h2>
-              
-              {childrenLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-14 w-full rounded-xl" />
-                  <Skeleton className="h-14 w-full rounded-xl" />
-                  <Skeleton className="h-14 w-full rounded-xl" />
-                </div>
-              ) : children && children.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-4">
+            {childrenLoading ? (
+              <Skeleton className="h-14 w-full rounded-2xl" />
+            ) : children && children.length > 0 ? (
+              <CollapsibleSection
+                icon={<Users className="w-4 h-4 text-primary" />}
+                title="Taxons subordonnes"
+                count={children.length}
+                defaultOpen={children.length <= 10}
+              >
+                <div className="grid sm:grid-cols-2 gap-3">
                   {children.map(child => (
                     <Link 
                       key={child.cdNom} 
                       href={`/taxon/${child.cdNom}`}
-                      className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all group"
+                      className="flex items-center justify-between p-3 bg-background border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all group"
                       data-testid={`link-child-${child.cdNom}`}
                     >
                       <div className="truncate pr-4">
-                        <div className="font-medium text-foreground truncate italic">{child.lbNom}</div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                        <div className="font-medium text-foreground truncate italic text-sm">{child.lbNom}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
                           <span className="uppercase text-[10px] font-bold tracking-wider">{formatRank(child.rang)}</span>
                           {child.nomVern && <span className="truncate">- {child.nomVern}</span>}
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8 bg-muted/30 rounded-2xl border border-dashed border-border text-muted-foreground">
-                  Aucun taxon subordonne.
-                </div>
-              )}
-            </div>
+              </CollapsibleSection>
+            ) : (
+              <div className="text-center py-6 bg-muted/30 rounded-2xl border border-dashed border-border text-muted-foreground text-sm">
+                Aucun taxon subordonne.
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -799,13 +842,12 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
   });
 
   return (
-    <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-5 uppercase tracking-wider">
-        <ScrollText className="w-4 h-4 text-primary" />
-        Statuts BDC
-        <span className="text-xs font-normal normal-case text-muted-foreground ml-1">({statuts.length})</span>
-      </div>
-
+    <CollapsibleSection
+      icon={<ScrollText className="w-4 h-4 text-primary" />}
+      title="Statuts BDC"
+      count={statuts.length}
+      defaultOpen={false}
+    >
       <div className="space-y-4">
         {sortedGroups.map(([group, items]) => (
           <div key={group} className={`rounded-xl border p-4 ${REGROUPEMENT_COLORS[group] || "border-border bg-muted/30"}`}>
@@ -857,6 +899,6 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
           </div>
         ))}
       </div>
-    </div>
+    </CollapsibleSection>
   );
 }
