@@ -87,6 +87,25 @@ export default function About() {
             </div>
           </section>
 
+          <section className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Soutenez le projet</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              ALi species est un projet open source dedie a la valorisation de la biodiversite francaise. Pour continuer a developper de nouvelles fonctionnalites, ameliorer l'experience utilisateur et enrichir les donnees disponibles, nous avons besoin de votre soutien.
+            </p>
+            <p className="text-muted-foreground leading-relaxed">
+              Que vous soyez une institution publique, une collectivite, une association naturaliste ou une entreprise engagee pour l'environnement, vous pouvez participer au financement et au developpement d'ALi species.
+            </p>
+            <a
+              href="https://www.natural-solutions.eu/contact"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors mt-2"
+            >
+              Contactez Natural Solutions
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </section>
+
           <section className="space-y-4 pt-6 border-t border-border">
             <h2 className="text-2xl font-serif font-semibold text-foreground">Sources des donnees</h2>
             <ul className="space-y-3 text-muted-foreground">
