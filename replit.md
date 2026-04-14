@@ -22,8 +22,9 @@ TAXREF Explorer - A web application for browsing the French national taxonomic r
 
 ### Data Pipeline
 - TAXREF v18 data (708,685 taxa) imported from TSV file into PostgreSQL
+- BDC Statuts v18 (447,664 conservation statuts) imported from CSV into PostgreSQL
 - Import script: `scripts/src/import-taxref.ts`
-- Source data: `data/TAXREFv18.txt` (extracted from attached ZIP)
+- Source data: `data/TAXREFv18.txt`, `data/bdc_18_01.csv`
 - Trigram indexes (pg_trgm) for fast ILIKE search
 
 ### API Endpoints
@@ -32,6 +33,7 @@ TAXREF Explorer - A web application for browsing the French national taxonomic r
 - `GET /api/taxons/:cdNom/children` — Get subordinate taxa
 - `GET /api/taxons/:cdNom/classification` — Get classification hierarchy (breadcrumbs)
 - `GET /api/taxons/:cdNom/media` — Get images from Wikipedia/Wikimedia Commons
+- `GET /api/taxons/:cdNom/statuts` — Get BDC conservation statuts (Liste rouge, Protection, Directives, Conventions, etc.)
 - `GET /api/taxons/:cdNom/wikipedia` — Get Wikipedia FR extract (with EN fallback)
 - `GET /api/taxons/:cdNom/gbif` — Get GBIF data (occurrence count, IUCN Red List status)
 - `GET /api/taxons/stats` — Get database statistics

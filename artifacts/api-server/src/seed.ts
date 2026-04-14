@@ -39,6 +39,39 @@ async function insertBatch(client: any, batch: string[][]) {
 }
 
 const EXPECTED_COUNT = 708685;
+const BDC_EXPECTED_COUNT = 447664;
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        fields.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  fields.push(current);
+  return fields;
+}
 
 export async function seedIfEmpty() {
   try {
@@ -47,6 +80,7 @@ export async function seedIfEmpty() {
 
     if (count >= EXPECTED_COUNT) {
       logger.info({ count }, "Database has all data, skipping seed");
+      await seedBdcStatuts();
       return;
     }
 
@@ -151,5 +185,141 @@ export async function seedIfEmpty() {
     }
   } catch (err) {
     logger.error({ err }, "Seed failed");
+  }
+
+  await seedBdcStatuts();
+}
+
+const BDC_HEADER_MAP: Record<string, number> = {};
+
+async function insertBdcBatch(client: any, batch: string[][]) {
+  const values: string[] = [];
+  const params: (string | null)[] = [];
+  let paramIdx = 1;
+
+  for (const row of batch) {
+    const placeholders: string[] = [];
+    for (const val of row) {
+      if (val === "") {
+        placeholders.push("NULL");
+      } else {
+        placeholders.push(`$${paramIdx}`);
+        params.push(val);
+        paramIdx++;
+      }
+    }
+    values.push(`(${placeholders.join(",")})`);
+  }
+
+  const sql = `INSERT INTO bdc_statuts (cd_nom, cd_ref, cd_type_statut, lb_type_statut, regroupement_type, code_statut, label_statut, rq_statut, cd_sig, lb_adm_tr, niveau_admin, full_citation, doc_url) VALUES ${values.join(",")} ON CONFLICT DO NOTHING`;
+  await client.query(sql, params);
+}
+
+async function seedBdcStatuts() {
+  try {
+    const countResult = await pool.query("SELECT COUNT(*)::int as count FROM bdc_statuts");
+    const count = countResult.rows[0].count;
+
+    if (count >= BDC_EXPECTED_COUNT) {
+      logger.info({ count }, "BDC statuts table has all data, skipping seed");
+      return;
+    }
+
+    if (count > 0) {
+      logger.info({ count, expected: BDC_EXPECTED_COUNT }, "BDC statuts table has partial data, clearing and reimporting...");
+      await pool.query("TRUNCATE bdc_statuts RESTART IDENTITY");
+    } else {
+      logger.info("BDC statuts table is empty, starting import...");
+    }
+
+    const possiblePaths = [
+      path.resolve(process.cwd(), "data/bdc_18_01.csv"),
+      path.resolve(process.cwd(), "../data/bdc_18_01.csv"),
+      path.resolve(process.cwd(), "../../data/bdc_18_01.csv"),
+      "/home/runner/workspace/data/bdc_18_01.csv",
+    ];
+
+    let dataPath: string | null = null;
+    for (const p of possiblePaths) {
+      if (existsSync(p)) {
+        dataPath = p;
+        break;
+      }
+    }
+
+    if (!dataPath) {
+      logger.warn("BDC data file not found, skipping seed");
+      return;
+    }
+
+    logger.info({ dataPath }, "Found BDC data file");
+
+    const client = await pool.connect();
+
+    try {
+      const rl = createInterface({
+        input: createReadStream(dataPath, "utf-8"),
+        crlfDelay: Infinity,
+      });
+
+      let lineNum = 0;
+      let batch: string[][] = [];
+      let totalInserted = 0;
+
+      for await (const line of rl) {
+        lineNum++;
+
+        if (lineNum === 1) {
+          const headers = parseCsvLine(line);
+          headers.forEach((h, i) => {
+            BDC_HEADER_MAP[h] = i;
+          });
+          continue;
+        }
+
+        const fields = parseCsvLine(line);
+        const get = (name: string) => fields[BDC_HEADER_MAP[name]] || "";
+
+        const cdNom = parseInt(get("CD_NOM"));
+        const cdRef = parseInt(get("CD_REF"));
+        if (isNaN(cdNom) || isNaN(cdRef)) continue;
+
+        batch.push([
+          String(cdNom),
+          String(cdRef),
+          get("CD_TYPE_STATUT"),
+          get("LB_TYPE_STATUT"),
+          get("REGROUPEMENT_TYPE"),
+          get("CODE_STATUT"),
+          get("LABEL_STATUT"),
+          get("RQ_STATUT"),
+          get("CD_SIG"),
+          get("LB_ADM_TR"),
+          get("NIVEAU_ADMIN"),
+          get("FULL_CITATION"),
+          get("DOC_URL"),
+        ]);
+
+        if (batch.length >= 2000) {
+          await insertBdcBatch(client, batch);
+          totalInserted += batch.length;
+          batch = [];
+          if (totalInserted % 100000 === 0) {
+            logger.info({ totalInserted }, "BDC import progress");
+          }
+        }
+      }
+
+      if (batch.length > 0) {
+        await insertBdcBatch(client, batch);
+        totalInserted += batch.length;
+      }
+
+      logger.info({ totalInserted }, "BDC statuts import complete");
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    logger.error({ err }, "BDC seed failed");
   }
 }

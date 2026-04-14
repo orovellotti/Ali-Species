@@ -14,6 +14,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BdcStatut,
   Error,
   GbifInfo,
   HealthStatus,
@@ -532,6 +533,93 @@ export function useGetTaxonStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTaxonStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get BDC conservation statuts for a taxon
+ */
+export const getGetTaxonStatutsUrl = (cdNom: number) => {
+  return `/api/taxons/${cdNom}/statuts`;
+};
+
+export const getTaxonStatuts = async (
+  cdNom: number,
+  options?: RequestInit,
+): Promise<BdcStatut[]> => {
+  return customFetch<BdcStatut[]>(getGetTaxonStatutsUrl(cdNom), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTaxonStatutsQueryKey = (cdNom: number) => {
+  return [`/api/taxons/${cdNom}/statuts`] as const;
+};
+
+export const getGetTaxonStatutsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTaxonStatuts>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonStatuts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTaxonStatutsQueryKey(cdNom);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonStatuts>>> = ({
+    signal,
+  }) => getTaxonStatuts(cdNom, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!cdNom,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTaxonStatuts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTaxonStatutsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTaxonStatuts>>
+>;
+export type GetTaxonStatutsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get BDC conservation statuts for a taxon
+ */
+
+export function useGetTaxonStatuts<
+  TData = Awaited<ReturnType<typeof getTaxonStatuts>>,
+  TError = ErrorType<unknown>,
+>(
+  cdNom: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTaxonStatuts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTaxonStatutsQueryOptions(cdNom, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

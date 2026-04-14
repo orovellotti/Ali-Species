@@ -66,6 +66,20 @@ export interface TaxonStats {
   kingdomCounts: TaxonStatsKingdomCountsItem[];
 }
 
+export interface BdcStatut {
+  cdTypeStatut: string;
+  lbTypeStatut?: string | null;
+  regroupementType?: string | null;
+  codeStatut?: string | null;
+  labelStatut?: string | null;
+  rqStatut?: string | null;
+  cdSig?: string | null;
+  lbAdmTr?: string | null;
+  niveauAdmin?: string | null;
+  fullCitation?: string | null;
+  docUrl?: string | null;
+}
+
 export interface WikipediaInfo {
   extract?: string | null;
   url?: string | null;

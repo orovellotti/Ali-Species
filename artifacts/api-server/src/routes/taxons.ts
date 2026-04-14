@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { sql, eq, ilike, or, desc, asc } from "drizzle-orm";
-import { db, taxonsTable } from "@workspace/db";
+import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -193,6 +193,36 @@ router.get("/taxons/:cdNom/classification", async (req, res): Promise<void> => {
   }
 
   res.json(path);
+});
+
+router.get("/taxons/:cdNom/statuts", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
+  const cdNom = parseInt(raw, 10);
+
+  if (isNaN(cdNom)) {
+    res.status(400).json({ error: "Invalid cdNom" });
+    return;
+  }
+
+  const statuts = await db
+    .select({
+      cdTypeStatut: bdcStatutsTable.cdTypeStatut,
+      lbTypeStatut: bdcStatutsTable.lbTypeStatut,
+      regroupementType: bdcStatutsTable.regroupementType,
+      codeStatut: bdcStatutsTable.codeStatut,
+      labelStatut: bdcStatutsTable.labelStatut,
+      rqStatut: bdcStatutsTable.rqStatut,
+      cdSig: bdcStatutsTable.cdSig,
+      lbAdmTr: bdcStatutsTable.lbAdmTr,
+      niveauAdmin: bdcStatutsTable.niveauAdmin,
+      fullCitation: bdcStatutsTable.fullCitation,
+      docUrl: bdcStatutsTable.docUrl,
+    })
+    .from(bdcStatutsTable)
+    .where(eq(bdcStatutsTable.cdNom, cdNom))
+    .orderBy(asc(bdcStatutsTable.regroupementType), asc(bdcStatutsTable.cdTypeStatut));
+
+  res.json(statuts);
 });
 
 router.get("/taxons/:cdNom/wikipedia", async (req, res): Promise<void> => {

@@ -126,6 +126,28 @@ export const GetTaxonStatsResponse = zod.object({
 });
 
 /**
+ * @summary Get BDC conservation statuts for a taxon
+ */
+export const GetTaxonStatutsParams = zod.object({
+  cdNom: zod.coerce.number().describe("CD_NOM identifier"),
+});
+
+export const GetTaxonStatutsResponseItem = zod.object({
+  cdTypeStatut: zod.string(),
+  lbTypeStatut: zod.string().nullish(),
+  regroupementType: zod.string().nullish(),
+  codeStatut: zod.string().nullish(),
+  labelStatut: zod.string().nullish(),
+  rqStatut: zod.string().nullish(),
+  cdSig: zod.string().nullish(),
+  lbAdmTr: zod.string().nullish(),
+  niveauAdmin: zod.string().nullish(),
+  fullCitation: zod.string().nullish(),
+  docUrl: zod.string().nullish(),
+});
+export const GetTaxonStatutsResponse = zod.array(GetTaxonStatutsResponseItem);
+
+/**
  * @summary Get Wikipedia extract for a taxon
  */
 export const GetTaxonWikipediaParams = zod.object({

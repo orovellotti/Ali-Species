@@ -139,6 +139,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaxonStats"
+  /taxons/{cdNom}/statuts:
+    get:
+      operationId: getTaxonStatuts
+      tags: [taxons]
+      summary: Get BDC conservation statuts for a taxon
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: List of conservation statuts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BdcStatut"
   /taxons/{cdNom}/wikipedia:
     get:
       operationId: getTaxonWikipedia
@@ -346,6 +367,43 @@ components:
         - totalGenera
         - totalFamilies
         - kingdomCounts
+    BdcStatut:
+      type: object
+      properties:
+        cdTypeStatut:
+          type: string
+        lbTypeStatut:
+          type: string
+          nullable: true
+        regroupementType:
+          type: string
+          nullable: true
+        codeStatut:
+          type: string
+          nullable: true
+        labelStatut:
+          type: string
+          nullable: true
+        rqStatut:
+          type: string
+          nullable: true
+        cdSig:
+          type: string
+          nullable: true
+        lbAdmTr:
+          type: string
+          nullable: true
+        niveauAdmin:
+          type: string
+          nullable: true
+        fullCitation:
+          type: string
+          nullable: true
+        docUrl:
+          type: string
+          nullable: true
+      required:
+        - cdTypeStatut
     WikipediaInfo:
       type: object
       properties:

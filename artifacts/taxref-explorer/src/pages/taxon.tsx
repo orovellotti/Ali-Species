@@ -6,17 +6,20 @@ import {
   useGetTaxonChildren,
   useGetTaxonWikipedia,
   useGetTaxonGbif,
+  useGetTaxonStatuts,
   getGetTaxonQueryKey,
   getGetTaxonClassificationQueryKey,
   getGetTaxonMediaQueryKey,
   getGetTaxonChildrenQueryKey,
   getGetTaxonWikipediaQueryKey,
-  getGetTaxonGbifQueryKey
+  getGetTaxonGbifQueryKey,
+  getGetTaxonStatutsQueryKey
 } from "@workspace/api-client-react";
+import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TaxonDetail() {
@@ -29,6 +32,7 @@ export default function TaxonDetail() {
   const { data: children, isLoading: childrenLoading } = useGetTaxonChildren(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonChildrenQueryKey(cdNom) } });
   const { data: wikipedia, isLoading: wikiLoading } = useGetTaxonWikipedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonWikipediaQueryKey(cdNom) } });
   const { data: gbif, isLoading: gbifLoading } = useGetTaxonGbif(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonGbifQueryKey(cdNom) } });
+  const { data: statuts, isLoading: statutsLoading } = useGetTaxonStatuts(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonStatutsQueryKey(cdNom) } });
 
   if (taxonLoading) {
     return (
@@ -317,6 +321,12 @@ export default function TaxonDetail() {
               </div>
             ) : null}
 
+            {statutsLoading ? (
+              <Skeleton className="h-40 w-full rounded-2xl" />
+            ) : statuts && statuts.length > 0 ? (
+              <StatutsSection statuts={statuts} />
+            ) : null}
+
             <div>
               <h2 className="text-2xl font-serif font-semibold mb-6 flex items-center justify-between border-b border-border pb-2">
                 <span>Taxons subordonne</span>
@@ -403,5 +413,113 @@ export default function TaxonDetail() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+const REGROUPEMENT_ORDER = [
+  "Liste rouge",
+  "Protection",
+  "Directives européennes",
+  "Conventions internationales",
+  "Réglementation",
+  "Plan national",
+  "ZNIEFF",
+  "SENSIBILITE",
+];
+
+const REGROUPEMENT_COLORS: Record<string, string> = {
+  "Liste rouge": "border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20",
+  "Protection": "border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20",
+  "Directives européennes": "border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20",
+  "Conventions internationales": "border-purple-200 dark:border-purple-900 bg-purple-50/50 dark:bg-purple-950/20",
+  "Réglementation": "border-orange-200 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20",
+  "Plan national": "border-teal-200 dark:border-teal-900 bg-teal-50/50 dark:bg-teal-950/20",
+  "ZNIEFF": "border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20",
+  "SENSIBILITE": "border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20",
+};
+
+const REGROUPEMENT_BADGE: Record<string, string> = {
+  "Liste rouge": "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  "Protection": "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
+  "Directives européennes": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300",
+  "Conventions internationales": "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300",
+  "Réglementation": "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300",
+  "Plan national": "bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300",
+  "ZNIEFF": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300",
+  "SENSIBILITE": "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300",
+};
+
+const LR_CODE_COLORS: Record<string, string> = {
+  EX: "bg-black text-white",
+  EW: "bg-black text-white",
+  CR: "bg-red-600 text-white",
+  EN: "bg-orange-500 text-white",
+  VU: "bg-yellow-500 text-white",
+  NT: "bg-yellow-300 text-yellow-900",
+  LC: "bg-green-500 text-white",
+  DD: "bg-gray-400 text-white",
+  NA: "bg-gray-300 text-gray-700",
+  NE: "bg-gray-200 text-gray-600",
+};
+
+function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
+  const grouped = new Map<string, BdcStatut[]>();
+
+  for (const s of statuts) {
+    const key = s.regroupementType || "Autre";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(s);
+  }
+
+  const sortedGroups = [...grouped.entries()].sort((a, b) => {
+    const ia = REGROUPEMENT_ORDER.indexOf(a[0]);
+    const ib = REGROUPEMENT_ORDER.indexOf(b[0]);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
+  return (
+    <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-5 uppercase tracking-wider">
+        <ScrollText className="w-4 h-4 text-primary" />
+        Statuts BDC
+        <span className="text-xs font-normal normal-case text-muted-foreground ml-1">({statuts.length})</span>
+      </div>
+
+      <div className="space-y-4">
+        {sortedGroups.map(([group, items]) => (
+          <div key={group} className={`rounded-xl border p-4 ${REGROUPEMENT_COLORS[group] || "border-border bg-muted/30"}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${REGROUPEMENT_BADGE[group] || "bg-muted text-muted-foreground"}`}>
+                {group}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {items.map((s, i) => (
+                <div key={`${s.cdTypeStatut}-${i}`} className="flex items-start gap-2 text-sm">
+                  {s.codeStatut && group === "Liste rouge" ? (
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5 ${LR_CODE_COLORS[s.codeStatut] || "bg-gray-200 text-gray-700"}`}>
+                      {s.codeStatut}
+                    </span>
+                  ) : s.codeStatut ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-foreground/10 text-foreground/70 shrink-0 mt-0.5">
+                      {s.codeStatut}
+                    </span>
+                  ) : null}
+                  <div className="min-w-0">
+                    <span className="text-foreground/90">
+                      <span className="font-medium">{s.lbTypeStatut}</span>
+                      {s.labelStatut && s.labelStatut !== "true" && <> — {s.labelStatut}</>}
+                    </span>
+                    {s.lbAdmTr && (
+                      <span className="text-muted-foreground text-xs ml-1">({s.lbAdmTr})</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

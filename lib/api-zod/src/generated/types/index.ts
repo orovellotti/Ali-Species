@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./bdcStatut";
 export * from "./error";
 export * from "./gbifInfo";
 export * from "./healthStatus";
