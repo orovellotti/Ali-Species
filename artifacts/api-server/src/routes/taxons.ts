@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { sql, eq, ilike, or, desc, asc } from "drizzle-orm";
+import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -48,24 +48,27 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
 });
 
 router.get("/taxons/stats", async (_req, res): Promise<void> => {
+  const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
+
   const [totalResult] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(taxonsTable);
+    .from(taxonsTable)
+    .where(refOnly);
 
   const [speciesResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(eq(taxonsTable.rang, "ES"));
+    .where(and(refOnly, eq(taxonsTable.rang, "ES")));
 
   const [generaResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(eq(taxonsTable.rang, "GN"));
+    .where(and(refOnly, eq(taxonsTable.rang, "GN")));
 
   const [familiesResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(eq(taxonsTable.rang, "FM"));
+    .where(and(refOnly, eq(taxonsTable.rang, "FM")));
 
   const kingdomCounts = await db
     .select({
@@ -73,7 +76,7 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
       count: sql<number>`count(*)::int`,
     })
     .from(taxonsTable)
-    .where(sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`)
+    .where(and(refOnly, sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`))
     .groupBy(taxonsTable.regne)
     .orderBy(desc(sql`count(*)`));
 
