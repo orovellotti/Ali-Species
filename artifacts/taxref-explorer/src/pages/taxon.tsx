@@ -497,11 +497,6 @@ export default function TaxonDetail() {
               </a>
             )}
 
-            {statutsLoading ? (
-              <Skeleton className="h-32 w-full rounded-2xl" />
-            ) : statuts && statuts.length > 0 ? (
-              <SensitivityScorePanel statuts={statuts} />
-            ) : null}
           </div>
 
         </div>
@@ -874,6 +869,9 @@ function sanitizeCitation(html: string): string {
 }
 
 function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
+  const [scoreExpanded, setScoreExpanded] = useState(false);
+  const sensitivity = useMemo(() => computeSensitivity(statuts), [statuts]);
+
   const grouped = new Map<string, BdcStatut[]>();
 
   for (const s of statuts) {
@@ -888,6 +886,19 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
+  const showScore = sensitivity.score > 0 || sensitivity.missingData.length <= 1;
+
+  const summaryParts: string[] = [];
+  if (sensitivity.ecological >= 0.6) summaryParts.push("statut menace");
+  if (sensitivity.regulatory >= 0.7) summaryParts.push("protection reglementaire");
+  if (sensitivity.territorial >= 0.5) summaryParts.push("enjeu territorial");
+  if (sensitivity.management >= 0.5) summaryParts.push("pression de gestion");
+  const scoreSummary = summaryParts.length > 0
+    ? `${sensitivity.label} en raison de : ${summaryParts.join(", ")}.`
+    : sensitivity.missingData.length > 0
+      ? `Donnees insuffisantes pour une evaluation complete.`
+      : `Aucune sensibilite particuliere identifiee.`;
+
   return (
     <CollapsibleSection
       icon={<ScrollText className="w-4 h-4 text-primary" />}
@@ -896,6 +907,86 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
       defaultOpen={false}
     >
       <div className="space-y-4">
+        {showScore && (
+          <div className={`p-5 rounded-xl border ${sensitivity.bgColor} ${sensitivity.borderColor}`}>
+            <div className="flex items-center gap-5">
+              <div className="relative shrink-0">
+                <ScoreRing score={sensitivity.score} ringColor={sensitivity.ringColor} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-2xl font-bold ${sensitivity.color}`}>{sensitivity.score}</span>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  <Activity className="w-3.5 h-3.5" />
+                  Synthese des statuts
+                </div>
+                <div className={`text-lg font-semibold ${sensitivity.color}`}>{sensitivity.label}</div>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{scoreSummary}</p>
+                {sensitivity.drivers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {sensitivity.drivers.map((d, i) => (
+                      <span key={i} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
+                        {d.code ? `${d.code} ` : ""}{d.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {sensitivity.inconsistencies.length > 0 && (
+              <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-100/60 border border-amber-200 text-amber-800 text-sm">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>{sensitivity.inconsistencies.map((t, i) => <p key={i}>{t}</p>)}</div>
+              </div>
+            )}
+
+            {sensitivity.missingData.length > 0 && (
+              <div className="mt-2 flex items-start gap-2 p-2 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{sensitivity.missingData.join(" · ")}</span>
+              </div>
+            )}
+
+            <button
+              onClick={() => setScoreExpanded(!scoreExpanded)}
+              className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${scoreExpanded ? "rotate-180" : ""}`} />
+              {scoreExpanded ? "Masquer le detail" : "Detail du score"}
+            </button>
+
+            {scoreExpanded && (
+              <div className="mt-3 pt-3 border-t border-border/50 space-y-4">
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dimensions</h4>
+                  <DimensionBar label="Ecologique" value={sensitivity.ecological} color="bg-red-400" />
+                  <DimensionBar label="Reglementaire" value={sensitivity.regulatory} color="bg-blue-400" />
+                  <DimensionBar label="Territorial" value={sensitivity.territorial} color="bg-emerald-400" />
+                  <DimensionBar label="Gestion" value={sensitivity.management} color="bg-orange-400" />
+                </div>
+                {sensitivity.explanations.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contributions</h4>
+                    <ul className="space-y-1.5">
+                      {sensitivity.explanations.map((e, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                          <span className="text-primary mt-0.5">·</span>
+                          {e}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="text-[10px] text-muted-foreground/60 pt-2 border-t border-border/30">
+                  Score = 0.4 × ecologique + 0.3 × reglementaire + 0.2 × territorial + 0.1 × gestion
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {sortedGroups.map(([group, items]) => (
           <div key={group} className={`rounded-xl border p-4 ${REGROUPEMENT_COLORS[group] || "border-border bg-muted/30"}`}>
             <div className="flex items-center gap-2 mb-3">
