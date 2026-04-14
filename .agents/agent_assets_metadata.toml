@@ -11,10 +11,10 @@ title = "generated_image"
 id = "QB9TGbJ90BuONPWaNA0X-"
 uri = "file://artifacts/taxref-explorer/src/assets/images/plantae.png"
 type = "image"
-title = "Plantae botanical illustration style"
+title = "generated_image"
 
 [[generated]]
 id = "kfrF64R4d6c_39D-jZex-"
 uri = "file://artifacts/taxref-explorer/src/assets/images/fungi.png"
 type = "image"
-title = "Fungi botanical illustration style"
+title = "generated_image"
