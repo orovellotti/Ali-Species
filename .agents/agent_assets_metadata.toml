@@ -5,7 +5,7 @@ outputs = []
 id = "zPmkPUvbR6Sm4Pm7X1D36"
 uri = "file://artifacts/taxref-explorer/src/assets/images/animalia.png"
 type = "image"
-title = "Animalia botanical illustration style"
+title = "generated_image"
 
 [[generated]]
 id = "QB9TGbJ90BuONPWaNA0X-"
