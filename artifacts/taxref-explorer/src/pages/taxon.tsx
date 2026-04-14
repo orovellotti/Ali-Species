@@ -224,12 +224,6 @@ export default function TaxonDetail() {
               )}
             </div>
 
-            {statutsLoading ? (
-              <Skeleton className="h-32 w-full rounded-2xl" />
-            ) : statuts && statuts.length > 0 ? (
-              <SensitivityScorePanel statuts={statuts} />
-            ) : null}
-
             <div className="flex flex-wrap gap-2 text-sm">
               {taxon.group1Inpn && (
                 <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium">{taxon.group1Inpn}</span>
@@ -502,6 +496,12 @@ export default function TaxonDetail() {
                 Voir sur le site INPN
               </a>
             )}
+
+            {statutsLoading ? (
+              <Skeleton className="h-32 w-full rounded-2xl" />
+            ) : statuts && statuts.length > 0 ? (
+              <SensitivityScorePanel statuts={statuts} />
+            ) : null}
           </div>
 
         </div>
