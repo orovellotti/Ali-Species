@@ -99,7 +99,7 @@ export default function TaxonDetail() {
 
   const hasImages = media && media.images && media.images.length > 0;
 
-  const pageTitle = `${taxon.lbNom}${taxon.nomVern ? ` (${taxon.nomVern.split(",")[0].trim()})` : ""} – ALi species`;
+  const pageTitle = `${taxon.lbNom}${taxon.nomVern ? ` (${taxon.nomVern.split(",")[0].trim()})` : ""} – ALI Species`;
   const pageDescription = `${taxon.lbNom}${taxon.lbAuteur ? ` ${taxon.lbAuteur}` : ""}${taxon.nomVern ? ` — ${taxon.nomVern}` : ""}. ${formatRank(taxon.rang)} du referentiel taxonomique TAXREF v18. Classification, statuts de conservation, donnees GBIF et images.`;
   const firstImage = media?.images?.[0]?.url;
   const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}taxon/${taxon.cdNom}`;

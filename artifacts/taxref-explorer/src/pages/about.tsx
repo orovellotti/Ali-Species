@@ -8,10 +8,10 @@ export default function About() {
   return (
     <Layout>
       <Helmet>
-        <title>A propos – ALi species</title>
-        <meta name="description" content="ALi species est une application web pour explorer le referentiel taxonomique national TAXREF v18. Produit par PatriNat, developpe par Natural Solutions." />
-        <meta property="og:title" content="A propos – ALi species" />
-        <meta property="og:description" content="ALi species est une application web pour explorer le referentiel taxonomique national TAXREF v18." />
+        <title>A propos – ALI Species</title>
+        <meta name="description" content="ALI Species (All Life Intelligence) est une application web pour explorer le referentiel taxonomique national TAXREF v18. Produit par PatriNat, developpe par Natural Solutions." />
+        <meta property="og:title" content="A propos – ALI Species" />
+        <meta property="og:description" content="ALI Species (All Life Intelligence) est une application web pour explorer le referentiel taxonomique national TAXREF v18." />
       </Helmet>
       <div className="container mx-auto px-4 py-16 max-w-3xl">
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-8">
@@ -20,9 +20,10 @@ export default function About() {
 
         <div className="space-y-10">
           <section className="space-y-4">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">ALi species</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">ALI Species</h2>
+            <p className="text-sm text-muted-foreground/70 italic mb-2">All Life Intelligence</p>
             <p className="text-muted-foreground leading-relaxed">
-              ALi species est une application web permettant d'explorer le referentiel taxonomique national francais (TAXREF). Elle offre une interface intuitive pour rechercher, consulter et naviguer parmi les taxons recenses en France.
+              ALI Species est une application web permettant d'explorer le referentiel taxonomique national francais (TAXREF). Elle offre une interface intuitive pour rechercher, consulter et naviguer parmi les taxons recenses en France.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               L'application permet de rechercher des taxons par nom scientifique ou nom vernaculaire, de visualiser la classification hierarchique complete, et de consulter les images associees depuis Wikipedia et Wikimedia Commons.
@@ -97,10 +98,10 @@ export default function About() {
           <section className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
             <h2 className="text-2xl font-serif font-semibold text-foreground">Soutenez le projet</h2>
             <p className="text-muted-foreground leading-relaxed">
-              ALi species est un projet open source dedie a la valorisation de la biodiversite francaise. Pour continuer a developper de nouvelles fonctionnalites, ameliorer l'experience utilisateur et enrichir les donnees disponibles, nous avons besoin de votre soutien.
+              ALI Species est un projet open source dedie a la valorisation de la biodiversite francaise. Pour continuer a developper de nouvelles fonctionnalites, ameliorer l'experience utilisateur et enrichir les donnees disponibles, nous avons besoin de votre soutien.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Que vous soyez une institution publique, une collectivite, une association naturaliste ou une entreprise engagee pour l'environnement, vous pouvez participer au financement et au developpement d'ALi species.
+              Que vous soyez une institution publique, une collectivite, une association naturaliste ou une entreprise engagee pour l'environnement, vous pouvez participer au financement et au developpement d'ALI Species.
             </p>
             <a
               href="https://www.natural-solutions.eu/contact"

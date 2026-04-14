@@ -16,9 +16,9 @@ export default function Home() {
   return (
     <Layout>
       <Helmet>
-        <title>ALi species — Explorez le monde vivant de la France</title>
-        <meta name="description" content="Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire : classification, statuts de conservation, images et donnees GBIF." />
-        <meta property="og:title" content="ALi species — Explorez le monde vivant de la France" />
+        <title>ALI Species — All Life Intelligence — Explorez le monde vivant de la France</title>
+        <meta name="description" content="ALI Species — All Life Intelligence. Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire : classification, statuts de conservation, images et donnees GBIF." />
+        <meta property="og:title" content="ALI Species — All Life Intelligence" />
         <meta property="og:description" content="Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire." />
         <meta property="og:type" content="website" />
       </Helmet>
