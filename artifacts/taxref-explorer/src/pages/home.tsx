@@ -5,6 +5,7 @@ import { Leaf, Trees, Microscope, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
+import { taxonUrl } from "@/lib/constants";
 
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
@@ -119,7 +120,7 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode, value: string
 
 function FeaturedCard({ title, desc, fallbackImage, cdNom }: { title: string, desc: string, fallbackImage: string, cdNom: number }) {
   return (
-    <Link href={`/taxon/${cdNom}`} className="group block">
+    <Link href={taxonUrl(cdNom, title)} className="group block">
       <div className="relative h-64 rounded-2xl overflow-hidden mb-4 bg-muted">
         <img 
           src={fallbackImage} 

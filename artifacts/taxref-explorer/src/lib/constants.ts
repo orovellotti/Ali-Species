@@ -81,3 +81,24 @@ export function formatStatus(code: string | null | undefined): string {
   if (!code) return "";
   return STATUS_LABELS[code] || code;
 }
+
+export function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function taxonUrl(cdNom: number, lbNom?: string | null): string {
+  if (lbNom) {
+    return `/taxon/${cdNom}-${slugify(lbNom)}`;
+  }
+  return `/taxon/${cdNom}`;
+}
+
+export function parseCdNomFromParam(param: string): number {
+  const match = param.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}

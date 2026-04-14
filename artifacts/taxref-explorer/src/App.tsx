@@ -22,7 +22,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/a-propos" component={About} />
-      <Route path="/taxon/:cdNom" component={TaxonDetail} />
+      <Route path="/taxon/:slug" component={TaxonDetail} />
       <Route component={NotFound} />
     </Switch>
   );

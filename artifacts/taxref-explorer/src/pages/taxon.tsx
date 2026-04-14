@@ -17,7 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
-import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
+import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users } from "lucide-react";
 import { useState, useMemo, type ReactNode } from "react";
@@ -53,7 +53,7 @@ function CollapsibleSection({ icon, title, count, children, defaultOpen = false,
 
 export default function TaxonDetail() {
   const params = useParams();
-  const cdNom = parseInt(params.cdNom || "0", 10);
+  const cdNom = parseCdNomFromParam(params.slug || "0");
 
   const { data: taxon, isLoading: taxonLoading } = useGetTaxon(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonQueryKey(cdNom) } });
   const { data: classification, isLoading: classLoading } = useGetTaxonClassification(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonClassificationQueryKey(cdNom) } });
@@ -102,7 +102,7 @@ export default function TaxonDetail() {
   const pageTitle = `${taxon.lbNom}${taxon.nomVern ? ` (${taxon.nomVern.split(",")[0].trim()})` : ""} – ALI Species`;
   const pageDescription = `${taxon.lbNom}${taxon.lbAuteur ? ` ${taxon.lbAuteur}` : ""}${taxon.nomVern ? ` — ${taxon.nomVern}` : ""}. ${formatRank(taxon.rang)} du referentiel taxonomique TAXREF v18. Classification, statuts de conservation, donnees GBIF et images.`;
   const firstImage = media?.images?.[0]?.url;
-  const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}taxon/${taxon.cdNom}`;
+  const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}${taxonUrl(taxon.cdNom, taxon.lbNom).slice(1)}`;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -160,7 +160,7 @@ export default function TaxonDetail() {
                 return items.map((node, i) => (
                   <div key={node.cdNom} className="flex items-center">
                     <Link 
-                      href={`/taxon/${node.cdNom}`}
+                      href={taxonUrl(node.cdNom, node.lbNom)}
                       className="hover:text-primary hover:underline underline-offset-4 text-muted-foreground transition-colors flex items-center gap-1"
                     >
                       <span className="text-[9px] font-medium text-foreground/60 uppercase">{node.rang}</span>
@@ -216,7 +216,7 @@ export default function TaxonDetail() {
                   </div>
                   <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                     Nom valide de reference :{" "}
-                    <Link href={`/taxon/${taxon.cdRef}`} className="italic underline underline-offset-4 hover:text-amber-900">
+                    <Link href={taxonUrl(taxon.cdRef, taxon.nomValide)} className="italic underline underline-offset-4 hover:text-amber-900">
                       {taxon.nomValide}
                     </Link>
                   </p>
@@ -432,7 +432,7 @@ export default function TaxonDetail() {
                   {children.map(child => (
                     <Link 
                       key={child.cdNom} 
-                      href={`/taxon/${child.cdNom}`}
+                      href={taxonUrl(child.cdNom, child.lbNom)}
                       className="flex items-center justify-between p-3 bg-background border border-border rounded-xl hover:border-primary/50 hover:shadow-md transition-all group"
                       data-testid={`link-child-${child.cdNom}`}
                     >

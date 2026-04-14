@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Search, Loader2, ChevronRight } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getSearchTaxonsQueryKey, useSearchTaxons } from "@workspace/api-client-react";
-import { formatRank } from "@/lib/constants";
+import { formatRank, taxonUrl } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 
 export function SearchAutocomplete() {
@@ -17,10 +17,10 @@ export function SearchAutocomplete() {
     { query: { enabled: debouncedQuery.length > 1, queryKey: getSearchTaxonsQueryKey({ q: debouncedQuery, limit: 8 }) } }
   );
 
-  const handleSelect = (cdNom: number) => {
+  const handleSelect = (cdNom: number, lbNom?: string) => {
     setQuery("");
     setIsFocused(false);
-    setLocation(`/taxon/${cdNom}`);
+    setLocation(taxonUrl(cdNom, lbNom));
   };
 
   return (
@@ -58,7 +58,7 @@ export function SearchAutocomplete() {
                 <li key={taxon.cdNom}>
                   <button
                     className="w-full px-5 py-3 text-left hover:bg-muted flex items-center justify-between group transition-colors"
-                    onClick={() => handleSelect(taxon.cdNom)}
+                    onClick={() => handleSelect(taxon.cdNom, taxon.lbNom)}
                     data-testid={`button-taxon-${taxon.cdNom}`}
                   >
                     <div>
