@@ -1,11 +1,18 @@
 import { Layout } from "@/components/Layout";
 import { ExternalLink } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 
 export default function About() {
   return (
     <Layout>
+      <Helmet>
+        <title>A propos – ALi species</title>
+        <meta name="description" content="ALi species est une application web pour explorer le referentiel taxonomique national TAXREF v18. Produit par PatriNat, developpe par Natural Solutions." />
+        <meta property="og:title" content="A propos – ALi species" />
+        <meta property="og:description" content="ALi species est une application web pour explorer le referentiel taxonomique national TAXREF v18." />
+      </Helmet>
       <div className="container mx-auto px-4 py-16 max-w-3xl">
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-8">
           A propos

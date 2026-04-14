@@ -21,6 +21,7 @@ import { formatRank, formatHabitat, formatStatus } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users } from "lucide-react";
 import { useState, useMemo, type ReactNode } from "react";
+import { Helmet } from "react-helmet-async";
 import { Badge } from "@/components/ui/badge";
 
 function CollapsibleSection({ icon, title, count, children, defaultOpen = false, className = "" }: {
@@ -98,8 +99,54 @@ export default function TaxonDetail() {
 
   const hasImages = media && media.images && media.images.length > 0;
 
+  const pageTitle = `${taxon.lbNom}${taxon.nomVern ? ` (${taxon.nomVern.split(",")[0].trim()})` : ""} – ALi species`;
+  const pageDescription = `${taxon.lbNom}${taxon.lbAuteur ? ` ${taxon.lbAuteur}` : ""}${taxon.nomVern ? ` — ${taxon.nomVern}` : ""}. ${formatRank(taxon.rang)} du referentiel taxonomique TAXREF v18. Classification, statuts de conservation, donnees GBIF et images.`;
+  const firstImage = media?.images?.[0]?.url;
+  const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}taxon/${taxon.cdNom}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Taxon",
+    name: taxon.lbNom,
+    alternateName: taxon.nomVern ? taxon.nomVern.split(",").map((n: string) => n.trim()) : undefined,
+    taxonRank: taxon.rang ? formatRank(taxon.rang) : undefined,
+    scientificName: taxon.nomComplet || taxon.lbNom,
+    parentTaxon: classification && classification.length > 1 ? {
+      "@type": "Taxon",
+      name: classification[classification.length - 2]?.lbNom,
+      taxonRank: classification[classification.length - 2]?.rang ? formatRank(classification[classification.length - 2].rang!) : undefined,
+    } : undefined,
+    image: firstImage || undefined,
+    url: canonicalUrl,
+    identifier: {
+      "@type": "PropertyValue",
+      name: "CD_NOM",
+      value: taxon.cdNom,
+    },
+    isPartOf: {
+      "@type": "Dataset",
+      name: "TAXREF v18",
+      creator: { "@type": "Organization", name: "PatriNat (OFB - MNHN - CNRS - IRD)" },
+    },
+  };
+
   return (
     <Layout>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalUrl} />
+        {firstImage && <meta property="og:image" content={firstImage} />}
+        <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        {firstImage && <meta name="twitter:image" content={firstImage} />}
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
       <div className="bg-muted/30 border-b border-border">
         <div className="container mx-auto px-4 py-2 max-w-6xl overflow-x-auto scrollbar-hide">
           <div className="flex items-center text-xs flex-wrap gap-y-1">
@@ -147,7 +194,7 @@ export default function TaxonDetail() {
                 )}
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-2 italic" data-testid="text-taxon-name">
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-2 italic" data-testid="text-taxon-name" lang="la">
                 {taxon.lbNom}
               </h1>
               

@@ -4,6 +4,7 @@ import { useGetTaxonStats } from "@workspace/api-client-react";
 import { Leaf, Trees, Microscope, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
@@ -14,6 +15,13 @@ export default function Home() {
 
   return (
     <Layout>
+      <Helmet>
+        <title>ALi species — Explorez le monde vivant de la France</title>
+        <meta name="description" content="Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire : classification, statuts de conservation, images et donnees GBIF." />
+        <meta property="og:title" content="ALi species — Explorez le monde vivant de la France" />
+        <meta property="og:description" content="Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire." />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <section className="relative pt-24 pb-32 px-4 overflow-visible">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         
