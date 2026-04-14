@@ -13,9 +13,9 @@ export default function About() {
 
         <div className="space-y-10">
           <section className="space-y-4">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">TAXREF Explorer</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">ALi species</h2>
             <p className="text-muted-foreground leading-relaxed">
-              TAXREF Explorer est une application web permettant d'explorer le referentiel taxonomique national francais (TAXREF). Elle offre une interface intuitive pour rechercher, consulter et naviguer parmi les 708 685 taxons recenses en France.
+              ALi species est une application web permettant d'explorer le referentiel taxonomique national francais (TAXREF). Elle offre une interface intuitive pour rechercher, consulter et naviguer parmi les taxons recenses en France.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               L'application permet de rechercher des taxons par nom scientifique ou nom vernaculaire, de visualiser la classification hierarchique complete, et de consulter les images associees depuis Wikipedia et Wikimedia Commons.

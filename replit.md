@@ -2,7 +2,7 @@
 
 ## Overview
 
-TAXREF Explorer - A web application for browsing the French national taxonomic reference (TAXREF v18) with autocomplete search and taxon images from Wikipedia.
+ALi species - A web application for browsing the French national taxonomic reference (TAXREF v18) with autocomplete search and taxon images from Wikipedia.
 
 ## Stack
 

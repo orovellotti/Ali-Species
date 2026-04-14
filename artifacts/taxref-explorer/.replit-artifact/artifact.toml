@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "TAXREF Explorer"
+title = "ALi species"
 version = "1.0.0"
 id = "artifacts/taxref-explorer"
 router = "path"

@@ -16,7 +16,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="bg-primary/10 p-1.5 rounded-md text-primary">
               <Leaf className="w-5 h-5" />
             </div>
-            <span className="font-serif font-semibold text-lg tracking-tight">TAXREF Explorer</span>
+            <span className="font-serif font-semibold text-lg tracking-tight">ALi species</span>
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
