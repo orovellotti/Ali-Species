@@ -40,8 +40,16 @@ ALi species - A web application for browsing the French national taxonomic refer
 
 ### Frontend Pages
 - `/` — Home page with search bar, statistics, and featured kingdoms (Animalia/183716, Plantae/187079, Fungi/187496)
-- `/taxon/:cdNom` — Taxon detail page with classification, images, vernacular names, Wikipedia description, GBIF data, children
+- `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 - `/a-propos` — About page with PatriNat and Natural Solutions credits
+
+### UX Features (Taxon Page)
+- **Species dashboard**: Sensitivity score + driver badges displayed prominently near title
+- **Image lightbox**: Click-to-zoom with fullscreen overlay (X to close)
+- **Sticky image column**: Right sidebar stays visible while scrolling
+- **SEO**: react-helmet-async with title/meta/OG/Twitter/JSON-LD structured data
+- **Visual hierarchy**: UICN badge color-coded, tags with borders and icons, Wikipedia inline, taxonomy collapsed by default
+- **External links**: INPN + GBIF side by side below image
 
 ### External APIs
 - **Wikipedia REST API** — FR/EN page summaries for taxon descriptions (`/api/rest_v1/page/summary/`)

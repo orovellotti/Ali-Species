@@ -19,8 +19,8 @@ import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users } from "lucide-react";
-import { useState, useMemo, type ReactNode } from "react";
+import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users, X, ZoomIn } from "lucide-react";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
 import { Badge } from "@/components/ui/badge";
 
@@ -62,6 +62,13 @@ export default function TaxonDetail() {
   const { data: wikipedia, isLoading: wikiLoading } = useGetTaxonWikipedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonWikipediaQueryKey(cdNom) } });
   const { data: gbif, isLoading: gbifLoading } = useGetTaxonGbif(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonGbifQueryKey(cdNom) } });
   const { data: statuts, isLoading: statutsLoading } = useGetTaxonStatuts(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonStatutsQueryKey(cdNom) } });
+
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+
+  const sensitivity = useMemo(() => {
+    if (!statuts || statuts.length === 0) return null;
+    return computeSensitivity(statuts);
+  }, [statuts]);
 
   if (taxonLoading) {
     return (
@@ -130,6 +137,15 @@ export default function TaxonDetail() {
     },
   };
 
+  const iucnClass = (cat?: string | null) => {
+    if (!cat) return "bg-green-100 text-green-800 border-green-200";
+    if (cat === "CR" || cat === "CRITICALLY_ENDANGERED") return "bg-red-100 text-red-800 border-red-200";
+    if (cat === "EN" || cat === "ENDANGERED") return "bg-orange-100 text-orange-800 border-orange-200";
+    if (cat === "VU" || cat === "VULNERABLE") return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (cat === "NT" || cat === "NEAR_THREATENED") return "bg-amber-100 text-amber-800 border-amber-200";
+    return "bg-green-100 text-green-800 border-green-200";
+  };
+
   return (
     <Layout>
       <Helmet>
@@ -147,6 +163,26 @@ export default function TaxonDetail() {
         {firstImage && <meta name="twitter:image" content={firstImage} />}
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
+
+      {lightboxImg && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightboxImg(null)}
+        >
+          <button
+            onClick={() => setLightboxImg(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={lightboxImg}
+            alt={taxon.lbNom}
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+          />
+        </div>
+      )}
+
       <div className="bg-muted/30 border-b border-border">
         <div className="container mx-auto px-4 py-2 max-w-6xl overflow-x-auto scrollbar-hide">
           <div className="flex items-center text-xs flex-wrap gap-y-1">
@@ -179,113 +215,121 @@ export default function TaxonDetail() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
-        <div className="grid lg:grid-cols-[1fr_400px] gap-12 items-start">
+      <div className="container mx-auto px-4 py-10 max-w-6xl">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-10 items-start">
           
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 mb-3">
                 <Badge variant="secondary" className="font-mono text-xs tracking-wider uppercase bg-primary/10 text-primary hover:bg-primary/20">
                   {formatRank(taxon.rang)}
                 </Badge>
-                <span className="text-sm font-mono text-muted-foreground">CD_NOM: {taxon.cdNom}</span>
-                {taxon.cdRef !== taxon.cdNom && (
-                  <span className="text-sm font-mono text-muted-foreground">CD_REF: {taxon.cdRef}</span>
-                )}
+                <span className="text-xs font-mono text-muted-foreground/60">CD_NOM {taxon.cdNom}</span>
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-2 italic" data-testid="text-taxon-name" lang="la">
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-1 italic" data-testid="text-taxon-name" lang="la">
                 {taxon.lbNom}
               </h1>
               
               {taxon.lbAuteur && (
-                <p className="text-lg text-muted-foreground font-serif">
+                <p className="text-base text-muted-foreground/70 font-serif mb-1">
                   {taxon.lbAuteur}
                 </p>
               )}
 
               {taxon.nomVern && (
-                <p className="text-base text-foreground/70 mt-1">{taxon.nomVern}</p>
-              )}
-
-              {taxon.nomValide && taxon.nomValide !== taxon.nomComplet && taxon.cdRef !== taxon.cdNom && (
-                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Link2 className="w-4 h-4 text-amber-600" />
-                    <span className="font-medium text-amber-800 dark:text-amber-400">Synonyme</span>
-                  </div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                    Nom valide de reference :{" "}
-                    <Link href={taxonUrl(taxon.cdRef, taxon.nomValide)} className="italic underline underline-offset-4 hover:text-amber-900">
-                      {taxon.nomValide}
-                    </Link>
-                  </p>
-                </div>
+                <p className="text-lg text-foreground/80 font-medium">{taxon.nomVern.split(",")[0].trim()}</p>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm">
-              {taxon.group1Inpn && (
-                <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium">{taxon.group1Inpn}</span>
-              )}
-              {taxon.group2Inpn && (
-                <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium">{taxon.group2Inpn}</span>
+            {sensitivity && sensitivity.score > 0 && (
+              <div className={`flex items-center gap-4 p-4 rounded-xl border ${sensitivity.bgColor} ${sensitivity.borderColor}`}>
+                <div className="relative shrink-0 w-14 h-14">
+                  <ScoreRing score={sensitivity.score} ringColor={sensitivity.ringColor} size={56} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-lg font-bold ${sensitivity.color}`}>{sensitivity.score}</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-semibold ${sensitivity.color}`}>{sensitivity.label}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {sensitivity.drivers.slice(0, 4).map((d, i) => (
+                      <span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${d.badgeClass}`}>
+                        {d.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {gbif?.iucnCategoryLabel && (
+                <span className={`px-3 py-1.5 rounded-lg font-semibold text-sm flex items-center gap-1.5 border ${iucnClass(gbif.iucnCategory)}`}>
+                  <Shield className="w-3.5 h-3.5" />UICN : {gbif.iucnCategory}
+                </span>
               )}
               {taxon.habitat && (
-                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
-                  <MapPin className="w-3 h-3" />{formatHabitat(taxon.habitat)}
+                <span className="px-3 py-1.5 bg-muted/80 text-foreground/70 rounded-lg text-sm font-medium flex items-center gap-1.5 border border-border">
+                  <MapPin className="w-3.5 h-3.5 text-primary" />{formatHabitat(taxon.habitat)}
                 </span>
               )}
               {taxon.fr && (
-                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
-                  <Globe className="w-3 h-3" />{formatStatus(taxon.fr)}
-                </span>
-              )}
-              {gbif?.iucnCategoryLabel && (
-                <span className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 ${
-                  gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "bg-red-100 text-red-800" :
-                  gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "bg-orange-100 text-orange-800" :
-                  gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "bg-yellow-100 text-yellow-800" :
-                  gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "bg-amber-100 text-amber-800" :
-                  "bg-green-100 text-green-800"
-                }`}>
-                  <Shield className="w-3 h-3" />UICN: {gbif.iucnCategory}
+                <span className="px-3 py-1.5 bg-muted/80 text-foreground/70 rounded-lg text-sm font-medium flex items-center gap-1.5 border border-border">
+                  <Globe className="w-3.5 h-3.5 text-primary" />{formatStatus(taxon.fr)}
                 </span>
               )}
               {gbif?.occurrenceCount != null && (
-                <span className="px-3 py-1.5 bg-muted text-muted-foreground rounded-full font-medium flex items-center gap-1.5">
-                  <BarChart3 className="w-3 h-3" />{gbif.occurrenceCount.toLocaleString("fr-FR")} obs. GBIF
+                <span className="px-3 py-1.5 bg-muted/80 text-foreground/70 rounded-lg text-sm font-medium flex items-center gap-1.5 border border-border">
+                  <BarChart3 className="w-3.5 h-3.5 text-primary" />{gbif.occurrenceCount.toLocaleString("fr-FR")} observations
                 </span>
               )}
+              {taxon.group1Inpn && (
+                <span className="px-3 py-1.5 bg-primary/8 text-primary rounded-lg text-sm font-medium border border-primary/15">{taxon.group1Inpn}</span>
+              )}
+              {taxon.group2Inpn && taxon.group2Inpn !== taxon.group1Inpn && (
+                <span className="px-3 py-1.5 bg-primary/8 text-primary rounded-lg text-sm font-medium border border-primary/15">{taxon.group2Inpn}</span>
+              )}
             </div>
+
+            {taxon.nomValide && taxon.nomValide !== taxon.nomComplet && taxon.cdRef !== taxon.cdNom && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Link2 className="w-4 h-4 text-amber-600" />
+                  <span className="font-medium text-amber-800 dark:text-amber-400">Synonyme</span>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  Nom valide de reference :{" "}
+                  <Link href={taxonUrl(taxon.cdRef, taxon.nomValide)} className="italic underline underline-offset-4 hover:text-amber-900">
+                    {taxon.nomValide}
+                  </Link>
+                </p>
+              </div>
+            )}
 
             {wikiLoading ? (
               <Skeleton className="h-20 w-full rounded-2xl" />
             ) : wikipedia?.extract ? (
-              <CollapsibleSection
-                icon={<BookOpen className="w-4 h-4 text-primary" />}
-                title="Description"
-                defaultOpen={true}
-              >
-                <p className="text-muted-foreground leading-relaxed">{wikipedia.extract}</p>
+              <div>
+                <p className="text-muted-foreground leading-relaxed text-[15px]">{wikipedia.extract}</p>
                 {wikipedia.url && (
                   <a
                     href={wikipedia.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline underline-offset-4"
+                    className="inline-flex items-center gap-1.5 mt-3 text-sm text-primary hover:underline underline-offset-4"
                   >
                     Lire sur Wikipedia
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
-              </CollapsibleSection>
+              </div>
             ) : null}
 
             <CollapsibleSection
               icon={<FileText className="w-4 h-4 text-primary" />}
               title="Informations taxonomiques"
-              defaultOpen={true}
+              defaultOpen={false}
             >
               <div className="grid sm:grid-cols-2 gap-6">
                 {(taxon.nomVern || taxon.nomVernEng) && (
@@ -378,11 +422,11 @@ export default function TaxonDetail() {
                   {gbif.iucnCategoryLabel && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                        gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "bg-red-100 dark:bg-red-950" :
-                        gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "bg-orange-100 dark:bg-orange-950" :
-                        gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "bg-yellow-100 dark:bg-yellow-950" :
-                        gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "bg-amber-100 dark:bg-amber-950" :
-                        "bg-green-100 dark:bg-green-950"
+                        gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "bg-red-100" :
+                        gbif.iucnCategory === "EN" || gbif.iucnCategory === "ENDANGERED" ? "bg-orange-100" :
+                        gbif.iucnCategory === "VU" || gbif.iucnCategory === "VULNERABLE" ? "bg-yellow-100" :
+                        gbif.iucnCategory === "NT" || gbif.iucnCategory === "NEAR_THREATENED" ? "bg-amber-100" :
+                        "bg-green-100"
                       }`}>
                         <Shield className={`w-5 h-5 ${
                           gbif.iucnCategory === "CR" || gbif.iucnCategory === "CRITICALLY_ENDANGERED" ? "text-red-600" :
@@ -448,20 +492,20 @@ export default function TaxonDetail() {
                   ))}
                 </div>
               </CollapsibleSection>
-            ) : (
-              <div className="text-center py-6 bg-muted/30 rounded-2xl border border-dashed border-border text-muted-foreground text-sm">
-                Aucun taxon subordonne.
-              </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 lg:sticky lg:top-20">
             {mediaLoading ? (
               <Skeleton className="w-full aspect-[4/3] rounded-2xl" />
             ) : hasImages ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {media.images.map((img, i) => (
-                  <div key={i} className="group relative rounded-2xl overflow-hidden bg-muted border border-border shadow-sm">
+                  <div
+                    key={i}
+                    className="group relative rounded-2xl overflow-hidden bg-muted border border-border shadow-sm cursor-zoom-in"
+                    onClick={() => setLightboxImg(img.url)}
+                  >
                     <img 
                       src={img.url} 
                       alt={img.title || taxon.lbNom} 
@@ -469,10 +513,13 @@ export default function TaxonDetail() {
                       loading={i === 0 ? "eager" : "lazy"}
                       data-testid={`img-taxon-${i}`}
                     />
+                    <div className="absolute top-3 right-3 p-1.5 rounded-full bg-black/30 text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ZoomIn className="w-4 h-4" />
+                    </div>
                     {(img.title || img.author) && (
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                        {img.title && <p className="text-white text-sm font-medium line-clamp-1">{img.title}</p>}
-                        {img.author && <p className="text-white/80 text-xs mt-1">{img.author}</p>}
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-10">
+                        {img.title && <p className="text-white text-xs font-medium line-clamp-1">{img.title}</p>}
+                        {img.author && <p className="text-white/70 text-[10px] mt-0.5">{img.author}</p>}
                       </div>
                     )}
                   </div>
@@ -480,23 +527,36 @@ export default function TaxonDetail() {
               </div>
             ) : (
               <div className="aspect-[4/3] rounded-2xl bg-muted border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
-                <ImageIcon className="w-12 h-12 mb-4 opacity-20" />
-                <p>Aucune image disponible pour ce taxon.</p>
+                <ImageIcon className="w-10 h-10 mb-3 opacity-20" />
+                <p className="text-sm">Aucune image disponible</p>
               </div>
             )}
 
-            {taxon.url && (
-              <a 
-                href={taxon.url} 
-                target="_blank" 
-                rel="noreferrer"
-                className="block w-full py-4 px-6 bg-card hover:bg-muted text-center border border-border rounded-xl font-medium transition-colors"
-                data-testid="link-inpn"
-              >
-                Voir sur le site INPN
-              </a>
-            )}
-
+            <div className="flex gap-2">
+              {taxon.url && (
+                <a 
+                  href={taxon.url} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="flex-1 py-3 px-4 bg-card hover:bg-muted text-center border border-border rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                  data-testid="link-inpn"
+                >
+                  INPN
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {gbif?.gbifUrl && (
+                <a 
+                  href={gbif.gbifUrl} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="flex-1 py-3 px-4 bg-card hover:bg-muted text-center border border-border rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                  GBIF
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
           </div>
 
         </div>

@@ -1,0 +1,257 @@
+Here’s a structured UX review of your page, focusing on clarity, hierarchy, and usability.
+
+---
+
+# 1. First impression & hierarchy
+
+### 👍 What works
+
+* Clean, calm visual style aligned with biodiversity theme
+* Good use of cards → content is modular and scannable
+* Status block (Sensitive élevée) stands out well
+
+### ⚠️ Issues
+
+* The **visual hierarchy is a bit flat**
+* The **most important info (status, rarity, conservation)** is buried mid-page
+* The **image (top right)** is visually strong but not functionally integrated
+
+### Recommendations
+
+* Create a **clear top summary zone (“species header”)**:
+
+  * Name
+  * Status (badge)
+  * Key metrics (rarity, protection, distribution)
+* Move **“Sensibilité élevée”** much higher (near the title)
+
+---
+
+# 2. Header section (species identity)
+
+### Issues
+
+* Title is good but lacks supporting structure
+* Latin + French naming could be better differentiated
+* Tags (e.g. LC, habitats) are visually weak
+
+### Recommendations
+
+* Use a **2-level typographic hierarchy**:
+
+  * *Astragalus tragacantha* (large, italic)
+  * Common name below (smaller, muted)
+* Turn tags into **stronger visual chips**:
+
+  * Color-coded by type (habitat, protection, etc.)
+* Add quick facts inline:
+
+  * “Endemic / Rare / Mediterranean / Coastal”
+
+---
+
+# 3. Image block
+
+### Issues
+
+* Feels disconnected from content
+* CTA “Voir sur le site INPN” is isolated
+* No zoom / gallery interaction
+
+### Recommendations
+
+* Make image **interactive**:
+
+  * Zoom on click
+  * Possibly multiple images (carousel)
+* Integrate CTA better:
+
+  * Place **below description or header**, not isolated
+* Add caption:
+
+  * Habitat / location / credit
+
+---
+
+# 4. Description & taxonomy cards
+
+### 👍
+
+* Clear separation into sections
+* Good use of icons
+
+### ⚠️
+
+* Too dense, low visual rhythm
+* Icons don’t add much meaning
+* Taxonomy is not a primary user need
+
+### Recommendations
+
+* Reduce visual weight of taxonomy:
+
+  * Collapse by default or move lower
+* Improve readability:
+
+  * Increase line spacing
+  * Highlight key words (family, habitat, etc.)
+* Consider **“progressive disclosure”**:
+
+  * Show summary → expand for details
+
+---
+
+# 5. Status & conservation block (core issue)
+
+This is the **most important section**, but:
+
+### Issues
+
+* Appears too low
+* Overloaded with colored boxes
+* Hard to scan quickly
+* Mixed semantics (threats, protection, regulation)
+
+### Recommendations
+
+### A. Reorganize into 3 clear sections:
+
+1. **Risk level (primary)**
+
+   * Big badge + score (74)
+2. **Threats**
+
+   * Bullet list with icons
+3. **Protection status**
+
+   * Legal + conservation measures
+
+---
+
+### B. Simplify colors
+
+Currently:
+
+* Orange, red, blue, green → too many signals
+
+👉 Use:
+
+* **Red / orange** → risk & threats
+* **Green** → protection
+* Neutral for everything else
+
+---
+
+### C. Improve scanability
+
+* Replace paragraphs with:
+
+  * Bullet points
+  * Icons (fire, urbanization, grazing, etc.)
+* Add **confidence indicators** if data-driven
+
+---
+
+# 6. Data cards (203, N/A etc.)
+
+### Issues
+
+* Meaning unclear
+* “203” is not self-explanatory
+* “Non évalué (NE)” needs context
+
+### Recommendations
+
+* Add **labels + microcopy**:
+
+  * “203 observations”
+  * “IUCN status: Not evaluated”
+* Add tooltips or info icons
+* Consider small charts (timeline, distribution)
+
+---
+
+# 7. Interaction & navigation
+
+### Missing elements
+
+* No clear navigation between species
+* No related content
+* No exploration flow
+
+### Recommendations
+
+* Add:
+
+  * “Similar species”
+  * “Same habitat”
+  * “Nearby observations”
+* Add breadcrumb (taxonomy or geography)
+
+---
+
+# 8. Cognitive load
+
+### Issues
+
+* Too many boxed sections
+* Everything has equal visual weight
+* Hard to know where to look first
+
+### Recommendations
+
+* Apply **visual hierarchy rules**:
+
+  * 1 primary section
+  * 2–3 secondary
+  * rest collapsible
+* Increase spacing between major sections
+
+---
+
+# 9. Accessibility
+
+### Points to improve
+
+* Color reliance (status colors)
+* Contrast in tags and light text
+* Small text in cards
+
+### Recommendations
+
+* Ensure **WCAG contrast compliance**
+* Add icons + labels (not just colors)
+* Increase font size for key info
+
+---
+
+# 10. Strategic UX improvement (high impact)
+
+If you want to level this up significantly:
+
+### Add a “Species dashboard” concept
+
+At the top:
+
+* Status: 🔴 Sensitive élevée
+* Score: 74 / 100
+* Trend: ↘ declining (if available)
+* Distribution: small map preview
+* Key threats: 2–3 tags
+
+👉 This turns the page from **informational → decision-support**
+
+---
+
+# Summary of key fixes (priority)
+
+1. Move **status & sensitivity to top**
+2. Simplify and restructure **status section**
+3. Improve **hierarchy (less flat, more guided reading)**
+4. Clarify **data meaning (203, NE, etc.)**
+5. Make image **interactive and contextual**
+6. Reduce **visual noise (too many colors/boxes)**
+
+---
+
+If you want, I can redesign this as a wireframe or propose a Figma-style layout aligned with ecoTeka / Natural Solutions positioning.
