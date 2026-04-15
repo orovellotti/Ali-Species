@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
-import { TaxonomySunburst } from "@/components/TaxonomySunburst";
+import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
 
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
@@ -121,7 +121,7 @@ export default function Home() {
               Explorez la hierarchie taxonomique par regne, embranchement et classe
             </p>
           </div>
-          <TaxonomySunburst data={treeData} />
+          <TaxonomyTreemap data={treeData} />
         </section>
       )}
 
