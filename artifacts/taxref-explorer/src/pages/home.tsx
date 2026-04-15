@@ -1,9 +1,10 @@
+import { useState, useCallback } from "react";
 import { Layout } from "@/components/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
-import { useGetTaxonStats } from "@workspace/api-client-react";
-import { Leaf, Trees, Microscope, BookOpen, ScrollText } from "lucide-react";
+import { useGetTaxonStats, getRandomTaxon } from "@workspace/api-client-react";
+import { Leaf, Trees, Microscope, BookOpen, ScrollText, Shuffle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
 
@@ -13,6 +14,20 @@ import fungiImg from "@/assets/images/fungi.png";
 
 export default function Home() {
   const { data: stats, isLoading: statsLoading } = useGetTaxonStats();
+  const [, navigate] = useLocation();
+  const [randomLoading, setRandomLoading] = useState(false);
+
+  const handleRandom = useCallback(async () => {
+    setRandomLoading(true);
+    try {
+      const taxon = await getRandomTaxon();
+      if (taxon?.cdNom && taxon?.lbNom) {
+        navigate(taxonUrl(taxon.cdNom, taxon.lbNom));
+      }
+    } finally {
+      setRandomLoading(false);
+    }
+  }, [navigate]);
 
   return (
     <Layout>
@@ -38,6 +53,15 @@ export default function Home() {
           </p>
 
           <SearchAutocomplete />
+
+          <button
+            onClick={handleRandom}
+            disabled={randomLoading}
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground bg-background/80 hover:bg-background border border-border rounded-full transition-all hover:shadow-sm disabled:opacity-50"
+          >
+            <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
+            {randomLoading ? "Chargement..." : "Espece au hasard"}
+          </button>
         </div>
       </section>
 

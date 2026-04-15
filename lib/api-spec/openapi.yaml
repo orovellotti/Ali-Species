@@ -60,6 +60,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TaxonSummary"
+  /taxons/random:
+    get:
+      operationId: getRandomTaxon
+      tags: [taxons]
+      summary: Get a random species
+      responses:
+        "200":
+          description: A random species with vernacular name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonSummary"
   /taxons/{cdNom}:
     get:
       operationId: getTaxon

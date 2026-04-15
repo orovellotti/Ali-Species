@@ -206,6 +206,81 @@ export function useSearchTaxons<
 }
 
 /**
+ * @summary Get a random species
+ */
+export const getGetRandomTaxonUrl = () => {
+  return `/api/taxons/random`;
+};
+
+export const getRandomTaxon = async (
+  options?: RequestInit,
+): Promise<TaxonSummary> => {
+  return customFetch<TaxonSummary>(getGetRandomTaxonUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRandomTaxonQueryKey = () => {
+  return [`/api/taxons/random`] as const;
+};
+
+export const getGetRandomTaxonQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRandomTaxon>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRandomTaxon>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRandomTaxonQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRandomTaxon>>> = ({
+    signal,
+  }) => getRandomTaxon({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRandomTaxon>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRandomTaxonQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRandomTaxon>>
+>;
+export type GetRandomTaxonQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a random species
+ */
+
+export function useGetRandomTaxon<
+  TData = Awaited<ReturnType<typeof getRandomTaxon>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRandomTaxon>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRandomTaxonQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get taxon details
  */
 export const getGetTaxonUrl = (cdNom: number) => {

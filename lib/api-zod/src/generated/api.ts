@@ -41,6 +41,19 @@ export const SearchTaxonsResponseItem = zod.object({
 export const SearchTaxonsResponse = zod.array(SearchTaxonsResponseItem);
 
 /**
+ * @summary Get a random species
+ */
+export const GetRandomTaxonResponse = zod.object({
+  cdNom: zod.number(),
+  cdRef: zod.number(),
+  lbNom: zod.string(),
+  nomVern: zod.string().nullish(),
+  rang: zod.string().nullish(),
+  famille: zod.string().nullish(),
+  regne: zod.string().nullish(),
+});
+
+/**
  * @summary Get taxon details
  */
 export const GetTaxonParams = zod.object({

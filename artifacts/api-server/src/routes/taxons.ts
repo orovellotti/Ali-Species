@@ -47,6 +47,31 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
   res.json(results);
 });
 
+router.get("/taxons/random", async (_req, res): Promise<void> => {
+  const [taxon] = await db
+    .select({
+      cdNom: taxonsTable.cdNom,
+      lbNom: taxonsTable.lbNom,
+      nomVern: taxonsTable.nomVern,
+      rang: taxonsTable.rang,
+    })
+    .from(taxonsTable)
+    .where(and(
+      eq(taxonsTable.cdNom, taxonsTable.cdRef),
+      eq(taxonsTable.rang, "ES"),
+      sql`${taxonsTable.nomVern} IS NOT NULL AND ${taxonsTable.nomVern} != ''`
+    ))
+    .orderBy(sql`RANDOM()`)
+    .limit(1);
+
+  if (!taxon) {
+    res.status(404).json({ error: "No species found" });
+    return;
+  }
+
+  res.json(taxon);
+});
+
 router.get("/taxons/stats", async (_req, res): Promise<void> => {
   const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
 
