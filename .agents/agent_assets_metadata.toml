@@ -18,3 +18,21 @@ id = "kfrF64R4d6c_39D-jZex-"
 uri = "file://artifacts/taxref-explorer/src/assets/images/fungi.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "CRW5TYnNxN5-SwpSBB9Zq"
+uri = "file://artifacts/taxref-explorer/src/assets/images/ali-logo-leaf.png"
+type = "image"
+title = "ALI Species leaf DNA logo"
+
+[[generated]]
+id = "lEpkx9sKtPFb7U2MNipO4"
+uri = "file://artifacts/taxref-explorer/src/assets/images/ali-logo-tree.png"
+type = "image"
+title = "ALI Species tree of life logo"
+
+[[generated]]
+id = "RbjCQyxNlF6X9rOp9_1j4"
+uri = "file://artifacts/taxref-explorer/src/assets/images/ali-logo-fingerprint.png"
+type = "image"
+title = "ALI Species fingerprint leaf logo"
