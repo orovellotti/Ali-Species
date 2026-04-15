@@ -11,23 +11,23 @@ interface TreeNode {
 }
 
 const KINGDOM_COLORS: Record<string, string> = {
-  Animalia: "#2d6a4f",
-  Plantae: "#588157",
-  Fungi: "#a68a64",
-  Chromista: "#457b9d",
-  Bacteria: "#e76f51",
-  Protozoa: "#8338ec",
-  Archaea: "#f77f00",
-  Orthornavirae: "#d62828",
+  Animalia: "#2a5a3a",
+  Plantae: "#3d6b3d",
+  Fungi: "#8b6b3e",
+  Chromista: "#2e5a5a",
+  Bacteria: "#9b4a2a",
+  Protozoa: "#5a3a6a",
+  Archaea: "#b07a28",
+  Orthornavirae: "#7a2e2e",
 };
 
-function lighten(hex: string, amount: number): string {
+function adjustColor(hex: string, lightenAmount: number, saturationShift: number = 0): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  const nr = Math.round(r + (255 - r) * amount);
-  const ng = Math.round(g + (255 - g) * amount);
-  const nb = Math.round(b + (255 - b) * amount);
+  const nr = Math.min(255, Math.round(r + (255 - r) * lightenAmount));
+  const ng = Math.min(255, Math.round(g + (255 - g) * lightenAmount));
+  const nb = Math.min(255, Math.round(b + (255 - b) * lightenAmount));
   return `rgb(${nr},${ng},${nb})`;
 }
 
@@ -41,10 +41,10 @@ function getColorForItem(name: string, parentName?: string): string {
   if (parentName && KINGDOM_COLORS[parentName]) {
     const base = KINGDOM_COLORS[parentName];
     const hash = name.split("").reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
-    const variation = (Math.abs(hash) % 30) / 100;
-    return lighten(base, 0.15 + variation);
+    const variation = (Math.abs(hash) % 25) / 100;
+    return adjustColor(base, 0.08 + variation);
   }
-  return "#64748b";
+  return "#3a3a2e";
 }
 
 interface Rect {
@@ -287,7 +287,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
         </div>
       </div>
 
-      <div ref={containerRef} className="relative rounded-xl overflow-hidden border border-border bg-card">
+      <div ref={containerRef} className="relative rounded-xl overflow-hidden border border-border" style={{ backgroundColor: "#0d0f0a" }}>
         <svg
           viewBox="0 0 960 420"
           className="w-full"
@@ -346,33 +346,33 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
                 {hasImage ? (
                   <>
                     <rect
-                      x={rect.x + 1}
-                      y={rect.y + 1}
-                      width={Math.max(0, rect.w - 2)}
-                      height={Math.max(0, rect.h - 2)}
+                      x={rect.x + 1.5}
+                      y={rect.y + 1.5}
+                      width={Math.max(0, rect.w - 3)}
+                      height={Math.max(0, rect.h - 3)}
                       fill={`url(#img-${item.name})`}
-                      rx={4}
+                      rx={3}
                     />
                     <rect
-                      x={rect.x + 1}
-                      y={rect.y + 1}
-                      width={Math.max(0, rect.w - 2)}
-                      height={Math.max(0, rect.h - 2)}
+                      x={rect.x + 1.5}
+                      y={rect.y + 1.5}
+                      width={Math.max(0, rect.w - 3)}
+                      height={Math.max(0, rect.h - 3)}
                       fill={color}
-                      opacity={0.6}
-                      rx={4}
-                      className="transition-opacity hover:opacity-50"
+                      opacity={0.55}
+                      rx={3}
+                      className="transition-opacity hover:opacity-40"
                     />
                   </>
                 ) : (
                   <rect
-                    x={rect.x + 1}
-                    y={rect.y + 1}
-                    width={Math.max(0, rect.w - 2)}
-                    height={Math.max(0, rect.h - 2)}
+                    x={rect.x + 1.5}
+                    y={rect.y + 1.5}
+                    width={Math.max(0, rect.w - 3)}
+                    height={Math.max(0, rect.h - 3)}
                     fill={color}
-                    rx={4}
-                    className="transition-opacity hover:opacity-90"
+                    rx={3}
+                    className="transition-opacity hover:opacity-80"
                   />
                 )}
                 {showLabel && (
@@ -381,11 +381,11 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
                     y={rect.y + rect.h / 2 - (showValue ? gap / 2 : 0)}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="white"
+                    fill="#f0e8d0"
                     fontWeight="400"
                     fontSize={fontSize}
                     fontFamily={FONT_STACK}
-                    letterSpacing="0.02em"
+                    letterSpacing="0.03em"
                     className="pointer-events-none select-none"
                   >
                     {item.name.length > Math.floor(rect.w / (fontSize * 0.55))
@@ -399,7 +399,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
                     y={rect.y + rect.h / 2 + gap / 2 + 2}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="rgba(255,255,255,0.75)"
+                    fill="rgba(240,232,208,0.65)"
                     fontSize={valueFontSize}
                     fontFamily={FONT_STACK}
                     fontWeight="400"
@@ -415,11 +415,11 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
 
         {tooltip && (
           <div
-            className="absolute bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none z-10"
-            style={{ left: tooltip.x, top: tooltip.y }}
+            className="absolute rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none z-10"
+            style={{ left: tooltip.x, top: tooltip.y, backgroundColor: "rgba(13,15,10,0.92)", border: "1px solid rgba(240,232,208,0.2)" }}
           >
-            <div className="font-semibold text-foreground">{tooltip.name}</div>
-            <div className="text-muted-foreground text-xs">
+            <div className="font-semibold" style={{ color: "#f0e8d0" }}>{tooltip.name}</div>
+            <div className="text-xs" style={{ color: "rgba(240,232,208,0.6)" }}>
               {tooltip.value.toLocaleString("fr-FR")} especes
             </div>
           </div>
