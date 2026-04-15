@@ -52,6 +52,7 @@ interface CustomContentProps {
   height?: number;
   name?: string;
   value?: number;
+  realValue?: number;
   depth?: number;
   root?: any;
   parentName?: string;
@@ -59,7 +60,8 @@ interface CustomContentProps {
 }
 
 function CustomContent(props: CustomContentProps) {
-  const { x = 0, y = 0, width = 0, height = 0, name = "", value = 0, depth, root, parentName, onDrillDown } = props;
+  const { x = 0, y = 0, width = 0, height = 0, name = "", value = 0, realValue, depth, root, parentName, onDrillDown } = props;
+  const displayValue = realValue ?? value;
 
   if (width < 4 || height < 4) return null;
 
@@ -115,7 +117,7 @@ function CustomContent(props: CustomContentProps) {
           fontWeight="400"
           className="pointer-events-none select-none"
         >
-          {value.toLocaleString("fr-FR")}
+          {displayValue.toLocaleString("fr-FR")}
         </text>
       )}
     </g>
@@ -129,7 +131,7 @@ function CustomTooltip({ active, payload }: any) {
     <div className="bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm">
       <div className="font-semibold text-foreground">{data.name}</div>
       <div className="text-muted-foreground text-xs">
-        {(data.value || 0).toLocaleString("fr-FR")} especes
+        {(data.realValue || data.value || 0).toLocaleString("fr-FR")} especes
       </div>
     </div>
   );
@@ -154,18 +156,24 @@ export function TaxonomyTreemap({ data }: Props) {
 
   const treemapData = useMemo(() => {
     if (!currentNode.children) return [];
-    return currentNode.children
+    const raw = currentNode.children
       .map((child) => ({
         name: child.name,
-        value: nodeValue(child),
+        realValue: nodeValue(child),
         parentName: path.length > 0 ? path[0] : child.name,
         hasChildren: !!child.children && child.children.length > 0,
       }))
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.realValue - a.realValue);
+    const maxVal = raw[0]?.realValue || 1;
+    const minDisplay = maxVal * 0.04;
+    return raw.map((item) => ({
+      ...item,
+      value: Math.max(item.realValue, minDisplay),
+    }));
   }, [currentNode, path]);
 
   const totalSpecies = useMemo(
-    () => treemapData.reduce((s, c) => s + c.value, 0),
+    () => treemapData.reduce((s, c) => s + (c.realValue ?? c.value), 0),
     [treemapData]
   );
 

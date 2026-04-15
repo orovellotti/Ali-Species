@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Leaf } from "lucide-react";
+import aliLogo from "@/assets/images/ali-logo.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 
@@ -12,10 +12,8 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-[100dvh] flex flex-col selection:bg-primary/20 selection:text-primary">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group transition-opacity hover:opacity-80">
-            <div className="bg-primary/10 p-1.5 rounded-md text-primary">
-              <Leaf className="w-5 h-5" />
-            </div>
+          <Link href="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-80">
+            <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
             <div className="flex flex-col leading-tight">
               <span className="font-serif font-semibold text-lg tracking-tight">ALI Species</span>
               <span className="text-[10px] text-muted-foreground tracking-widest uppercase">All Life Intelligence</span>

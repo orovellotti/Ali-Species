@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
 import { useGetTaxonStats, getRandomTaxon } from "@workspace/api-client-react";
-import { Leaf, Trees, Microscope, BookOpen, ScrollText, Shuffle } from "lucide-react";
+import { Trees, Microscope, BookOpen, ScrollText, Shuffle, Layers } from "lucide-react";
+import aliLogo from "@/assets/images/ali-logo.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
@@ -51,8 +52,8 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         
         <div className="container mx-auto max-w-4xl text-center relative z-10">
-          <div className="inline-flex items-center justify-center p-2 bg-primary/10 text-primary rounded-2xl mb-6 ring-1 ring-primary/20">
-            <Leaf className="w-6 h-6" />
+          <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-2xl mb-6 ring-1 ring-primary/20">
+            <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight">
             Explorez le monde vivant de la <span className="text-primary italic">France</span>.
@@ -93,7 +94,7 @@ export default function Home() {
               <>
                 <StatCard icon={<Microscope className="w-4 h-4" />} value={stats.totalTaxons.toLocaleString("fr-FR")} label="Taxons" />
                 <StatCard icon={<Trees className="w-4 h-4" />} value={stats.totalSpecies.toLocaleString("fr-FR")} label="Especes" />
-                <StatCard icon={<Leaf className="w-4 h-4" />} value={stats.totalGenera.toLocaleString("fr-FR")} label="Genres" />
+                <StatCard icon={<Layers className="w-4 h-4" />} value={stats.totalGenera.toLocaleString("fr-FR")} label="Genres" />
                 <StatCard icon={<BookOpen className="w-4 h-4" />} value={stats.totalFamilies.toLocaleString("fr-FR")} label="Familles" />
                 <StatCard icon={<ScrollText className="w-4 h-4" />} value={stats.totalStatuts.toLocaleString("fr-FR")} label="Statuts BDC" />
               </>
