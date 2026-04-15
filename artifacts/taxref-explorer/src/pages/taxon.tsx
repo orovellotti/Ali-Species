@@ -547,6 +547,61 @@ export default function TaxonDetail() {
               </div>
             )}
 
+            {gbif?.gbifKey && (
+              <div className="rounded-2xl overflow-hidden border border-border shadow-sm">
+                <a
+                  href={`https://www.gbif.org/occurrence/search?taxon_key=${gbif.gbifKey}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block relative group"
+                >
+                  <div className="relative w-full" style={{ aspectRatio: "2/1" }}>
+                    <img
+                      src="https://basemaps.cartocdn.com/light_nolabels/1/0/0.png"
+                      alt=""
+                      className="absolute top-0 left-0 w-1/2 h-1/2 object-cover"
+                    />
+                    <img
+                      src="https://basemaps.cartocdn.com/light_nolabels/1/1/0.png"
+                      alt=""
+                      className="absolute top-0 left-1/2 w-1/2 h-1/2 object-cover"
+                    />
+                    <img
+                      src="https://basemaps.cartocdn.com/light_nolabels/1/0/1.png"
+                      alt=""
+                      className="absolute top-1/2 left-0 w-1/2 h-1/2 object-cover"
+                    />
+                    <img
+                      src="https://basemaps.cartocdn.com/light_nolabels/1/1/1.png"
+                      alt=""
+                      className="absolute top-1/2 left-1/2 w-1/2 h-1/2 object-cover"
+                    />
+                    {[[0,0],[1,0],[0,1],[1,1]].map(([x,y]) => (
+                      <img
+                        key={`gbif-${x}-${y}`}
+                        src={`https://api.gbif.org/v2/map/occurrence/density/1/${x}/${y}@1x.png?taxonKey=${gbif.gbifKey}&bin=hex&hexPerTile=30&style=purpleYellow.point`}
+                        alt=""
+                        className={`absolute ${y === 0 ? "top-0" : "top-1/2"} ${x === 0 ? "left-0" : "left-1/2"} w-1/2 h-1/2 object-cover`}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ))}
+                  </div>
+                </a>
+                <div className="px-3 py-2 bg-card flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Occurrences GBIF</span>
+                  <a
+                    href={`https://www.gbif.org/occurrence/search?taxon_key=${gbif.gbifKey}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:underline underline-offset-2 flex items-center gap-1"
+                  >
+                    Explorer
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               {taxon.url && (
                 <a 
