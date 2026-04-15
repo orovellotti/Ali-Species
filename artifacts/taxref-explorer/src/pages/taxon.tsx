@@ -634,7 +634,7 @@ export default function TaxonDetail() {
               className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground text-center rounded-xl text-sm font-semibold transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
             >
               <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
-              {randomLoading ? "Chargement..." : "Decouvrir une espece"}
+              {randomLoading ? "Chargement..." : "Espece au hasard"}
             </button>
           </div>
 

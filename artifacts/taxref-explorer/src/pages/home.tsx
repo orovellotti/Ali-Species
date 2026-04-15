@@ -69,7 +69,7 @@ export default function Home() {
             className="mt-6 inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
-            {randomLoading ? "Chargement..." : "Decouvrir une espece"}
+            {randomLoading ? "Chargement..." : "Espece au hasard"}
           </button>
         </div>
       </section>
