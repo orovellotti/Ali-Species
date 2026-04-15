@@ -92,6 +92,7 @@ function CustomContent(props: CustomContentProps) {
           fill="white"
           fontWeight="600"
           fontSize={fontSize}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
           className="pointer-events-none select-none"
         >
           {name.length > Math.floor(width / (fontSize * 0.6))
@@ -107,6 +108,7 @@ function CustomContent(props: CustomContentProps) {
           dominantBaseline="central"
           fill="rgba(255,255,255,0.8)"
           fontSize={valueFontSize}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
           className="pointer-events-none select-none"
         >
           {value.toLocaleString("fr-FR")}
