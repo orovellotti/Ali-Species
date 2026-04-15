@@ -312,7 +312,7 @@ export function TaxonomyTreemap({ data }: Props) {
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="white"
-                    fontWeight="700"
+                    fontWeight="400"
                     fontSize={fontSize}
                     fontFamily={FONT_STACK}
                     letterSpacing="0.02em"
