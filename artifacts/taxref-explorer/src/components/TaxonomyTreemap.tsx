@@ -155,9 +155,10 @@ const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-se
 
 interface Props {
   data: TreeNode;
+  onNavigateToTaxon?: (name: string, rang: string) => void;
 }
 
-export function TaxonomyTreemap({ data }: Props) {
+export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
   const [path, setPath] = useState<string[]>([]);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; value: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -199,15 +200,20 @@ export function TaxonomyTreemap({ data }: Props) {
     return squarify(treemapItems, { x: 0, y: 0, w: 960, h: 420 });
   }, [treemapItems]);
 
-  const handleDrillDown = useCallback(
+  const depthToRang: Record<number, string> = { 0: "KD", 1: "PH", 2: "CL", 3: "OR", 4: "FM" };
+
+  const handleClick = useCallback(
     (name: string) => {
       const child = currentNode.children?.find((c) => c.name === name);
       if (child?.children && child.children.length > 0) {
         setPath((p) => [...p, name]);
         setTooltip(null);
+      } else {
+        const rang = depthToRang[path.length + 1] || depthToRang[path.length] || "FM";
+        onNavigateToTaxon?.(name, rang);
       }
     },
-    [currentNode]
+    [currentNode, path, onNavigateToTaxon]
   );
 
   const handleBack = useCallback(() => {
@@ -326,14 +332,14 @@ export function TaxonomyTreemap({ data }: Props) {
             const fontSize = Math.min(22, Math.max(10, Math.min(rect.w / 6, rect.h / 4)));
             const valueFontSize = Math.max(10, fontSize * 0.7);
             const gap = fontSize * 0.9;
-            const isClickable = item.hasChildren;
+            const isLeaf = !item.hasChildren;
             const hasImage = path.length === 0 && !!KINGDOM_IMAGES[item.name];
 
             return (
               <g
                 key={item.name}
-                className={isClickable ? "cursor-pointer" : "cursor-default"}
-                onClick={isClickable ? () => handleDrillDown(item.name) : undefined}
+                className="cursor-pointer"
+                onClick={() => handleClick(item.name)}
                 onMouseMove={(e) => handleMouseMove(e, item)}
                 onMouseLeave={handleMouseLeave}
               >
@@ -355,7 +361,7 @@ export function TaxonomyTreemap({ data }: Props) {
                       fill={color}
                       opacity={0.6}
                       rx={4}
-                      className={isClickable ? "transition-opacity hover:opacity-50" : ""}
+                      className="transition-opacity hover:opacity-50"
                     />
                   </>
                 ) : (
@@ -366,7 +372,7 @@ export function TaxonomyTreemap({ data }: Props) {
                     height={Math.max(0, rect.h - 2)}
                     fill={color}
                     rx={4}
-                    className={isClickable ? "transition-opacity hover:opacity-90" : ""}
+                    className="transition-opacity hover:opacity-90"
                   />
                 )}
                 {showLabel && (
