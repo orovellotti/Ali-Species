@@ -77,6 +77,23 @@ export default function Home() {
             {randomLoading ? "Chargement..." : "Espece au hasard"}
           </button>
         </div>
+
+        <div className="container mx-auto max-w-5xl mt-16 relative z-10">
+          {treeData ? <TaxonomyTreemap data={treeData} onNavigateToTaxon={async (name, rang) => {
+            try {
+              const res = await fetch(`/api/taxons/search?q=${encodeURIComponent(name)}&limit=10`);
+              const results = await res.json();
+              const match = results.find((t: any) => t.rang === rang && t.lbNom === name) || results[0];
+              if (match?.cdNom && match?.lbNom) {
+                navigate(taxonUrl(match.cdNom, match.lbNom));
+              }
+            } catch {}
+          }} /> : (
+            <div className="flex items-center justify-center h-[420px] border border-border rounded-xl bg-card">
+              <div className="animate-pulse text-muted-foreground">Chargement de la taxonomie...</div>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="py-16 bg-card border-y border-border">
@@ -116,29 +133,6 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
-
-      <section className="py-20 px-4 container mx-auto max-w-5xl">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-serif font-semibold">Arbre du vivant</h2>
-          <p className="text-muted-foreground mt-2">
-            Explorez la hierarchie taxonomique par regne, embranchement, classe, ordre et famille
-          </p>
-        </div>
-        {treeData ? <TaxonomyTreemap data={treeData} onNavigateToTaxon={async (name, rang) => {
-          try {
-            const res = await fetch(`/api/taxons/search?q=${encodeURIComponent(name)}&limit=10`);
-            const results = await res.json();
-            const match = results.find((t: any) => t.rang === rang && t.lbNom === name) || results[0];
-            if (match?.cdNom && match?.lbNom) {
-              navigate(taxonUrl(match.cdNom, match.lbNom));
-            }
-          } catch {}
-        }} /> : (
-          <div className="flex items-center justify-center h-[420px] border border-border rounded-xl bg-card">
-            <div className="animate-pulse text-muted-foreground">Chargement de la taxonomie...</div>
-          </div>
-        )}
       </section>
 
       <section className="py-24 px-4 container mx-auto max-w-5xl">
