@@ -72,6 +72,56 @@ router.get("/taxons/random", async (_req, res): Promise<void> => {
   res.json(taxon);
 });
 
+router.get("/taxons/taxonomy-tree", async (_req, res): Promise<void> => {
+  const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
+
+  const rows = await db
+    .select({
+      regne: taxonsTable.regne,
+      phylum: taxonsTable.phylum,
+      classe: taxonsTable.classe,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(taxonsTable)
+    .where(and(
+      refOnly,
+      eq(taxonsTable.rang, "ES"),
+      sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`
+    ))
+    .groupBy(taxonsTable.regne, taxonsTable.phylum, taxonsTable.classe)
+    .orderBy(desc(sql`count(*)`));
+
+  const tree: Record<string, Record<string, Record<string, number>>> = {};
+  for (const r of rows) {
+    const regno = r.regne || "Inconnu";
+    const phylum = r.phylum || "Autre";
+    const classe = r.classe || "Autre";
+    if (!tree[regno]) tree[regno] = {};
+    if (!tree[regno][phylum]) tree[regno][phylum] = {};
+    tree[regno][phylum][classe] = (tree[regno][phylum][classe] || 0) + r.count;
+  }
+
+  const children = Object.entries(tree).map(([regno, phyla]) => ({
+    name: regno,
+    children: Object.entries(phyla)
+      .map(([phylum, classes]) => ({
+        name: phylum,
+        children: Object.entries(classes)
+          .map(([classe, value]) => ({ name: classe, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 15),
+      }))
+      .sort((a, b) => {
+        const sumA = a.children.reduce((s, c) => s + c.value, 0);
+        const sumB = b.children.reduce((s, c) => s + c.value, 0);
+        return sumB - sumA;
+      })
+      .slice(0, 8),
+  }));
+
+  res.json({ name: "Vivant", children });
+});
+
 router.get("/taxons/stats", async (_req, res): Promise<void> => {
   const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
 

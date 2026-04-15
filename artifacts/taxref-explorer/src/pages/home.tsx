@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
 import { useGetTaxonStats, getRandomTaxon } from "@workspace/api-client-react";
@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
+import { TaxonomySunburst } from "@/components/TaxonomySunburst";
 
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
@@ -16,6 +17,14 @@ export default function Home() {
   const { data: stats, isLoading: statsLoading } = useGetTaxonStats();
   const [, navigate] = useLocation();
   const [randomLoading, setRandomLoading] = useState(false);
+  const [treeData, setTreeData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/taxons/taxonomy-tree")
+      .then((r) => r.json())
+      .then(setTreeData)
+      .catch(() => {});
+  }, []);
 
   const handleRandom = useCallback(async () => {
     setRandomLoading(true);
@@ -103,6 +112,18 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {treeData && (
+        <section className="py-20 px-4 container mx-auto max-w-5xl">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-serif font-semibold">Arbre du vivant</h2>
+            <p className="text-muted-foreground mt-2">
+              Explorez la hierarchie taxonomique par regne, embranchement et classe
+            </p>
+          </div>
+          <TaxonomySunburst data={treeData} />
+        </section>
+      )}
 
       <section className="py-24 px-4 container mx-auto max-w-5xl">
         <h2 className="text-3xl font-serif font-semibold mb-10 text-center">Les grands regnes</h2>
