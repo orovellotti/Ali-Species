@@ -65,9 +65,11 @@ function CustomContent(props: CustomContentProps) {
 
   const color = getColorForItem(name, parentName);
   const showLabel = width > 40 && height > 24;
-  const showValue = width > 60 && height > 40;
-  const fontSize = Math.min(14, Math.max(9, Math.min(width / 8, height / 3)));
-  const valueFontSize = Math.min(11, fontSize - 1);
+  const showValue = width > 60 && height > 44;
+  const fontSize = Math.min(22, Math.max(10, Math.min(width / 6, height / 4)));
+  const valueFontSize = Math.max(10, fontSize * 0.7);
+  const gap = fontSize * 0.9;
+  const fontStack = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
   return (
     <g>
@@ -79,36 +81,38 @@ function CustomContent(props: CustomContentProps) {
         fill={color}
         stroke="white"
         strokeWidth={2}
-        rx={3}
+        rx={4}
         className="cursor-pointer transition-opacity hover:opacity-90"
         onClick={() => onDrillDown?.(name)}
       />
       {showLabel && (
         <text
           x={x + width / 2}
-          y={y + height / 2 - (showValue ? 7 : 0)}
+          y={y + height / 2 - (showValue ? gap / 2 : 0)}
           textAnchor="middle"
           dominantBaseline="central"
           fill="white"
-          fontWeight="600"
+          fontWeight="700"
           fontSize={fontSize}
-          fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          fontFamily={fontStack}
+          letterSpacing="0.02em"
           className="pointer-events-none select-none"
         >
-          {name.length > Math.floor(width / (fontSize * 0.6))
-            ? name.slice(0, Math.floor(width / (fontSize * 0.6)) - 1) + "…"
+          {name.length > Math.floor(width / (fontSize * 0.55))
+            ? name.slice(0, Math.floor(width / (fontSize * 0.55)) - 1) + "…"
             : name}
         </text>
       )}
       {showValue && (
         <text
           x={x + width / 2}
-          y={y + height / 2 + 10}
+          y={y + height / 2 + gap / 2 + 2}
           textAnchor="middle"
           dominantBaseline="central"
-          fill="rgba(255,255,255,0.8)"
+          fill="rgba(255,255,255,0.75)"
           fontSize={valueFontSize}
-          fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          fontFamily={fontStack}
+          fontWeight="400"
           className="pointer-events-none select-none"
         >
           {value.toLocaleString("fr-FR")}
