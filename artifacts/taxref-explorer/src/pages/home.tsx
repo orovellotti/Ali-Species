@@ -57,10 +57,10 @@ export default function Home() {
           <button
             onClick={handleRandom}
             disabled={randomLoading}
-            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground bg-background/80 hover:bg-background border border-border rounded-full transition-all hover:shadow-sm disabled:opacity-50"
+            className="mt-6 inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
-            {randomLoading ? "Chargement..." : "Espece au hasard"}
+            {randomLoading ? "Chargement..." : "Decouvrir une espece"}
           </button>
         </div>
       </section>
