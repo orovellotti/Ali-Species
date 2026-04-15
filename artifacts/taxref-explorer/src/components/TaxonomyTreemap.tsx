@@ -1,5 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
+import animaliaImg from "@/assets/images/animalia.png";
+import plantaeImg from "@/assets/images/plantae.png";
+import fungiImg from "@/assets/images/fungi.png";
 
 interface TreeNode {
   name: string;
@@ -142,6 +145,12 @@ function squarify(items: DataItem[], bounds: Rect): LayoutItem[] {
   return result;
 }
 
+const KINGDOM_IMAGES: Record<string, string> = {
+  Animalia: animaliaImg,
+  Plantae: plantaeImg,
+  Fungi: fungiImg,
+};
+
 const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 interface Props {
@@ -278,6 +287,37 @@ export function TaxonomyTreemap({ data }: Props) {
           className="w-full"
           style={{ display: "block", height: "auto", aspectRatio: "960/420" }}
         >
+          <defs>
+            {path.length === 0 && layoutItems.map((item) => {
+              const img = KINGDOM_IMAGES[item.name];
+              if (!img) return null;
+              const { rect } = item;
+              const rw = Math.max(0, rect.w - 2);
+              const rh = Math.max(0, rect.h - 2);
+              if (rw <= 0 || rh <= 0) return null;
+              const imgSize = Math.max(rw, rh);
+              return (
+                <pattern
+                  key={`pat-${item.name}`}
+                  id={`img-${item.name}`}
+                  patternUnits="userSpaceOnUse"
+                  x={rect.x + 1}
+                  y={rect.y + 1}
+                  width={rw}
+                  height={rh}
+                >
+                  <image
+                    href={img}
+                    x={(rw - imgSize) / 2}
+                    y={(rh - imgSize) / 2}
+                    width={imgSize}
+                    height={imgSize}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </pattern>
+              );
+            })}
+          </defs>
           {layoutItems.map((item) => {
             const { rect } = item;
             const color = getColorForItem(item.name, item.parentName);
@@ -287,6 +327,7 @@ export function TaxonomyTreemap({ data }: Props) {
             const valueFontSize = Math.max(10, fontSize * 0.7);
             const gap = fontSize * 0.9;
             const isClickable = item.hasChildren;
+            const hasImage = path.length === 0 && !!KINGDOM_IMAGES[item.name];
 
             return (
               <g
@@ -296,15 +337,38 @@ export function TaxonomyTreemap({ data }: Props) {
                 onMouseMove={(e) => handleMouseMove(e, item)}
                 onMouseLeave={handleMouseLeave}
               >
-                <rect
-                  x={rect.x + 1}
-                  y={rect.y + 1}
-                  width={Math.max(0, rect.w - 2)}
-                  height={Math.max(0, rect.h - 2)}
-                  fill={color}
-                  rx={4}
-                  className={isClickable ? "transition-opacity hover:opacity-90" : ""}
-                />
+                {hasImage ? (
+                  <>
+                    <rect
+                      x={rect.x + 1}
+                      y={rect.y + 1}
+                      width={Math.max(0, rect.w - 2)}
+                      height={Math.max(0, rect.h - 2)}
+                      fill={`url(#img-${item.name})`}
+                      rx={4}
+                    />
+                    <rect
+                      x={rect.x + 1}
+                      y={rect.y + 1}
+                      width={Math.max(0, rect.w - 2)}
+                      height={Math.max(0, rect.h - 2)}
+                      fill={color}
+                      opacity={0.6}
+                      rx={4}
+                      className={isClickable ? "transition-opacity hover:opacity-50" : ""}
+                    />
+                  </>
+                ) : (
+                  <rect
+                    x={rect.x + 1}
+                    y={rect.y + 1}
+                    width={Math.max(0, rect.w - 2)}
+                    height={Math.max(0, rect.h - 2)}
+                    fill={color}
+                    rx={4}
+                    className={isClickable ? "transition-opacity hover:opacity-90" : ""}
+                  />
+                )}
                 {showLabel && (
                   <text
                     x={rect.x + rect.w / 2}
