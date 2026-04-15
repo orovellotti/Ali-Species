@@ -37,9 +37,11 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `GET /api/taxons/:cdNom/wikipedia` — Get Wikipedia FR extract (with EN fallback)
 - `GET /api/taxons/:cdNom/gbif` — Get GBIF data (occurrence count, IUCN Red List status)
 - `GET /api/taxons/stats` — Get database statistics
+- `GET /api/taxons/taxonomy-tree` — Get 5-level taxonomy tree (règnes→phyla→classes→ordres→familles) for treemap visualization
+- `GET /api/taxons/random` — Get a random species taxon
 
 ### Frontend Pages
-- `/` — Home page with search bar, statistics, and featured kingdoms (Animalia/183716, Plantae/187079, Fungi/187496)
+- `/` — Home page with search bar, statistics, interactive taxonomy treemap (5-level drill-down: règnes→embranchements→classes→ordres→familles), and featured kingdoms (Animalia/183716, Plantae/187079, Fungi/187496)
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 - `/a-propos` — About page with PatriNat and Natural Solutions credits
 

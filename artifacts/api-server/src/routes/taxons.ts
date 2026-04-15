@@ -80,6 +80,8 @@ router.get("/taxons/taxonomy-tree", async (_req, res): Promise<void> => {
       regne: taxonsTable.regne,
       phylum: taxonsTable.phylum,
       classe: taxonsTable.classe,
+      ordre: taxonsTable.ordre,
+      famille: taxonsTable.famille,
       count: sql<number>`count(*)::int`,
     })
     .from(taxonsTable)
@@ -88,35 +90,59 @@ router.get("/taxons/taxonomy-tree", async (_req, res): Promise<void> => {
       eq(taxonsTable.rang, "ES"),
       sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`
     ))
-    .groupBy(taxonsTable.regne, taxonsTable.phylum, taxonsTable.classe)
+    .groupBy(taxonsTable.regne, taxonsTable.phylum, taxonsTable.classe, taxonsTable.ordre, taxonsTable.famille)
     .orderBy(desc(sql`count(*)`));
 
-  const tree: Record<string, Record<string, Record<string, number>>> = {};
+  type Tree5 = Record<string, Record<string, Record<string, Record<string, Record<string, number>>>>>;
+  const tree: Tree5 = {};
   for (const r of rows) {
     const regno = r.regne || "Inconnu";
     const phylum = r.phylum || "Autre";
     const classe = r.classe || "Autre";
+    const ordre = r.ordre || "Autre";
+    const famille = r.famille || "Autre";
     if (!tree[regno]) tree[regno] = {};
     if (!tree[regno][phylum]) tree[regno][phylum] = {};
-    tree[regno][phylum][classe] = (tree[regno][phylum][classe] || 0) + r.count;
+    if (!tree[regno][phylum][classe]) tree[regno][phylum][classe] = {};
+    if (!tree[regno][phylum][classe][ordre]) tree[regno][phylum][classe][ordre] = {};
+    tree[regno][phylum][classe][ordre][famille] = (tree[regno][phylum][classe][ordre][famille] || 0) + r.count;
+  }
+
+  function sortAndSlice<T extends { children?: any[] }>(arr: T[], limit: number): T[] {
+    const sumVal = (node: any): number => {
+      if (node.value != null) return node.value;
+      return (node.children || []).reduce((s: number, c: any) => s + sumVal(c), 0);
+    };
+    return arr.sort((a, b) => sumVal(b) - sumVal(a)).slice(0, limit);
   }
 
   const children = Object.entries(tree).map(([regno, phyla]) => ({
     name: regno,
-    children: Object.entries(phyla)
-      .map(([phylum, classes]) => ({
+    children: sortAndSlice(
+      Object.entries(phyla).map(([phylum, classes]) => ({
         name: phylum,
-        children: Object.entries(classes)
-          .map(([classe, value]) => ({ name: classe, value }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 15),
-      }))
-      .sort((a, b) => {
-        const sumA = a.children.reduce((s, c) => s + c.value, 0);
-        const sumB = b.children.reduce((s, c) => s + c.value, 0);
-        return sumB - sumA;
-      })
-      .slice(0, 8),
+        children: sortAndSlice(
+          Object.entries(classes).map(([classe, ordres]) => ({
+            name: classe,
+            children: sortAndSlice(
+              Object.entries(ordres).map(([ordre, familles]) => ({
+                name: ordre,
+                children: sortAndSlice(
+                  Object.entries(familles).map(([famille, value]) => ({
+                    name: famille,
+                    value,
+                  })),
+                  20
+                ),
+              })),
+              15
+            ),
+          })),
+          15
+        ),
+      })),
+      10
+    ),
   }));
 
   res.json({ name: "Vivant", children });

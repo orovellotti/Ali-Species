@@ -23,8 +23,12 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/taxons/taxonomy-tree")
       .then((r) => r.json())
-      .then(setTreeData)
-      .catch(() => {});
+      .then((data) => {
+        setTreeData(data);
+      })
+      .catch((err) => {
+        console.error("taxonomy-tree fetch error", err);
+      });
   }, []);
 
   const handleRandom = useCallback(async () => {
@@ -114,17 +118,19 @@ export default function Home() {
         </div>
       </section>
 
-      {treeData && (
-        <section className="py-20 px-4 container mx-auto max-w-5xl">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-serif font-semibold">Arbre du vivant</h2>
-            <p className="text-muted-foreground mt-2">
-              Explorez la hierarchie taxonomique par regne, embranchement et classe
-            </p>
+      <section className="py-20 px-4 container mx-auto max-w-5xl">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-serif font-semibold">Arbre du vivant</h2>
+          <p className="text-muted-foreground mt-2">
+            Explorez la hierarchie taxonomique par regne, embranchement, classe, ordre et famille
+          </p>
+        </div>
+        {treeData ? <TaxonomyTreemap data={treeData} /> : (
+          <div className="flex items-center justify-center h-[420px] border border-border rounded-xl bg-card">
+            <div className="animate-pulse text-muted-foreground">Chargement de la taxonomie...</div>
           </div>
-          <TaxonomyTreemap data={treeData} />
-        </section>
-      )}
+        )}
+      </section>
 
       <section className="py-24 px-4 container mx-auto max-w-5xl">
         <h2 className="text-3xl font-serif font-semibold mb-10 text-center">Les grands regnes</h2>

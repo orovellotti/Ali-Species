@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 
 interface TreeNode {
@@ -45,97 +44,105 @@ function getColorForItem(name: string, parentName?: string): string {
   return "#64748b";
 }
 
-interface CustomContentProps {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  name?: string;
-  value?: number;
-  realValue?: number;
-  depth?: number;
-  root?: any;
-  parentName?: string;
-  onDrillDown?: (name: string) => void;
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-function CustomContent(props: CustomContentProps) {
-  const { x = 0, y = 0, width = 0, height = 0, name = "", value = 0, realValue, depth, root, parentName, onDrillDown } = props;
-  const displayValue = realValue ?? value;
-
-  if (width < 4 || height < 4) return null;
-
-  const color = getColorForItem(name, parentName);
-  const showLabel = width > 40 && height > 24;
-  const showValue = width > 60 && height > 44;
-  const fontSize = Math.min(22, Math.max(10, Math.min(width / 6, height / 4)));
-  const valueFontSize = Math.max(10, fontSize * 0.7);
-  const gap = fontSize * 0.9;
-  const fontStack = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill={color}
-        stroke="white"
-        strokeWidth={2}
-        rx={4}
-        className="cursor-pointer transition-opacity hover:opacity-90"
-        onClick={() => onDrillDown?.(name)}
-      />
-      {showLabel && (
-        <text
-          x={x + width / 2}
-          y={y + height / 2 - (showValue ? gap / 2 : 0)}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="white"
-          fontWeight="700"
-          fontSize={fontSize}
-          fontFamily={fontStack}
-          letterSpacing="0.02em"
-          className="pointer-events-none select-none"
-        >
-          {name.length > Math.floor(width / (fontSize * 0.55))
-            ? name.slice(0, Math.floor(width / (fontSize * 0.55)) - 1) + "…"
-            : name}
-        </text>
-      )}
-      {showValue && (
-        <text
-          x={x + width / 2}
-          y={y + height / 2 + gap / 2 + 2}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="rgba(255,255,255,0.75)"
-          fontSize={valueFontSize}
-          fontFamily={fontStack}
-          fontWeight="400"
-          className="pointer-events-none select-none"
-        >
-          {displayValue.toLocaleString("fr-FR")}
-        </text>
-      )}
-    </g>
-  );
+interface DataItem {
+  name: string;
+  value: number;
+  realValue: number;
+  parentName: string;
+  hasChildren: boolean;
 }
 
-function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload || !payload.length) return null;
-  const data = payload[0].payload;
-  return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm">
-      <div className="font-semibold text-foreground">{data.name}</div>
-      <div className="text-muted-foreground text-xs">
-        {(data.realValue || data.value || 0).toLocaleString("fr-FR")} especes
-      </div>
-    </div>
-  );
+interface LayoutItem extends DataItem {
+  rect: Rect;
 }
+
+function worstAspectRatio(areas: number[], side: number): number {
+  const rowArea = areas.reduce((s, a) => s + a, 0);
+  if (rowArea <= 0 || side <= 0) return Infinity;
+  const rowWidth = rowArea / side;
+  let worst = 0;
+  for (const area of areas) {
+    const h = area / rowWidth;
+    const ratio = Math.max(rowWidth / h, h / rowWidth);
+    if (ratio > worst) worst = ratio;
+  }
+  return worst;
+}
+
+function squarify(items: DataItem[], bounds: Rect): LayoutItem[] {
+  if (items.length === 0) return [];
+
+  const totalValue = items.reduce((s, it) => s + it.value, 0);
+  if (totalValue <= 0) return [];
+
+  const boundsArea = bounds.w * bounds.h;
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const areas = sorted.map((it) => (it.value / totalValue) * boundsArea);
+
+  const result: LayoutItem[] = [];
+  let { x, y, w, h } = bounds;
+  let idx = 0;
+
+  while (idx < sorted.length) {
+    const side = Math.min(w, h);
+    if (side <= 0) break;
+
+    const rowIndices: number[] = [idx];
+    let rowAreas = [areas[idx]];
+    idx++;
+
+    while (idx < sorted.length) {
+      const currentWorst = worstAspectRatio(rowAreas, side);
+      const candidateAreas = [...rowAreas, areas[idx]];
+      const candidateWorst = worstAspectRatio(candidateAreas, side);
+      if (candidateWorst <= currentWorst) {
+        rowIndices.push(idx);
+        rowAreas = candidateAreas;
+        idx++;
+      } else {
+        break;
+      }
+    }
+
+    const totalRowArea = rowAreas.reduce((s, a) => s + a, 0);
+    const isHorizontal = w >= h;
+    const strip = totalRowArea / side;
+
+    let offset = 0;
+    for (let i = 0; i < rowIndices.length; i++) {
+      const itemLen = rowAreas[i] / strip;
+
+      let rect: Rect;
+      if (isHorizontal) {
+        rect = { x, y: y + offset, w: strip, h: itemLen };
+      } else {
+        rect = { x: x + offset, y, w: itemLen, h: strip };
+      }
+
+      result.push({ ...sorted[rowIndices[i]], rect });
+      offset += itemLen;
+    }
+
+    if (isHorizontal) {
+      x += strip;
+      w -= strip;
+    } else {
+      y += strip;
+      h -= strip;
+    }
+  }
+
+  return result;
+}
+
+const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 interface Props {
   data: TreeNode;
@@ -143,6 +150,8 @@ interface Props {
 
 export function TaxonomyTreemap({ data }: Props) {
   const [path, setPath] = useState<string[]>([]);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; value: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const currentNode = useMemo(() => {
     let node = data;
@@ -154,7 +163,7 @@ export function TaxonomyTreemap({ data }: Props) {
     return node;
   }, [data, path]);
 
-  const treemapData = useMemo(() => {
+  const treemapItems = useMemo(() => {
     if (!currentNode.children) return [];
     const raw = currentNode.children
       .map((child) => ({
@@ -173,15 +182,20 @@ export function TaxonomyTreemap({ data }: Props) {
   }, [currentNode, path]);
 
   const totalSpecies = useMemo(
-    () => treemapData.reduce((s, c) => s + (c.realValue ?? c.value), 0),
-    [treemapData]
+    () => treemapItems.reduce((s, c) => s + c.realValue, 0),
+    [treemapItems]
   );
+
+  const layoutItems = useMemo(() => {
+    return squarify(treemapItems, { x: 0, y: 0, w: 960, h: 420 });
+  }, [treemapItems]);
 
   const handleDrillDown = useCallback(
     (name: string) => {
       const child = currentNode.children?.find((c) => c.name === name);
       if (child?.children && child.children.length > 0) {
         setPath((p) => [...p, name]);
+        setTooltip(null);
       }
     },
     [currentNode]
@@ -189,10 +203,35 @@ export function TaxonomyTreemap({ data }: Props) {
 
   const handleBack = useCallback(() => {
     setPath((p) => p.slice(0, -1));
+    setTooltip(null);
   }, []);
 
-  const depthLabels = ["Regnes", "Embranchements", "Classes"];
+  const handleMouseMove = useCallback((e: React.MouseEvent, item: LayoutItem) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const containerW = container.offsetWidth;
+    const containerH = container.offsetHeight;
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    setTooltip({
+      x: Math.min(rawX + 12, containerW - 170),
+      y: Math.max(10, Math.min(rawY - 50, containerH - 60)),
+      name: item.name,
+      value: item.realValue,
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltip(null);
+  }, []);
+
+  const depthLabels = ["Regnes", "Embranchements", "Classes", "Ordres", "Familles"];
   const currentLabel = depthLabels[path.length] || "Groupes";
+
+  if (treemapItems.length === 0) {
+    return <div className="p-8 text-center text-muted-foreground">Aucune donnee disponible</div>;
+  }
 
   return (
     <div>
@@ -229,22 +268,92 @@ export function TaxonomyTreemap({ data }: Props) {
         </div>
         <div className="text-sm text-muted-foreground">
           <span className="font-medium text-foreground">{totalSpecies.toLocaleString("fr-FR")}</span>{" "}
-          especes · {treemapData.length} {currentLabel.toLowerCase()}
+          especes · {treemapItems.length} {currentLabel.toLowerCase()}
         </div>
       </div>
 
-      <div className="rounded-xl overflow-hidden border border-border bg-card">
-        <ResponsiveContainer width="100%" height={420}>
-          <Treemap
-            data={treemapData}
-            dataKey="value"
-            stroke="white"
-            animationDuration={300}
-            content={<CustomContent onDrillDown={handleDrillDown} parentName={path.length > 0 ? path[path.length - 1] : undefined} />}
+      <div ref={containerRef} className="relative rounded-xl overflow-hidden border border-border bg-card">
+        <svg
+          viewBox="0 0 960 420"
+          className="w-full"
+          style={{ display: "block", height: "auto", aspectRatio: "960/420" }}
+        >
+          {layoutItems.map((item) => {
+            const { rect } = item;
+            const color = getColorForItem(item.name, item.parentName);
+            const showLabel = rect.w > 40 && rect.h > 24;
+            const showValue = rect.w > 60 && rect.h > 44;
+            const fontSize = Math.min(22, Math.max(10, Math.min(rect.w / 6, rect.h / 4)));
+            const valueFontSize = Math.max(10, fontSize * 0.7);
+            const gap = fontSize * 0.9;
+            const isClickable = item.hasChildren;
+
+            return (
+              <g
+                key={item.name}
+                className={isClickable ? "cursor-pointer" : "cursor-default"}
+                onClick={isClickable ? () => handleDrillDown(item.name) : undefined}
+                onMouseMove={(e) => handleMouseMove(e, item)}
+                onMouseLeave={handleMouseLeave}
+              >
+                <rect
+                  x={rect.x + 1}
+                  y={rect.y + 1}
+                  width={Math.max(0, rect.w - 2)}
+                  height={Math.max(0, rect.h - 2)}
+                  fill={color}
+                  rx={4}
+                  className={isClickable ? "transition-opacity hover:opacity-90" : ""}
+                />
+                {showLabel && (
+                  <text
+                    x={rect.x + rect.w / 2}
+                    y={rect.y + rect.h / 2 - (showValue ? gap / 2 : 0)}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="white"
+                    fontWeight="700"
+                    fontSize={fontSize}
+                    fontFamily={FONT_STACK}
+                    letterSpacing="0.02em"
+                    className="pointer-events-none select-none"
+                  >
+                    {item.name.length > Math.floor(rect.w / (fontSize * 0.55))
+                      ? item.name.slice(0, Math.floor(rect.w / (fontSize * 0.55)) - 1) + "…"
+                      : item.name}
+                  </text>
+                )}
+                {showValue && (
+                  <text
+                    x={rect.x + rect.w / 2}
+                    y={rect.y + rect.h / 2 + gap / 2 + 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="rgba(255,255,255,0.75)"
+                    fontSize={valueFontSize}
+                    fontFamily={FONT_STACK}
+                    fontWeight="400"
+                    className="pointer-events-none select-none"
+                  >
+                    {item.realValue.toLocaleString("fr-FR")}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {tooltip && (
+          <div
+            className="absolute bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none z-10"
+            style={{ left: tooltip.x, top: tooltip.y }}
           >
-            <Tooltip content={<CustomTooltip />} />
-          </Treemap>
-        </ResponsiveContainer>
+            <div className="font-semibold text-foreground">{tooltip.name}</div>
+            <div className="text-muted-foreground text-xs">
+              {tooltip.value.toLocaleString("fr-FR")} especes
+            </div>
+          </div>
+        )}
       </div>
 
       {path.length === 0 && (
