@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { SearchAutocomplete } from "@/components/SearchAutocomplete";
 import { useGetTaxonStats } from "@workspace/api-client-react";
-import { Leaf, Trees, Microscope, BookOpen } from "lucide-react";
+import { Leaf, Trees, Microscope, BookOpen, ScrollText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
@@ -48,9 +48,9 @@ export default function Home() {
             <p className="text-muted-foreground mt-2">Donnees du referentiel national</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {statsLoading || !stats ? (
-              Array(4).fill(0).map((_, i) => (
+              Array(5).fill(0).map((_, i) => (
                 <div key={i} className="bg-background rounded-2xl p-6 text-center border border-border/50">
                   <Skeleton className="w-16 h-10 mx-auto mb-2" />
                   <Skeleton className="w-24 h-4 mx-auto" />
@@ -62,6 +62,7 @@ export default function Home() {
                 <StatCard icon={<Trees className="w-4 h-4" />} value={stats.totalSpecies.toLocaleString("fr-FR")} label="Especes" />
                 <StatCard icon={<Leaf className="w-4 h-4" />} value={stats.totalGenera.toLocaleString("fr-FR")} label="Genres" />
                 <StatCard icon={<BookOpen className="w-4 h-4" />} value={stats.totalFamilies.toLocaleString("fr-FR")} label="Familles" />
+                <StatCard icon={<ScrollText className="w-4 h-4" />} value={stats.totalStatuts.toLocaleString("fr-FR")} label="Statuts BDC" />
               </>
             )}
           </div>

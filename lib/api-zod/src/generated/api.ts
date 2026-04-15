@@ -117,6 +117,7 @@ export const GetTaxonStatsResponse = zod.object({
   totalSpecies: zod.number(),
   totalGenera: zod.number(),
   totalFamilies: zod.number(),
+  totalStatuts: zod.number(),
   kingdomCounts: zod.array(
     zod.object({
       regne: zod.string(),

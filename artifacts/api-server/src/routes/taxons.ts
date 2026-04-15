@@ -80,11 +80,16 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
     .groupBy(taxonsTable.regne)
     .orderBy(desc(sql`count(*)`));
 
+  const [statutsResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(bdcStatutsTable);
+
   res.json({
     totalTaxons: totalResult?.count ?? 0,
     totalSpecies: speciesResult?.count ?? 0,
     totalGenera: generaResult?.count ?? 0,
     totalFamilies: familiesResult?.count ?? 0,
+    totalStatuts: statutsResult?.count ?? 0,
     kingdomCounts: kingdomCounts.map((k) => ({
       regne: k.regne || "Unknown",
       count: k.count,

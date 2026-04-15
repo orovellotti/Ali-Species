@@ -63,6 +63,7 @@ export interface TaxonStats {
   totalSpecies: number;
   totalGenera: number;
   totalFamilies: number;
+  totalStatuts: number;
   kingdomCounts: TaxonStatsKingdomCountsItem[];
 }
 
