@@ -13,13 +13,14 @@ import {
   getGetTaxonChildrenQueryKey,
   getGetTaxonWikipediaQueryKey,
   getGetTaxonGbifQueryKey,
-  getGetTaxonStatutsQueryKey
+  getGetTaxonStatutsQueryKey,
+  getRandomTaxon
 } from "@workspace/api-client-react";
 import type { BdcStatut } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users, X, ZoomIn } from "lucide-react";
+import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users, X, ZoomIn, Shuffle } from "lucide-react";
 import { useState, useMemo, useCallback, type ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,20 @@ export default function TaxonDetail() {
   const { data: statuts, isLoading: statutsLoading } = useGetTaxonStatuts(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonStatutsQueryKey(cdNom) } });
 
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [randomLoading, setRandomLoading] = useState(false);
+  const [, navigate] = useLocation();
+
+  const handleRandom = useCallback(async () => {
+    setRandomLoading(true);
+    try {
+      const t = await getRandomTaxon();
+      if (t?.cdNom && t?.lbNom) {
+        navigate(taxonUrl(t.cdNom, t.lbNom));
+      }
+    } finally {
+      setRandomLoading(false);
+    }
+  }, [navigate]);
 
   const sensitivity = useMemo(() => {
     if (!statuts || statuts.length === 0) return null;
@@ -557,6 +572,15 @@ export default function TaxonDetail() {
                 </a>
               )}
             </div>
+
+            <button
+              onClick={handleRandom}
+              disabled={randomLoading}
+              className="w-full py-3 px-4 bg-card hover:bg-muted text-center border border-border rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <Shuffle className={`w-3.5 h-3.5 ${randomLoading ? "animate-spin" : ""}`} />
+              {randomLoading ? "Chargement..." : "Espece au hasard"}
+            </button>
           </div>
 
         </div>
