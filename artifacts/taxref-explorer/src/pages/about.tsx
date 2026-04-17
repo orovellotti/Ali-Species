@@ -1,10 +1,21 @@
 import { Layout } from "@/components/Layout";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Copy, Check, Sparkles } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { useState } from "react";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 
 export default function About() {
+  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(mcpUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
   return (
     <Layout>
       <Helmet>
@@ -93,6 +104,42 @@ export default function About() {
                 </a>
               </div>
             </div>
+          </section>
+
+          <section className="p-8 rounded-2xl bg-foreground/[0.03] border border-border space-y-4" id="mcp">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="text-2xl font-serif font-semibold text-foreground">Serveur MCP</h2>
+              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/15 text-primary rounded-full">Nouveau</span>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              ALI Species expose un serveur <strong className="text-foreground">Model Context Protocol</strong> (MCP) qui permet a un assistant IA (Claude, ChatGPT, Cursor, ...) de rechercher dans TAXREF, consulter la classification et les statuts de conservation directement depuis une conversation.
+            </p>
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">URL du serveur</div>
+              <div className="flex items-stretch gap-0 rounded-lg border border-border bg-background overflow-hidden">
+                <code className="flex-1 px-4 py-3 text-sm font-mono text-foreground truncate">{mcpUrl}</code>
+                <button
+                  onClick={handleCopy}
+                  className="px-4 flex items-center gap-1.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  data-testid="button-copy-mcp"
+                >
+                  {copied ? <><Check className="w-4 h-4" /> Copie</> : <><Copy className="w-4 h-4" /> Copier</>}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2 pt-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outils disponibles</div>
+              <ul className="space-y-1.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">search_taxons</code> — recherche par nom scientifique ou vernaculaire</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_taxon</code> — detail complet d'un taxon par cdNom</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_classification</code> — hierarchie taxonomique complete</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_statuts</code> — statuts BDC (listes rouges, protections, directives)</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground/80 pt-1">
+              Transport : Streamable HTTP (sans session). Compatible avec Claude Desktop, Cursor, et tout client MCP recent.
+            </p>
           </section>
 
           <section className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">

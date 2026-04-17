@@ -22,7 +22,14 @@ export function Layout({ children }: LayoutProps) {
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
             <Link href="/a-propos" className="hover:text-foreground transition-colors">A propos</Link>
-            <a href="https://www.natural-solutions.eu/" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">Natural Solutions</a>
+            <Link
+              href="/a-propos#mcp"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+              data-testid="link-mcp-header"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider">MCP</span>
+              <span className="text-xs">API</span>
+            </Link>
           </nav>
         </div>
       </header>
