@@ -1,8 +1,72 @@
 import { Router, type IRouter } from "express";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
 const router: IRouter = Router();
+
+const IMAGE_CACHE_DIR = path.join(os.tmpdir(), "ali-img-cache");
+const ALLOWED_IMAGE_HOSTS = new Set([
+  "upload.wikimedia.org",
+  "commons.wikimedia.org",
+  "fr.wikipedia.org",
+  "en.wikipedia.org",
+]);
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+async function ensureCacheDir() {
+  try { await fs.mkdir(IMAGE_CACHE_DIR, { recursive: true }); } catch {}
+}
+ensureCacheDir();
+
+router.get("/image-proxy", async (req, res): Promise<void> => {
+  const url = typeof req.query.url === "string" ? req.query.url : "";
+  if (!url) { res.status(400).end(); return; }
+
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { res.status(400).end(); return; }
+  if (!/^https?:$/.test(parsed.protocol) || !ALLOWED_IMAGE_HOSTS.has(parsed.hostname)) {
+    res.status(403).end(); return;
+  }
+
+  const key = createHash("sha256").update(url).digest("hex");
+  const binPath = path.join(IMAGE_CACHE_DIR, `${key}.bin`);
+  const metaPath = path.join(IMAGE_CACHE_DIR, `${key}.json`);
+
+  try {
+    const [bin, metaRaw] = await Promise.all([fs.readFile(binPath), fs.readFile(metaPath, "utf8")]);
+    const meta = JSON.parse(metaRaw) as { contentType: string };
+    res.setHeader("Content-Type", meta.contentType || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("X-Cache", "HIT");
+    res.end(bin);
+    return;
+  } catch {}
+
+  try {
+    const upstream = await fetch(url, {
+      headers: { "User-Agent": "AliSpecies/1.0 (https://ali-species.replit.app)" },
+    });
+    if (!upstream.ok || !upstream.body) { res.status(upstream.status || 502).end(); return; }
+    const contentType = upstream.headers.get("content-type") || "image/jpeg";
+    if (!contentType.startsWith("image/")) { res.status(415).end(); return; }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    if (buf.byteLength > MAX_IMAGE_BYTES) { res.status(413).end(); return; }
+
+    fs.writeFile(binPath, buf).catch(() => {});
+    fs.writeFile(metaPath, JSON.stringify({ contentType })).catch(() => {});
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("X-Cache", "MISS");
+    res.end(buf);
+  } catch {
+    res.status(502).end();
+  }
+});
 
 router.get("/taxons/search", async (req, res): Promise<void> => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";

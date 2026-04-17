@@ -25,6 +25,12 @@ import { useState, useMemo, useCallback, useRef, useEffect, type ReactNode } fro
 import { Helmet } from "react-helmet-async";
 import { Badge } from "@/components/ui/badge";
 
+function proxyImg(url: string | undefined | null): string {
+  if (!url) return "";
+  if (!/^https?:\/\//i.test(url)) return url;
+  return `${import.meta.env.BASE_URL}api/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 function GbifMiniMap({ gbifKey }: { gbifKey: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -598,10 +604,10 @@ export default function TaxonDetail() {
                   <div
                     key={i}
                     className="group relative rounded-2xl overflow-hidden bg-muted border border-border shadow-sm cursor-zoom-in"
-                    onClick={() => setLightboxImg(img.url)}
+                    onClick={() => setLightboxImg(proxyImg(img.url))}
                   >
                     <img 
-                      src={img.url} 
+                      src={proxyImg(img.url)} 
                       alt={img.title || taxon.lbNom} 
                       className="w-full h-auto object-cover object-center max-h-[500px]"
                       loading={i === 0 ? "eager" : "lazy"}
