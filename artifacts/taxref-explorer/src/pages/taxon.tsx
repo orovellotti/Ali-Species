@@ -1176,7 +1176,7 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
           </div>
         )}
 
-        {sortedGroups.map(([group, items]) => (
+        {sortedGroups.length > 0 && sortedGroups.map(([group, items]) => (
           <div key={group} className={`rounded-xl border p-4 ${REGROUPEMENT_COLORS[group] || "border-border bg-muted/30"}`}>
             <div className="flex items-center gap-2 mb-3">
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${REGROUPEMENT_BADGE[group] || "bg-muted text-muted-foreground"}`}>
@@ -1225,6 +1225,29 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
             </div>
           </div>
         ))}
+
+        {(sensitivity.missingData.length > 0 || statuts.length === 0) && (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-primary" />
+                Donnees de statut incompletes ?
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Vous constatez des informations manquantes ou inexactes sur ce taxon ? Signalez-le a Natural Solutions.
+              </p>
+            </div>
+            <a
+              href="https://www.natural-solutions.eu/contact"
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Nous contacter
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
       </div>
     </CollapsibleSection>
   );
