@@ -924,6 +924,77 @@ function ScoreRing({ score, ringColor, size = 80 }: { score: number; ringColor: 
   );
 }
 
+function SensitivityRadar({
+  ecological, regulatory, territorial, management, fillClass, strokeClass,
+}: {
+  ecological: number; regulatory: number; territorial: number; management: number;
+  fillClass: string; strokeClass: string;
+}) {
+  const size = 180;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 62;
+  const axes = [
+    { label: "Ecologique", value: ecological, angle: -Math.PI / 2 },
+    { label: "Reglementaire", value: regulatory, angle: 0 },
+    { label: "Territorial", value: territorial, angle: Math.PI / 2 },
+    { label: "Gestion", value: management, angle: Math.PI },
+  ];
+  const point = (v: number, angle: number) => [cx + Math.cos(angle) * r * v, cy + Math.sin(angle) * r * v] as const;
+  const polygon = axes.map(a => point(Math.max(0.02, a.value), a.angle).join(",")).join(" ");
+  const grid = [0.25, 0.5, 0.75, 1].map(level => (
+    <polygon
+      key={level}
+      points={axes.map(a => point(level, a.angle).join(",")).join(" ")}
+      fill="none"
+      stroke="currentColor"
+      strokeOpacity={level === 1 ? 0.25 : 0.12}
+      strokeWidth={level === 1 ? 1 : 0.5}
+    />
+  ));
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-auto max-w-[180px] text-muted-foreground">
+      {grid}
+      {axes.map((a, i) => {
+        const [x, y] = point(1, a.angle);
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="currentColor" strokeOpacity={0.15} strokeWidth={0.5} />;
+      })}
+      <polygon points={polygon} className={`${fillClass} ${strokeClass}`} strokeWidth={1.5} />
+      {axes.map((a, i) => {
+        const [x, y] = point(1, a.angle);
+        const lx = cx + (x - cx) * 1.18;
+        const ly = cy + (y - cy) * 1.18;
+        return (
+          <text
+            key={i}
+            x={lx}
+            y={ly}
+            textAnchor={Math.abs(x - cx) < 1 ? "middle" : x > cx ? "start" : "end"}
+            dominantBaseline={Math.abs(y - cy) < 1 ? "middle" : y > cy ? "hanging" : "auto"}
+            className="fill-muted-foreground"
+            fontSize="9"
+            fontWeight="600"
+          >
+            {a.label}
+          </text>
+        );
+      })}
+      {axes.map((a, i) => {
+        const [x, y] = point(Math.max(0.02, a.value), a.angle);
+        return <circle key={i} cx={x} cy={y} r={2.5} className={strokeClass.replace("stroke-", "fill-")} />;
+      })}
+    </svg>
+  );
+}
+
+function dimensionColors(label: string): { fill: string; stroke: string } {
+  if (label === "tres-eleve" || label === "Tres elevee") return { fill: "fill-red-400/30", stroke: "stroke-red-500" };
+  if (label === "elevee" || label === "Elevee") return { fill: "fill-orange-400/30", stroke: "stroke-orange-500" };
+  if (label === "moderee" || label === "Moderee") return { fill: "fill-amber-400/30", stroke: "stroke-amber-500" };
+  if (label === "faible" || label === "Faible") return { fill: "fill-emerald-400/25", stroke: "stroke-emerald-500" };
+  return { fill: "fill-primary/25", stroke: "stroke-primary" };
+}
+
 function DimensionBar({ label, value, color }: { label: string; value: number; color: string }) {
   const pct = Math.round(value * 100);
   return (
@@ -1104,7 +1175,7 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
       <div className="space-y-4">
         {showScore && (
           <div className={`p-5 rounded-xl border ${sensitivity.bgColor} ${sensitivity.borderColor}`}>
-            <div className="flex items-center gap-5">
+            <div className="flex flex-col sm:flex-row items-start gap-5">
               <div className="relative shrink-0">
                 <ScoreRing score={sensitivity.score} ringColor={sensitivity.ringColor} />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -1127,6 +1198,16 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                     ))}
                   </div>
                 )}
+              </div>
+              <div className="shrink-0 mx-auto sm:mx-0">
+                <SensitivityRadar
+                  ecological={sensitivity.ecological}
+                  regulatory={sensitivity.regulatory}
+                  territorial={sensitivity.territorial}
+                  management={sensitivity.management}
+                  fillClass={dimensionColors(sensitivity.label).fill}
+                  strokeClass={dimensionColors(sensitivity.label).stroke}
+                />
               </div>
             </div>
 
