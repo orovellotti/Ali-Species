@@ -62,6 +62,21 @@ export function Layout({ children }: LayoutProps) {
             </p>
           </div>
 
+          <div className="flex flex-col items-center gap-3 pt-4">
+            <p className="text-sm text-muted-foreground text-center max-w-xl">
+              Une idee de projet autour de la biodiversite, de la donnee naturaliste ou du vivant&nbsp;?
+            </p>
+            <a
+              href="https://www.natural-solutions.eu/contact"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Contactez Natural Solutions
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
+
           <div className="flex items-center justify-center gap-6 pt-2 border-t border-border/50">
             <a href="https://www.natural-solutions.eu/" target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
               Natural Solutions
