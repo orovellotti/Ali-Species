@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
 import fungiImg from "@/assets/images/fungi.png";
@@ -8,6 +8,8 @@ interface TreeNode {
   name: string;
   value?: number;
   children?: TreeNode[];
+  cdNom?: number;
+  nomVern?: string | null;
 }
 
 const KINGDOM_COLORS: Record<string, string> = {
@@ -60,6 +62,8 @@ interface DataItem {
   realValue: number;
   parentName: string;
   hasChildren: boolean;
+  cdNom?: number;
+  nomVern?: string | null;
 }
 
 interface LayoutItem extends DataItem {
@@ -156,35 +160,51 @@ const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-se
 interface Props {
   data: TreeNode;
   onNavigateToTaxon?: (name: string, rang: string) => void;
+  onNavigateToCdNom?: (cdNom: number, lbNom: string) => void;
+  statutType?: string;
 }
 
-export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
+export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, statutType }: Props) {
   const [path, setPath] = useState<string[]>([]);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; value: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; value: number; vern?: string | null } | null>(null);
+  const [lazyChildren, setLazyChildren] = useState<Record<string, TreeNode[]>>({});
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const lazyKey = useCallback((segments: string[]) => `${statutType || ""}::${segments.join("/")}`, [statutType]);
 
   const currentNode = useMemo(() => {
     let node = data;
-    for (const segment of path) {
+    for (let i = 0; i < path.length; i++) {
+      const segment = path[i];
+      const key = lazyKey(path.slice(0, i + 1));
+      const lazy = lazyChildren[key];
+      if (lazy) {
+        node = { name: segment, children: lazy };
+        continue;
+      }
       const child = node.children?.find((c) => c.name === segment);
       if (!child) break;
       node = child;
     }
     return node;
-  }, [data, path]);
+  }, [data, path, lazyChildren, lazyKey]);
 
   const treemapItems = useMemo(() => {
     if (!currentNode.children) return [];
+    const isSpeciesLevel = path.length === 6;
     const raw = currentNode.children
       .map((child) => ({
         name: child.name,
-        realValue: nodeValue(child),
+        realValue: nodeValue(child) || 1,
         parentName: path.length > 0 ? path[0] : child.name,
         hasChildren: !!child.children && child.children.length > 0,
+        cdNom: child.cdNom,
+        nomVern: child.nomVern,
       }))
       .sort((a, b) => b.realValue - a.realValue);
     const maxVal = raw[0]?.realValue || 1;
-    const minDisplay = maxVal * 0.04;
+    const minDisplay = isSpeciesLevel ? maxVal : maxVal * 0.04;
     return raw.map((item) => ({
       ...item,
       value: Math.max(item.realValue, minDisplay),
@@ -200,20 +220,71 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
     return squarify(treemapItems, { x: 0, y: 0, w: 960, h: 420 });
   }, [treemapItems]);
 
-  const depthToRang: Record<number, string> = { 0: "KD", 1: "PH", 2: "CL", 3: "OR", 4: "FM" };
+  const depthToRang: Record<number, string> = { 0: "KD", 1: "PH", 2: "CL", 3: "OR", 4: "FM", 5: "GN", 6: "ES" };
+
+  const fetchLazyChildren = useCallback(async (newPath: string[]) => {
+    const famille = newPath[4];
+    const genre = newPath[5];
+    if (!famille) return null;
+    const params = new URLSearchParams({ famille });
+    if (genre) params.set("genre", genre);
+    if (statutType) params.set("statutType", statutType);
+    const res = await fetch(`/api/taxons/taxonomy-children?${params.toString()}`);
+    if (!res.ok) return null;
+    const items = await res.json();
+    return items.map((it: any) => ({
+      name: it.name,
+      value: it.value,
+      cdNom: it.cdNom,
+      nomVern: it.nomVern,
+      ...(it.hasChildren ? { children: undefined } : {}),
+    })) as TreeNode[];
+  }, [statutType]);
 
   const handleClick = useCallback(
-    (name: string) => {
+    async (name: string) => {
+      const item = treemapItems.find((it) => it.name === name);
+      const newPath = [...path, name];
+      const newDepth = newPath.length;
+
+      if (newDepth === 7 && item?.cdNom) {
+        onNavigateToCdNom?.(item.cdNom, name);
+        return;
+      }
+
+      if (newDepth >= 5 && newDepth <= 6) {
+        const key = lazyKey(newPath);
+        if (lazyChildren[key]) {
+          setPath(newPath);
+          setTooltip(null);
+          return;
+        }
+        setLoadingKey(key);
+        try {
+          const items = await fetchLazyChildren(newPath);
+          if (items && items.length > 0) {
+            setLazyChildren((prev) => ({ ...prev, [key]: items }));
+            setPath(newPath);
+            setTooltip(null);
+          } else if (item?.cdNom) {
+            onNavigateToCdNom?.(item.cdNom, name);
+          }
+        } finally {
+          setLoadingKey(null);
+        }
+        return;
+      }
+
       const child = currentNode.children?.find((c) => c.name === name);
       if (child?.children && child.children.length > 0) {
-        setPath((p) => [...p, name]);
+        setPath(newPath);
         setTooltip(null);
       } else {
-        const rang = depthToRang[path.length + 1] || depthToRang[path.length] || "FM";
+        const rang = depthToRang[newDepth] || "FM";
         onNavigateToTaxon?.(name, rang);
       }
     },
-    [currentNode, path, onNavigateToTaxon]
+    [currentNode, path, treemapItems, fetchLazyChildren, lazyChildren, lazyKey, onNavigateToTaxon, onNavigateToCdNom]
   );
 
   const handleBack = useCallback(() => {
@@ -221,7 +292,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
     setTooltip(null);
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent, item: LayoutItem) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent, item: LayoutItem & { nomVern?: string | null }) => {
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -230,10 +301,11 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
     setTooltip({
-      x: Math.min(rawX + 12, containerW - 170),
-      y: Math.max(10, Math.min(rawY - 50, containerH - 60)),
+      x: Math.min(rawX + 12, containerW - 200),
+      y: Math.max(10, Math.min(rawY - 50, containerH - 70)),
       name: item.name,
       value: item.realValue,
+      vern: item.nomVern,
     });
   }, []);
 
@@ -241,8 +313,9 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
     setTooltip(null);
   }, []);
 
-  const depthLabels = ["Regnes", "Embranchements", "Classes", "Ordres", "Familles"];
+  const depthLabels = ["Regnes", "Embranchements", "Classes", "Ordres", "Familles", "Genres", "Especes"];
   const currentLabel = depthLabels[path.length] || "Groupes";
+  const isSpeciesLevel = path.length === 6;
 
   if (treemapItems.length === 0) {
     return <div className="p-8 text-center text-muted-foreground">Aucune donnee disponible</div>;
@@ -281,9 +354,13 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
             ))}
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{totalSpecies.toLocaleString("fr-FR")}</span>{" "}
-          especes · {treemapItems.length} {currentLabel.toLowerCase()}
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          {loadingKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {isSpeciesLevel ? (
+            <span><span className="font-medium text-foreground">{treemapItems.length}</span> especes</span>
+          ) : (
+            <span><span className="font-medium text-foreground">{totalSpecies.toLocaleString("fr-FR")}</span> especes · {treemapItems.length} {currentLabel.toLowerCase()}</span>
+          )}
         </div>
       </div>
 
@@ -418,9 +495,12 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon }: Props) {
             className="absolute rounded-lg shadow-lg px-3 py-2 text-sm pointer-events-none z-10"
             style={{ left: tooltip.x, top: tooltip.y, backgroundColor: "rgba(13,15,10,0.92)", border: "1px solid rgba(240,232,208,0.2)" }}
           >
-            <div className="font-semibold" style={{ color: "#f0e8d0" }}>{tooltip.name}</div>
+            <div className="font-semibold italic" style={{ color: "#f0e8d0" }}>{tooltip.name}</div>
+            {tooltip.vern && (
+              <div className="text-xs mt-0.5" style={{ color: "rgba(240,232,208,0.85)" }}>{tooltip.vern}</div>
+            )}
             <div className="text-xs" style={{ color: "rgba(240,232,208,0.6)" }}>
-              {tooltip.value.toLocaleString("fr-FR")} especes
+              {isSpeciesLevel ? "Cliquer pour voir la fiche" : `${tooltip.value.toLocaleString("fr-FR")} especes`}
             </div>
           </div>
         )}

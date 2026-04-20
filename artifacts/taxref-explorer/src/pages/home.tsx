@@ -124,16 +124,20 @@ export default function Home() {
               </span>
             )}
           </div>
-          {treeData && !treeLoading ? <TaxonomyTreemap data={treeData} onNavigateToTaxon={async (name, rang) => {
-            try {
-              const res = await fetch(`/api/taxons/search?q=${encodeURIComponent(name)}&limit=10`);
-              const results = await res.json();
-              const match = results.find((t: any) => t.rang === rang && t.lbNom === name) || results[0];
-              if (match?.cdNom && match?.lbNom) {
-                navigate(taxonUrl(match.cdNom, match.lbNom));
-              }
-            } catch {}
-          }} /> : (
+          {treeData && !treeLoading ? <TaxonomyTreemap
+            data={treeData}
+            statutType={statutType}
+            onNavigateToCdNom={(cdNom, lbNom) => navigate(taxonUrl(cdNom, lbNom))}
+            onNavigateToTaxon={async (name, rang) => {
+              try {
+                const res = await fetch(`/api/taxons/search?q=${encodeURIComponent(name)}&limit=10`);
+                const results = await res.json();
+                const match = results.find((t: any) => t.rang === rang && t.lbNom === name) || results[0];
+                if (match?.cdNom && match?.lbNom) {
+                  navigate(taxonUrl(match.cdNom, match.lbNom));
+                }
+              } catch {}
+            }} /> : (
             <div className="flex items-center justify-center h-[420px] border border-border rounded-xl bg-card">
               <div className="animate-pulse text-muted-foreground">Chargement de la taxonomie...</div>
             </div>

@@ -144,6 +144,73 @@ router.get("/taxons/random", async (_req, res): Promise<void> => {
   res.json(taxon);
 });
 
+router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
+  const famille = typeof req.query.famille === "string" ? req.query.famille.trim() : "";
+  const genre = typeof req.query.genre === "string" ? req.query.genre.trim() : "";
+  const statutType = typeof req.query.statutType === "string" ? req.query.statutType.trim() : "";
+
+  if (!famille) {
+    res.status(400).json({ error: "famille parameter is required" });
+    return;
+  }
+
+  const refOnly = sql`cd_nom = cd_ref`;
+  const statutFilter = statutType
+    ? sql`AND cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${statutType})`
+    : sql``;
+
+  if (!genre) {
+    const rows = await db.execute(sql`
+      SELECT
+        SPLIT_PART(lb_nom, ' ', 1) AS name,
+        COUNT(*)::int AS species_count
+      FROM taxons
+      WHERE ${refOnly}
+        AND famille = ${famille}
+        AND rang = 'ES'
+        AND lb_nom IS NOT NULL
+        AND lb_nom <> ''
+        ${statutFilter}
+      GROUP BY 1
+      HAVING COUNT(*) > 0
+      ORDER BY 2 DESC
+      LIMIT 200
+    `);
+    const items = ((rows as any).rows ?? rows).map((r: any) => ({
+      name: r.name as string,
+      value: Number(r.species_count),
+      hasChildren: true,
+      rang: "GN",
+    }));
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json(items);
+    return;
+  }
+
+  const prefix = `${genre} %`;
+  const rows = await db.execute(sql`
+    SELECT cd_nom, lb_nom, nom_vern
+    FROM taxons
+    WHERE ${refOnly}
+      AND famille = ${famille}
+      AND rang = 'ES'
+      AND lb_nom LIKE ${prefix}
+      ${statutFilter}
+    ORDER BY lb_nom
+    LIMIT 500
+  `);
+  const items = ((rows as any).rows ?? rows).map((r: any) => ({
+    name: r.lb_nom as string,
+    nomVern: r.nom_vern as string | null,
+    cdNom: r.cd_nom as number,
+    value: 1,
+    hasChildren: false,
+    rang: "ES",
+  }));
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json(items);
+});
+
 router.get("/status-types", async (_req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT cd_type_statut AS code, lb_type_statut AS label, COUNT(DISTINCT cd_nom)::int AS taxa
