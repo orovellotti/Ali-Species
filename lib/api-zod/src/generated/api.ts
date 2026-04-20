@@ -16,6 +16,16 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary List BDC status types with taxon counts
+ */
+export const ListStatusTypesResponseItem = zod.object({
+  code: zod.string(),
+  label: zod.string(),
+  taxa: zod.number(),
+});
+export const ListStatusTypesResponse = zod.array(ListStatusTypesResponseItem);
+
+/**
  * @summary List régions and départements with status counts
  */
 export const ListTerritoiresResponseItem = zod.object({

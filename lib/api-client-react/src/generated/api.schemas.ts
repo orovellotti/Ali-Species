@@ -100,6 +100,12 @@ export interface Error {
   error: string;
 }
 
+export type ListStatusTypes200Item = {
+  code: string;
+  label: string;
+  taxa: number;
+};
+
 export type ListTerritoires200Item = {
   lb: string;
   cd_sig: string;

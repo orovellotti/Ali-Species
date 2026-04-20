@@ -18,6 +18,7 @@ import type {
   Error,
   GbifInfo,
   HealthStatus,
+  ListStatusTypes200Item,
   ListTerritoires200Item,
   SearchTaxonsParams,
   TaxonDetail,
@@ -104,6 +105,81 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List BDC status types with taxon counts
+ */
+export const getListStatusTypesUrl = () => {
+  return `/api/status-types`;
+};
+
+export const listStatusTypes = async (
+  options?: RequestInit,
+): Promise<ListStatusTypes200Item[]> => {
+  return customFetch<ListStatusTypes200Item[]>(getListStatusTypesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStatusTypesQueryKey = () => {
+  return [`/api/status-types`] as const;
+};
+
+export const getListStatusTypesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStatusTypes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStatusTypes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStatusTypesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStatusTypes>>> = ({
+    signal,
+  }) => listStatusTypes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStatusTypes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStatusTypesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStatusTypes>>
+>;
+export type ListStatusTypesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List BDC status types with taxon counts
+ */
+
+export function useListStatusTypes<
+  TData = Awaited<ReturnType<typeof listStatusTypes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStatusTypes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStatusTypesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

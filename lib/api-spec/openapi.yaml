@@ -26,6 +26,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /status-types:
+    get:
+      operationId: listStatusTypes
+      tags: [taxons]
+      summary: List BDC status types with taxon counts
+      responses:
+        "200":
+          description: List of status types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [code, label, taxa]
+                  properties:
+                    code:
+                      type: string
+                    label:
+                      type: string
+                    taxa:
+                      type: integer
   /territoires:
     get:
       operationId: listTerritoires

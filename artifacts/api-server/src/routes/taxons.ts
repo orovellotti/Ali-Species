@@ -144,8 +144,30 @@ router.get("/taxons/random", async (_req, res): Promise<void> => {
   res.json(taxon);
 });
 
-router.get("/taxons/taxonomy-tree", async (_req, res): Promise<void> => {
+router.get("/status-types", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT cd_type_statut AS code, lb_type_statut AS label, COUNT(DISTINCT cd_nom)::int AS taxa
+    FROM bdc_statuts
+    WHERE cd_type_statut IS NOT NULL AND lb_type_statut IS NOT NULL
+    GROUP BY 1, 2
+    ORDER BY taxa DESC
+  `);
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.json((rows as any).rows ?? rows);
+});
+
+router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
+  const statutType = typeof req.query.statutType === "string" ? req.query.statutType.trim() : "";
   const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
+
+  const conds: any[] = [
+    refOnly,
+    eq(taxonsTable.rang, "ES"),
+    sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`,
+  ];
+  if (statutType) {
+    conds.push(sql`${taxonsTable.cdNom} IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${statutType})`);
+  }
 
   const rows = await db
     .select({
@@ -157,11 +179,7 @@ router.get("/taxons/taxonomy-tree", async (_req, res): Promise<void> => {
       count: sql<number>`count(*)::int`,
     })
     .from(taxonsTable)
-    .where(and(
-      refOnly,
-      eq(taxonsTable.rang, "ES"),
-      sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`
-    ))
+    .where(and(...conds))
     .groupBy(taxonsTable.regne, taxonsTable.phylum, taxonsTable.classe, taxonsTable.ordre, taxonsTable.famille)
     .orderBy(desc(sql`count(*)`));
 
