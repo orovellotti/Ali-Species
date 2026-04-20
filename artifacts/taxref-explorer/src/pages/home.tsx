@@ -9,6 +9,9 @@ import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
 import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
+import animaliaImg from "@/assets/images/animalia.png";
+import plantaeImg from "@/assets/images/plantae.png";
+import fungiImg from "@/assets/images/fungi.png";
 
 
 export default function Home() {
@@ -197,16 +200,19 @@ export default function Home() {
           <FeaturedCard 
             title="Animalia" 
             desc="Des invertebres microscopiques aux mammiferes."
+            fallbackImage={animaliaImg}
             cdNom={183716}
           />
           <FeaturedCard 
             title="Plantae" 
             desc="Plantes a fleurs, fougeres, mousses et algues vertes."
+            fallbackImage={plantaeImg}
             cdNom={187079}
           />
           <FeaturedCard 
             title="Fungi" 
             desc="Champignons, moisissures et levures."
+            fallbackImage={fungiImg}
             cdNom={187496}
           />
         </div>
