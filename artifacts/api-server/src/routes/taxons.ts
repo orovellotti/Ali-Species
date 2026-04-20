@@ -211,16 +211,48 @@ router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
   res.json(items);
 });
 
+const STATUS_TYPE_ORDER: Record<string, { group: string; rank: number }> = {
+  LRM: { group: "Listes rouges", rank: 1 },
+  LRE: { group: "Listes rouges", rank: 2 },
+  LRN: { group: "Listes rouges", rank: 3 },
+  LRR: { group: "Listes rouges", rank: 4 },
+  PN: { group: "Protections", rank: 5 },
+  PR: { group: "Protections", rank: 6 },
+  PD: { group: "Protections", rank: 7 },
+  POM: { group: "Protections", rank: 8 },
+  DH: { group: "Directives européennes", rank: 9 },
+  DO: { group: "Directives européennes", rank: 10 },
+  BERN: { group: "Conventions internationales", rank: 11 },
+  BONN: { group: "Conventions internationales", rank: 12 },
+  BARC: { group: "Conventions internationales", rank: 13 },
+  OSPAR: { group: "Conventions internationales", rank: 14 },
+  ZDET: { group: "ZNIEFF", rank: 15 },
+  PNA: { group: "Plans nationaux d'actions", rank: 16 },
+  exPNA: { group: "Plans nationaux d'actions", rank: 17 },
+  SENSNAT: { group: "Sensibilité", rank: 18 },
+  SENSREG: { group: "Sensibilité", rank: 19 },
+  SENSDEP: { group: "Sensibilité", rank: 20 },
+  REGL: { group: "Réglementation", rank: 21 },
+  REGLII: { group: "Réglementation", rank: 22 },
+  REGLLUTTE: { group: "Réglementation", rank: 23 },
+  REGLSO: { group: "Réglementation", rank: 24 },
+};
+
 router.get("/status-types", async (_req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT cd_type_statut AS code, lb_type_statut AS label, COUNT(DISTINCT cd_nom)::int AS taxa
     FROM bdc_statuts
     WHERE cd_type_statut IS NOT NULL AND lb_type_statut IS NOT NULL
     GROUP BY 1, 2
-    ORDER BY taxa DESC
   `);
+  const items = ((rows as any).rows ?? rows) as { code: string; label: string; taxa: number }[];
+  const decorated = items.map((it) => {
+    const meta = STATUS_TYPE_ORDER[it.code] ?? { group: "Autres", rank: 999 };
+    return { ...it, group: meta.group, rank: meta.rank };
+  });
+  decorated.sort((a, b) => (a.rank - b.rank) || a.label.localeCompare(b.label, "fr"));
   res.setHeader("Cache-Control", "public, max-age=86400");
-  res.json((rows as any).rows ?? rows);
+  res.json(decorated);
 });
 
 router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {

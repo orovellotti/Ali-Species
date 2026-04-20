@@ -10,9 +10,6 @@ import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
 import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
 
-import animaliaImg from "@/assets/images/animalia.png";
-import plantaeImg from "@/assets/images/plantae.png";
-import fungiImg from "@/assets/images/fungi.png";
 
 export default function Home() {
   const { data: stats, isLoading: statsLoading } = useGetTaxonStats();
@@ -21,7 +18,7 @@ export default function Home() {
   const [treeData, setTreeData] = useState<any>(null);
   const [treeLoading, setTreeLoading] = useState(false);
   const [statutType, setStatutType] = useState<string>("");
-  const [statusTypes, setStatusTypes] = useState<{ code: string; label: string; taxa: number }[]>([]);
+  const [statusTypes, setStatusTypes] = useState<{ code: string; label: string; taxa: number; group?: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/status-types")
@@ -103,8 +100,18 @@ export default function Home() {
                 data-testid="select-status-type"
               >
                 <option value="">Toutes les especes ({stats?.totalTaxons?.toLocaleString("fr-FR") || "..."})</option>
-                {statusTypes.map(s => (
-                  <option key={s.code} value={s.code}>{s.label} ({s.taxa.toLocaleString("fr-FR")})</option>
+                {Object.entries(
+                  statusTypes.reduce<Record<string, typeof statusTypes>>((acc, s) => {
+                    const g = s.group || "Autres";
+                    (acc[g] ||= []).push(s);
+                    return acc;
+                  }, {})
+                ).map(([group, items]) => (
+                  <optgroup key={group} label={group}>
+                    {items.map(s => (
+                      <option key={s.code} value={s.code}>{s.label} ({s.taxa.toLocaleString("fr-FR")})</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               {statutType && (
@@ -190,19 +197,16 @@ export default function Home() {
           <FeaturedCard 
             title="Animalia" 
             desc="Des invertebres microscopiques aux mammiferes."
-            fallbackImage={animaliaImg}
             cdNom={183716}
           />
           <FeaturedCard 
             title="Plantae" 
             desc="Plantes a fleurs, fougeres, mousses et algues vertes."
-            fallbackImage={plantaeImg}
             cdNom={187079}
           />
           <FeaturedCard 
             title="Fungi" 
             desc="Champignons, moisissures et levures."
-            fallbackImage={fungiImg}
             cdNom={187496}
           />
         </div>
