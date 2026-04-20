@@ -10,6 +10,7 @@ export * from "./bdcStatut";
 export * from "./error";
 export * from "./gbifInfo";
 export * from "./healthStatus";
+export * from "./listTerritoires200Item";
 export * from "./searchTaxonsParams";
 export * from "./taxonDetail";
 export * from "./taxonMedia";

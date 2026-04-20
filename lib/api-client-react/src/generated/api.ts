@@ -18,6 +18,7 @@ import type {
   Error,
   GbifInfo,
   HealthStatus,
+  ListTerritoires200Item,
   SearchTaxonsParams,
   TaxonDetail,
   TaxonMedia,
@@ -103,6 +104,81 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List régions and départements with status counts
+ */
+export const getListTerritoiresUrl = () => {
+  return `/api/territoires`;
+};
+
+export const listTerritoires = async (
+  options?: RequestInit,
+): Promise<ListTerritoires200Item[]> => {
+  return customFetch<ListTerritoires200Item[]>(getListTerritoiresUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTerritoiresQueryKey = () => {
+  return [`/api/territoires`] as const;
+};
+
+export const getListTerritoiresQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTerritoires>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTerritoires>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTerritoiresQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTerritoires>>> = ({
+    signal,
+  }) => listTerritoires({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTerritoires>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTerritoiresQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTerritoires>>
+>;
+export type ListTerritoiresQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List régions and départements with status counts
+ */
+
+export function useListTerritoires<
+  TData = Awaited<ReturnType<typeof listTerritoires>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTerritoires>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTerritoiresQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

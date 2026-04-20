@@ -100,6 +100,13 @@ export interface Error {
   error: string;
 }
 
+export type ListTerritoires200Item = {
+  lb: string;
+  cd_sig: string;
+  niveau: string;
+  taxa: number;
+};
+
 export type SearchTaxonsParams = {
   /**
    * Search query (name or vernacular name)
@@ -109,6 +116,10 @@ export type SearchTaxonsParams = {
    * Filter by kingdom
    */
   regne?: string;
+  /**
+   * Filter by territory cd_sig (e.g. INSEER52 region or INSEED69 département)
+   */
+  territoire?: string;
   /**
    * Max results
    */

@@ -16,6 +16,17 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary List régions and départements with status counts
+ */
+export const ListTerritoiresResponseItem = zod.object({
+  lb: zod.string(),
+  cd_sig: zod.string(),
+  niveau: zod.string(),
+  taxa: zod.number(),
+});
+export const ListTerritoiresResponse = zod.array(ListTerritoiresResponseItem);
+
+/**
  * @summary Search taxons with autocomplete
  */
 export const searchTaxonsQueryLimitDefault = 20;
@@ -23,6 +34,12 @@ export const searchTaxonsQueryLimitDefault = 20;
 export const SearchTaxonsQueryParams = zod.object({
   q: zod.coerce.string().describe("Search query (name or vernacular name)"),
   regne: zod.coerce.string().optional().describe("Filter by kingdom"),
+  territoire: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter by territory cd_sig (e.g. INSEER52 region or INSEED69 département)",
+    ),
   limit: zod.coerce
     .number()
     .default(searchTaxonsQueryLimitDefault)

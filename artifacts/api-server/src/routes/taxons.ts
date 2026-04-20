@@ -71,6 +71,7 @@ router.get("/image-proxy", async (req, res): Promise<void> => {
 router.get("/taxons/search", async (req, res): Promise<void> => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const regne = typeof req.query.regne === "string" ? req.query.regne : undefined;
+  const territoire = typeof req.query.territoire === "string" ? req.query.territoire.trim() : undefined;
   const limitRaw = typeof req.query.limit === "string" ? parseInt(req.query.limit) : 20;
   const limit = Math.min(Math.max(limitRaw || 20, 1), 50);
 
@@ -81,7 +82,15 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
 
   const pattern = `%${q}%`;
 
-  let query = db
+  const conds: any[] = [
+    or(ilike(taxonsTable.lbNom, pattern), ilike(taxonsTable.nomVern, pattern)),
+  ];
+  if (regne) conds.push(sql`${taxonsTable.regne} = ${regne}`);
+  if (territoire) {
+    conds.push(sql`${taxonsTable.cdNom} IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_sig = ${territoire})`);
+  }
+
+  const results = await db
     .select({
       cdNom: taxonsTable.cdNom,
       cdRef: taxonsTable.cdRef,
@@ -92,23 +101,22 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
       regne: taxonsTable.regne,
     })
     .from(taxonsTable)
-    .where(
-      or(
-        ilike(taxonsTable.lbNom, pattern),
-        ilike(taxonsTable.nomVern, pattern),
-      )
-    )
-    .limit(limit)
-    .$dynamic();
+    .where(and(...conds))
+    .limit(limit);
 
-  if (regne) {
-    query = query.where(
-      sql`${taxonsTable.regne} = ${regne} AND (${taxonsTable.lbNom} ILIKE ${pattern} OR ${taxonsTable.nomVern} ILIKE ${pattern})`
-    );
-  }
-
-  const results = await query;
   res.json(results);
+});
+
+router.get("/territoires", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT lb_adm_tr AS lb, cd_sig, niveau_admin AS niveau, COUNT(DISTINCT cd_nom)::int AS taxa
+    FROM bdc_statuts
+    WHERE niveau_admin IN ('Région', 'Département') AND cd_sig IS NOT NULL AND lb_adm_tr IS NOT NULL
+    GROUP BY 1, 2, 3
+    ORDER BY niveau_admin, lb_adm_tr
+  `);
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.json((rows as any).rows ?? rows);
 });
 
 router.get("/taxons/random", async (_req, res): Promise<void> => {

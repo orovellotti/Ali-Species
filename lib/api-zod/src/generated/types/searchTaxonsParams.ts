@@ -16,6 +16,10 @@ export type SearchTaxonsParams = {
    */
   regne?: string;
   /**
+   * Filter by territory cd_sig (e.g. INSEER52 region or INSEED69 département)
+   */
+  territoire?: string;
+  /**
    * Max results
    */
   limit?: number;

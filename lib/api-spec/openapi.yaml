@@ -26,6 +26,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /territoires:
+    get:
+      operationId: listTerritoires
+      tags: [taxons]
+      summary: List régions and départements with status counts
+      responses:
+        "200":
+          description: List of territories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [lb, cd_sig, niveau, taxa]
+                  properties:
+                    lb:
+                      type: string
+                    cd_sig:
+                      type: string
+                    niveau:
+                      type: string
+                    taxa:
+                      type: integer
   /taxons/search:
     get:
       operationId: searchTaxons
@@ -44,6 +68,12 @@ paths:
           schema:
             type: string
           description: Filter by kingdom
+        - name: territoire
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by territory cd_sig (e.g. INSEER52 region or INSEED69 département)
         - name: limit
           in: query
           required: false
