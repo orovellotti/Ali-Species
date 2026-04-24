@@ -165,7 +165,7 @@ function ConversationTurn({ turn }: { turn: Turn }) {
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{turn.reply}</p>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{turn.reply.replace(/\*\*/g, "")}</p>
             {turn.results.length > 0 && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {turn.results.map((r) => (
