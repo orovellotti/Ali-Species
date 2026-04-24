@@ -21,6 +21,7 @@ export function Layout({ children }: LayoutProps) {
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
+            <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">Taxonomie</Link>
             <Link href="/a-propos" className="hover:text-foreground transition-colors">A propos</Link>
             <Link
               href="/a-propos#mcp"

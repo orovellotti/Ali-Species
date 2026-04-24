@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TaxonDetail from "@/pages/taxon";
 import About from "@/pages/about";
+import Taxonomie from "@/pages/taxonomie";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/taxonomie" component={Taxonomie} />
       <Route path="/a-propos" component={About} />
       <Route path="/taxon/:slug" component={TaxonDetail} />
       <Route component={NotFound} />
