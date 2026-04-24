@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Layout } from "@/components/Layout";
-import { SearchAutocomplete } from "@/components/SearchAutocomplete";
+import { ConversationalBar } from "@/components/ConversationalBar";
 import { useGetTaxonStats, getRandomTaxon } from "@workspace/api-client-react";
 import { Trees, Microscope, BookOpen, ScrollText, Shuffle, Layers, ShieldAlert, X } from "lucide-react";
 import aliLogo from "@/assets/images/ali-logo.png";
@@ -77,7 +77,7 @@ export default function Home() {
             Le referentiel taxonomique national couvrant la flore, la faune et les champignons. Base sur TAXREF v18, produit par PatriNat.
           </p>
 
-          <SearchAutocomplete />
+          <ConversationalBar />
 
           <button
             onClick={handleRandom}
