@@ -34,9 +34,9 @@ export default function Home() {
     <Layout>
       <Helmet>
         <title>ALI Species — All Life Intelligence — Explorez le monde vivant de la France</title>
-        <meta name="description" content="ALI Species — All Life Intelligence. Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire : classification, statuts de conservation, images et donnees GBIF." />
+        <meta name="description" content="ALI Species — All Life Intelligence. Explorez 700 000 taxons de TAXREF v18 : classification, statuts de conservation (Liste Rouge UICN, protections, directives) et reseaux trophiques GloBI (proies, predateurs, parasites, pollinisation)." />
         <meta property="og:title" content="ALI Species — All Life Intelligence" />
-        <meta property="og:description" content="Explorez le referentiel taxonomique national francais TAXREF v18. Recherchez parmi 300 000+ taxons par nom scientifique ou vernaculaire." />
+        <meta property="og:description" content="Explorez 700 000 taxons de TAXREF v18 : statuts de conservation et reseaux trophiques de la biodiversite francaise." />
         <meta property="og:type" content="website" />
       </Helmet>
       <section className="relative pt-24 pb-32 px-4 overflow-visible">
@@ -49,8 +49,11 @@ export default function Home() {
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight">
             Explorez le monde vivant de la <span className="text-primary italic">France</span>.
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
-            Le referentiel taxonomique national couvrant la flore, la faune et les champignons. Base sur TAXREF v18, produit par PatriNat.
+          <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
+            700 000 taxons de TAXREF v18 — flore, faune et champignons — avec leurs <span className="text-foreground font-medium">statuts de conservation</span> (Liste Rouge UICN, protections nationales, directives européennes) et leurs <span className="text-foreground font-medium">réseaux trophiques</span> (proies, prédateurs, parasites, pollinisation) issus de GloBI.
+          </p>
+          <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
+            Posez votre question en français — l'assistant interroge la base et vous présente les espèces et leurs interactions.
           </p>
 
           <ConversationalBar />
