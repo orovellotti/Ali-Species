@@ -16,7 +16,15 @@ export function Layout({ children }: LayoutProps) {
           <Link href="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-80">
             <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
             <div className="flex flex-col leading-tight">
-              <span className="font-serif font-semibold text-lg tracking-tight">ALI Species</span>
+              <span className="font-serif font-semibold text-lg tracking-tight flex items-center gap-2">
+                ALI Species
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/15 text-primary text-[9px] font-bold uppercase tracking-wider ring-1 ring-primary/20"
+                  data-testid="badge-beta"
+                >
+                  Beta
+                </span>
+              </span>
               <span className="text-[10px] text-muted-foreground tracking-widest uppercase">All Life Intelligence</span>
             </div>
           </Link>
