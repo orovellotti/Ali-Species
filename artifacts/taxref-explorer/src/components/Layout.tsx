@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import aliLogo from "@/assets/images/ali-logo.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
+import globiLogo from "@/assets/images/globi-logo.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -56,6 +57,13 @@ export function Layout({ children }: LayoutProps) {
                 className="h-14 object-contain"
               />
             </a>
+            <a href="https://www.globalbioticinteractions.org/" target="_blank" rel="noreferrer" className="block hover:opacity-80 transition-opacity" data-testid="link-globi-footer">
+              <img
+                src={globiLogo}
+                alt="Global Biotic Interactions (GloBI)"
+                className="h-12 object-contain"
+              />
+            </a>
           </div>
 
           <div className="text-center space-y-2">
@@ -67,6 +75,11 @@ export function Layout({ children }: LayoutProps) {
               TAXREF est produit par{" "}
               <a href="https://www.patrinat.fr/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">PatriNat</a>
               {" "}(OFB - MNHN - CNRS - IRD), centre d'expertise et de donnees sur le patrimoine naturel.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Reseaux trophiques fournis par{" "}
+              <a href="https://www.globalbioticinteractions.org/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">GloBI</a>
+              {" "}(Global Biotic Interactions), agregateur ouvert d'interactions ecologiques entre especes.
             </p>
           </div>
 
