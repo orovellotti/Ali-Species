@@ -181,11 +181,100 @@ async function runQuery(filters: Filters) {
   return { totalCount, items };
 }
 
+const QUESTION_KEYWORDS = [
+  "combien", "quel", "quels", "quelle", "quelles", "qui", "quoi", "où", "ou est", "comment", "pourquoi",
+  "liste", "donne", "donnez", "montre", "montrez", "affiche", "trouve", "cherche", "cite",
+  "qu'est", "c'est quoi", "explique", "raconte", "parle", "dis", "compte", "comptez",
+  "ventile", "ventilation", "répartition", "repartition", "breakdown", "statut", "statuts", "par statut",
+  "menacé", "menace", "menacée", "menacees", "menacés", "menacees",
+  "protégé", "protege", "protégée", "protegee", "protégés", "proteges",
+  "rouge", "vulnérable", "vulnerable", "danger", "uicn",
+  "famille de", "famille des", "espèces de", "especes de", "espèce de", "espece de",
+  "réseau", "reseau", "trophique", "mange", "mangé", "consomme", "prédateur", "predateur",
+  "et ", " ou ", " avec ", " dans ", " sur ", " pour ",
+];
+
+function looksLikeSpeciesName(q: string): boolean {
+  const s = q.trim();
+  if (!s || s.length > 60) return false;
+  if (/[?!]/.test(s)) return false;
+  const tokens = s.split(/\s+/);
+  if (tokens.length === 0 || tokens.length > 5) return false;
+  const low = s.toLowerCase();
+  for (const w of QUESTION_KEYWORDS) {
+    if (low.includes(w)) return false;
+  }
+  return true;
+}
+
+async function findExactSpecies(q: string): Promise<any[]> {
+  const trimmed = q.trim();
+  const rowsRes = await db.execute(sql`
+    SELECT cd_nom, lb_nom, nom_vern, rang, regne, classe, ordre, famille,
+      CASE
+        WHEN LOWER(lb_nom) = LOWER(${trimmed}) THEN 0
+        WHEN LOWER(nom_vern) = LOWER(${trimmed}) THEN 1
+        WHEN ', ' || LOWER(COALESCE(nom_vern, '')) || ',' LIKE '%, ' || LOWER(${trimmed}) || ',%' THEN 2
+        WHEN LOWER(lb_nom) LIKE LOWER(${trimmed}) || '%' THEN 3
+        ELSE 4
+      END AS priority
+    FROM taxons
+    WHERE cd_nom = cd_ref
+      AND (
+        LOWER(lb_nom) = LOWER(${trimmed})
+        OR LOWER(nom_vern) = LOWER(${trimmed})
+        OR ', ' || LOWER(COALESCE(nom_vern, '')) || ',' LIKE '%, ' || LOWER(${trimmed}) || ',%'
+        OR LOWER(lb_nom) LIKE LOWER(${trimmed}) || '%'
+      )
+    ORDER BY priority,
+      CASE WHEN rang = 'ES' THEN 0 ELSE 1 END,
+      lb_nom
+    LIMIT 5
+  `);
+  const rows = ((rowsRes as any).rows ?? rowsRes) as any[];
+  return rows
+    .filter((r) => r.priority < 4)
+    .map((r) => ({
+      cdNom: r.cd_nom as number,
+      lbNom: r.lb_nom as string,
+      nomVern: r.nom_vern as string | null,
+      rang: r.rang as string,
+      regne: r.regne as string | null,
+      classe: r.classe as string | null,
+      ordre: r.ordre as string | null,
+      famille: r.famille as string | null,
+    }));
+}
+
 router.post("/ask", async (req, res): Promise<void> => {
   const body = req.body ?? {};
   const question = typeof body.question === "string" ? body.question.trim() : "";
   const history: Msg[] = Array.isArray(body.history) ? body.history.slice(-10) : [];
   if (!question) { res.status(400).json({ error: "question required" }); return; }
+
+  // Fast path: if the question looks like just a species name, look it up directly
+  // and skip the LLM call entirely.
+  if (history.length === 0 && looksLikeSpeciesName(question)) {
+    try {
+      const items = await findExactSpecies(question);
+      if (items.length > 0) {
+        const top = items[0];
+        const vern = top.nomVern ? ` (${top.nomVern.split(",")[0].trim()})` : "";
+        const reply = items.length === 1
+          ? `Voici ${top.lbNom}${vern}. Cliquez sur la fiche pour explorer ses statuts, sa classification et son réseau trophique.`
+          : `${items.length} taxons correspondent à « ${question} ». Cliquez sur une fiche pour voir le détail.`;
+        res.json({
+          reply,
+          results: items,
+          totalCount: items.length,
+          filters: { name: question },
+        });
+        return;
+      }
+    } catch {
+      // fall through to LLM path
+    }
+  }
 
   const systemPrompt = `Tu es l'assistant de l'application ALI Species, un explorateur du référentiel taxonomique français TAXREF v18 (≈ 708 000 taxons couvrant la flore, la faune et les champignons de France métropolitaine et d'outre-mer).
 
