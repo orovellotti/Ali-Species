@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { getInteractionsForCdNom } from "./interactions.js";
 
 const router: IRouter = Router();
 
@@ -53,6 +54,19 @@ const TOOL_DEFS = [
         cdSig: { type: "string", description: "Restreindre à un territoire (ex: METRO, 11, 75)." },
       },
       required: ["statutType"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_interactions",
+    description:
+      "Retourne le réseau trophique d'un taxon depuis Global Biotic Interactions (GloBI) : ce qu'il consomme, ce qui le consomme, parasites/hôtes, plantes pollinisées. Utilise ce tool quand l'utilisateur demande qui mange qui, les proies, prédateurs, parasites, ou interactions écologiques d'une espèce. Tu dois d'abord obtenir le cdNom du taxon (avec query_taxa si besoin). Le résultat te donne un compte par groupe et un échantillon de partenaires.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        cdNom: { type: "number", description: "Identifiant TAXREF (cdNom) du taxon source." },
+      },
+      required: ["cdNom"],
       additionalProperties: false,
     },
   },
@@ -280,14 +294,16 @@ router.post("/ask", async (req, res): Promise<void> => {
 
 Tu réponds toujours en français, de manière concise (2-4 phrases), naturelle et précise.
 
-Tu disposes de deux tools :
+Tu disposes de trois tools :
 - "query_taxa" : pour lister/compter des taxons selon des filtres (taxonomie, statut, territoire...). Utilise-le pour répondre à toute question portant sur des espèces.
 - "status_breakdown" : pour obtenir la répartition agrégée des taxons par code de statut, pour un type de statut donné. Utilise-le quand l'utilisateur demande une vue "par statut" / "par catégorie" / "répartition" / "ventilation" — par exemple : "répartition Liste Rouge des oiseaux", "combien d'espèces dans chaque catégorie UICN", "breakdown des protégées par annexe", "statut par statut".
+- "get_interactions" : pour obtenir le réseau trophique d'une espèce depuis GloBI (proies, prédateurs, parasites, pollinisation). Utilise-le quand l'utilisateur demande "qui mange qui", "que mange X", "quels sont les prédateurs de X", "parasites de X", "interactions de X". Si tu n'as pas le cdNom du taxon, fais d'abord un query_taxa pour le récupérer, puis appelle get_interactions.
 
 Quand le résultat est revenu, formule une réponse synthétique en français qui :
 - Donne le compte total trouvé (en chiffres formatés)
 - Pour query_taxa : mentionne 2-4 exemples emblématiques s'il y a lieu
 - Pour status_breakdown : présente la ventilation (ex: "Sur 379 oiseaux évalués, 12 en danger critique, 25 en danger, 48 vulnérables...")
+- Pour get_interactions : résume les groupes (ex: "L'écureuil roux interagit avec 337 partenaires : il consomme 161 espèces (noisettes, faînes, champignons...), est consommé par 142 prédateurs (rapaces, mustélidés...), héberge 30 parasites et pollinise 4 plantes."). Mentionne quelques exemples par groupe.
 - N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa)
 - Invite à cliquer sur les cartes pour voir le détail
 - N'utilise JAMAIS countOnly=true (le paramètre est ignoré, on retourne toujours un échantillon en plus du compte)
@@ -368,6 +384,37 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
               })),
             }),
           });
+        } else if (tu.name === "get_interactions") {
+          const cdNom = Number((tu.input ?? {}).cdNom);
+          if (!cdNom || Number.isNaN(cdNom)) {
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "cdNom invalide", is_error: true });
+          } else {
+            const payload = await getInteractionsForCdNom(cdNom);
+            if (!payload) {
+              toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: `Aucun taxon pour cdNom=${cdNom}`, is_error: true });
+            } else {
+              const summary = {
+                sourceTaxon: payload.sourceTaxon,
+                cdNom: payload.cdNom,
+                totalPartners: payload.totalPartners,
+                groups: payload.groups.map((g: any) => ({
+                  id: g.id,
+                  label: g.label,
+                  count: g.count,
+                  topPartners: g.partners.slice(0, 8).map((p: any) => ({
+                    name: p.name,
+                    nomVern: p.nomVern,
+                    cdNom: p.cdNom,
+                  })),
+                })),
+              };
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: JSON.stringify(summary),
+              });
+            }
+          }
         } else if (tu.name === "status_breakdown") {
           const filters = (tu.input ?? {}) as BreakdownFilters;
           if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
