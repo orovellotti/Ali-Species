@@ -47,7 +47,7 @@ export default function Home() {
             <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight">
-            Explorez le referentiel des especes en <span className="text-primary italic">langue naturelle</span>.
+            Explorez le referentiel du vivant en <span className="text-primary italic">langage naturel</span>.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
             700 000 taxons de TAXREF v18 — flore, faune et champignons — avec leurs <span className="text-foreground font-medium">statuts de conservation</span> (Liste Rouge UICN, protections nationales, directives européennes) et leurs <span className="text-foreground font-medium">réseaux trophiques</span> (proies, prédateurs, parasites, pollinisation) issus de GloBI.
