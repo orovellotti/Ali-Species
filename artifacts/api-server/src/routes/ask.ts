@@ -34,6 +34,29 @@ const REGNE_HINTS: Record<string, string> = {
 
 const TOOL_DEFS = [
   {
+    name: "status_breakdown",
+    description:
+      "Retourne la répartition des taxons par code de statut, pour un type de statut donné. À utiliser quand l'utilisateur demande une vue agrégée 'par statut' (ex: répartition Liste Rouge, combien d'espèces dans chaque catégorie UICN, breakdown des protégées par annexe, etc.). Les filtres taxonomiques (regne, classe, etc.) restreignent la portée. Le résultat te donne, pour chaque code, le libellé et le nombre de taxons concernés.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        statutType: {
+          type: "string",
+          description: "OBLIGATOIRE. Code du type de statut : LRM, LRE, LRN, LRR, PN, PR, PD, POM, DH, DO, BERN, BONN, BARC, OSPAR, ZDET, PNA, exPNA, SENSNAT, SENSREG, SENSDEP, REGL, REGLII, REGLLUTTE, REGLSO."
+        },
+        regne: { type: "string", description: "Filtrer par règne (Animalia, Plantae, Fungi...)." },
+        classe: { type: "string", description: "Filtrer par classe (Mammalia, Aves, Insecta...)." },
+        ordre: { type: "string", description: "Filtrer par ordre." },
+        famille: { type: "string", description: "Filtrer par famille." },
+        genre: { type: "string", description: "Filtrer par genre." },
+        groupe2Inpn: { type: "string", description: "Filtrer par grand groupe INPN (Mammifères, Oiseaux, Reptiles...)." },
+        cdSig: { type: "string", description: "Restreindre à un territoire (ex: METRO, 11, 75)." },
+      },
+      required: ["statutType"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "query_taxa",
     description:
       "Recherche des taxons dans TAXREF v18 selon des filtres. Utilise ce tool pour répondre à toute question portant sur des espèces, leur conservation, leur répartition ou leur taxonomie. Le résultat te donne le nombre total ainsi qu'un échantillon. Tu peux ensuite formuler une réponse en français pour l'utilisateur.",
@@ -63,6 +86,45 @@ const TOOL_DEFS = [
     },
   },
 ];
+
+interface BreakdownFilters {
+  statutType: string;
+  regne?: string;
+  classe?: string;
+  ordre?: string;
+  famille?: string;
+  genre?: string;
+  groupe2Inpn?: string;
+  cdSig?: string;
+}
+
+async function runStatusBreakdown(filters: BreakdownFilters) {
+  const conds: any[] = [
+    sql`t.cd_nom = t.cd_ref`,
+    sql`t.rang = 'ES'`,
+    sql`s.cd_type_statut = ${filters.statutType}`,
+  ];
+  for (const [k, col] of [
+    ["regne", "regne"], ["classe", "classe"], ["ordre", "ordre"],
+    ["famille", "famille"], ["genre", "genre"], ["groupe2Inpn", "group2_inpn"],
+  ] as const) {
+    const v = (filters as any)[k];
+    if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
+  }
+  if (filters.cdSig) conds.push(sql`s.cd_sig = ${filters.cdSig}`);
+
+  const whereSql = sql.join(conds, sql` AND `);
+  const rowsRes = await db.execute(sql`
+    SELECT s.code_statut AS code, MAX(s.label_statut) AS label, COUNT(DISTINCT t.cd_nom)::int AS count
+    FROM taxons t JOIN bdc_statuts s ON s.cd_nom = t.cd_nom
+    WHERE ${whereSql}
+    GROUP BY s.code_statut
+    ORDER BY count DESC
+  `);
+  const rows = ((rowsRes as any).rows ?? rowsRes) as Array<{ code: string; label: string | null; count: number }>;
+  const totalCount = rows.reduce((s, r) => s + r.count, 0);
+  return { totalCount, breakdown: rows };
+}
 
 async function runQuery(filters: Filters) {
   const conds: any[] = [sql`t.cd_nom = t.cd_ref`];
@@ -129,10 +191,15 @@ router.post("/ask", async (req, res): Promise<void> => {
 
 Tu réponds toujours en français, de manière concise (2-4 phrases), naturelle et précise.
 
-Pour répondre à une question sur des espèces ou des taxons, tu DOIS utiliser le tool "query_taxa" avec les filtres adéquats. Tu peux l'appeler plusieurs fois si nécessaire pour comparer ou affiner. Quand le résultat est revenu, formule une réponse synthétique en français qui:
+Tu disposes de deux tools :
+- "query_taxa" : pour lister/compter des taxons selon des filtres (taxonomie, statut, territoire...). Utilise-le pour répondre à toute question portant sur des espèces.
+- "status_breakdown" : pour obtenir la répartition agrégée des taxons par code de statut, pour un type de statut donné. Utilise-le quand l'utilisateur demande une vue "par statut" / "par catégorie" / "répartition" / "ventilation" — par exemple : "répartition Liste Rouge des oiseaux", "combien d'espèces dans chaque catégorie UICN", "breakdown des protégées par annexe", "statut par statut".
+
+Quand le résultat est revenu, formule une réponse synthétique en français qui :
 - Donne le compte total trouvé (en chiffres formatés)
-- Mentionne 2-4 exemples emblématiques s'il y a lieu
-- N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse, à chaque appel du tool)
+- Pour query_taxa : mentionne 2-4 exemples emblématiques s'il y a lieu
+- Pour status_breakdown : présente la ventilation (ex: "Sur 379 oiseaux évalués, 12 en danger critique, 25 en danger, 48 vulnérables...")
+- N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa)
 - Invite à cliquer sur les cartes pour voir le détail
 - N'utilise JAMAIS countOnly=true (le paramètre est ignoré, on retourne toujours un échantillon en plus du compte)
 
@@ -189,33 +256,47 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
 
     const toolResults: any[] = [];
     for (const tu of toolUses as any[]) {
-      if (tu.name !== "query_taxa") {
-        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "Tool inconnu" });
-        continue;
-      }
-      const filters = (tu.input ?? {}) as Filters;
-      // light normalization
-      if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
-        filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
-      }
       try {
-        const result = await runQuery(filters);
-        lastQueryResult = result;
-        usedFilters = filters;
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: tu.id,
-          content: JSON.stringify({
-            totalCount: result.totalCount,
-            sample: result.items.slice(0, 12).map((it) => ({
-              cdNom: it.cdNom,
-              lbNom: it.lbNom,
-              nomVern: it.nomVern,
-              classe: it.classe,
-              famille: it.famille,
-            })),
-          }),
-        });
+        if (tu.name === "query_taxa") {
+          const filters = (tu.input ?? {}) as Filters;
+          if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
+            filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
+          }
+          const result = await runQuery(filters);
+          lastQueryResult = result;
+          usedFilters = filters;
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: JSON.stringify({
+              totalCount: result.totalCount,
+              sample: result.items.slice(0, 12).map((it) => ({
+                cdNom: it.cdNom,
+                lbNom: it.lbNom,
+                nomVern: it.nomVern,
+                classe: it.classe,
+                famille: it.famille,
+              })),
+            }),
+          });
+        } else if (tu.name === "status_breakdown") {
+          const filters = (tu.input ?? {}) as BreakdownFilters;
+          if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
+            filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
+          }
+          const result = await runStatusBreakdown(filters);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: JSON.stringify({
+              statutType: filters.statutType,
+              totalTaxons: result.totalCount,
+              breakdown: result.breakdown,
+            }),
+          });
+        } else {
+          toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "Tool inconnu", is_error: true });
+        }
       } catch (e: any) {
         toolResults.push({
           type: "tool_result",
