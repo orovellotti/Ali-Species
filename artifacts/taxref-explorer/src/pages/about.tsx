@@ -135,6 +135,8 @@ export default function About() {
                 <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_taxon</code> — detail complet d'un taxon par cdNom</li>
                 <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_classification</code> — hierarchie taxonomique complete</li>
                 <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_statuts</code> — statuts BDC (listes rouges, protections, directives)</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">status_breakdown</code> — repartition des taxons par code de statut, avec filtres taxonomiques</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_interactions</code> — reseau trophique d'un taxon (proies, predateurs, parasites, pollinisation) via GloBI</li>
               </ul>
             </div>
             <p className="text-xs text-muted-foreground/80 pt-1">

@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import { sql, eq, and, ilike, or, desc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
+import { getInteractionsForCdNom } from "./interactions.js";
 
 function buildServer(): McpServer {
   const server = new McpServer(
@@ -107,6 +108,66 @@ function buildServer(): McpServer {
         .from(bdcStatutsTable)
         .where(eq(bdcStatutsTable.cdNom, cdNom));
       return { content: [{ type: "text", text: JSON.stringify(rows, null, 2) }] };
+    },
+  );
+
+  server.registerTool(
+    "status_breakdown",
+    {
+      title: "Répartition par statut",
+      description:
+        "Retourne la ventilation des taxons par code de statut, pour un type de statut donné (ex: répartition Liste Rouge nationale par catégorie UICN, ou des protégées par annexe). Filtres taxonomiques optionnels (regne, classe, ordre, famille, genre, groupe2Inpn) et territoire (cdSig).",
+      inputSchema: {
+        statutType: z.string().describe("Code du type de statut: LRM, LRE, LRN, LRR, PN, PR, PD, POM, DH, DO, BERN, BONN, BARC, OSPAR, ZDET, PNA, exPNA, SENSNAT, SENSREG, SENSDEP, REGL, REGLII, REGLLUTTE, REGLSO."),
+        regne: z.string().optional().describe("Animalia, Plantae, Fungi..."),
+        classe: z.string().optional().describe("Mammalia, Aves, Insecta..."),
+        ordre: z.string().optional(),
+        famille: z.string().optional(),
+        genre: z.string().optional(),
+        groupe2Inpn: z.string().optional().describe("Mammifères, Oiseaux, Reptiles..."),
+        cdSig: z.string().optional().describe("Code SIG du territoire (ex: METRO, 11, 75)."),
+      },
+    },
+    async (input) => {
+      const conds: any[] = [
+        sql`t.cd_nom = t.cd_ref`,
+        sql`t.rang = 'ES'`,
+        sql`s.cd_type_statut = ${input.statutType}`,
+      ];
+      for (const [k, col] of [
+        ["regne", "regne"], ["classe", "classe"], ["ordre", "ordre"],
+        ["famille", "famille"], ["genre", "genre"], ["groupe2Inpn", "group2_inpn"],
+      ] as const) {
+        const v = (input as any)[k];
+        if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
+      }
+      if (input.cdSig) conds.push(sql`s.cd_sig = ${input.cdSig}`);
+      const whereSql = sql.join(conds, sql` AND `);
+      const rowsRes = await db.execute(sql`
+        SELECT s.code_statut AS code, MAX(s.label_statut) AS label, COUNT(DISTINCT t.cd_nom)::int AS count
+        FROM taxons t JOIN bdc_statuts s ON s.cd_nom = t.cd_nom
+        WHERE ${whereSql}
+        GROUP BY s.code_statut
+        ORDER BY count DESC
+      `);
+      const rows = ((rowsRes as any).rows ?? rowsRes) as Array<{ code: string; label: string | null; count: number }>;
+      const totalTaxons = rows.reduce((s, r) => s + r.count, 0);
+      return { content: [{ type: "text", text: JSON.stringify({ statutType: input.statutType, totalTaxons, breakdown: rows }, null, 2) }] };
+    },
+  );
+
+  server.registerTool(
+    "get_interactions",
+    {
+      title: "Réseau trophique (GloBI)",
+      description:
+        "Retourne les interactions biotiques d'un taxon depuis Global Biotic Interactions (GloBI) : ce qu'il consomme, ce qui le consomme, parasites/hôtes, pollinisation. Les partenaires connus de TAXREF incluent leur cdNom et nom vernaculaire français.",
+      inputSchema: { cdNom: z.number().int().describe("Identifiant TAXREF (cdNom)") },
+    },
+    async ({ cdNom }) => {
+      const payload = await getInteractionsForCdNom(cdNom);
+      if (!payload) return { isError: true, content: [{ type: "text", text: `Aucun taxon trouvé pour cdNom=${cdNom}` }] };
+      return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
     },
   );
 

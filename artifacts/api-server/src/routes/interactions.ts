@@ -6,7 +6,7 @@ const router: IRouter = Router();
 
 const GLOBI_BASE = "https://api.globalbioticinteractions.org";
 const CACHE_TTL_MS = 60 * 60 * 1000;
-const cache = new Map<number, { at: number; payload: unknown }>();
+const cache = new Map<number, { at: number; payload: any }>();
 
 const FOOD_GROUPS = [
   { id: "consumes", label: "Se nourrit de", types: ["eats", "preysOn"] },
@@ -20,47 +20,16 @@ interface GlobiAggregate {
   data: Array<[string, string, string[]]>;
 }
 
-async function fetchGlobiGroup(taxonName: string, type: string): Promise<string[]> {
-  const url = `${GLOBI_BASE}/taxon/${encodeURIComponent(taxonName)}/${encodeURIComponent(type)}`;
-  const r = await fetch(url, {
-    headers: { "User-Agent": "AliSpecies/1.0 (https://ali-species.replit.app)" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!r.ok) return [];
-  const json = (await r.json()) as GlobiAggregate;
-  const out = new Set<string>();
-  for (const row of json.data ?? []) {
-    const targets = row[2];
-    if (Array.isArray(targets)) for (const t of targets) if (t && typeof t === "string") out.add(t);
-  }
-  return [...out];
-}
-
-router.get("/taxons/:cdNom/interactions", async (req, res): Promise<void> => {
-  const cdNom = parseInt(req.params.cdNom);
-  if (!cdNom || Number.isNaN(cdNom)) {
-    res.status(400).json({ error: "invalid cdNom" });
-    return;
-  }
-
+export async function getInteractionsForCdNom(cdNom: number): Promise<any | null> {
   const cached = cache.get(cdNom);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.setHeader("X-Cache", "HIT");
-    res.json(cached.payload);
-    return;
-  }
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.payload;
 
   const [taxon] = await db
     .select({ cdNom: taxonsTable.cdNom, lbNom: taxonsTable.lbNom, rang: taxonsTable.rang })
     .from(taxonsTable)
     .where(eq(taxonsTable.cdNom, cdNom))
     .limit(1);
-
-  if (!taxon || !taxon.lbNom) {
-    res.status(404).json({ error: "taxon not found" });
-    return;
-  }
+  if (!taxon || !taxon.lbNom) return null;
 
   const allCalls = FOOD_GROUPS.flatMap((g) => g.types.map((t) => ({ groupId: g.id, type: t })));
   const settled = await Promise.allSettled(allCalls.map((c) => fetchGlobiGroup(taxon.lbNom!, c.type)));
@@ -92,9 +61,7 @@ router.get("/taxons/:cdNom/interactions", async (req, res): Promise<void> => {
         eq(taxonsTable.cdNom, taxonsTable.cdRef),
       ));
     for (const m of matches) {
-      if (m.lbNom && !nameToTaxon.has(m.lbNom)) {
-        nameToTaxon.set(m.lbNom, m as any);
-      }
+      if (m.lbNom && !nameToTaxon.has(m.lbNom)) nameToTaxon.set(m.lbNom, m as any);
     }
   }
 
@@ -133,9 +100,39 @@ router.get("/taxons/:cdNom/interactions", async (req, res): Promise<void> => {
     const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
     if (oldest) cache.delete(oldest[0]);
   }
+  return payload;
+}
 
+async function fetchGlobiGroup(taxonName: string, type: string): Promise<string[]> {
+  const url = `${GLOBI_BASE}/taxon/${encodeURIComponent(taxonName)}/${encodeURIComponent(type)}`;
+  const r = await fetch(url, {
+    headers: { "User-Agent": "AliSpecies/1.0 (https://ali-species.replit.app)" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) return [];
+  const json = (await r.json()) as GlobiAggregate;
+  const out = new Set<string>();
+  for (const row of json.data ?? []) {
+    const targets = row[2];
+    if (Array.isArray(targets)) for (const t of targets) if (t && typeof t === "string") out.add(t);
+  }
+  return [...out];
+}
+
+router.get("/taxons/:cdNom/interactions", async (req, res): Promise<void> => {
+  const cdNom = parseInt(req.params.cdNom);
+  if (!cdNom || Number.isNaN(cdNom)) {
+    res.status(400).json({ error: "invalid cdNom" });
+    return;
+  }
+  const wasCached = cache.has(cdNom);
+  const payload = await getInteractionsForCdNom(cdNom);
+  if (!payload) {
+    res.status(404).json({ error: "taxon not found" });
+    return;
+  }
   res.setHeader("Cache-Control", "public, max-age=3600");
-  res.setHeader("X-Cache", "MISS");
+  res.setHeader("X-Cache", wasCached ? "HIT" : "MISS");
   res.json(payload);
 });
 
