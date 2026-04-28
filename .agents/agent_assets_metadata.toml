@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "zPmkPUvbR6Sm4Pm7X1D36"
@@ -36,3 +35,9 @@ id = "RbjCQyxNlF6X9rOp9_1j4"
 uri = "file://artifacts/taxref-explorer/src/assets/images/ali-logo-fingerprint.png"
 type = "image"
 title = "ALI Species fingerprint leaf logo"
+
+[[outputs]]
+id = "oKAbhCUQJs4vB3NN86v26"
+uri = "file://docs/ARCHITECTURE.md"
+type = "text"
+title = "Architecture — ALI Species"
