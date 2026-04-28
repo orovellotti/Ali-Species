@@ -183,7 +183,7 @@ français de repli. `lastQueryResult` est conservé pour qu'un éventuel
 
 | Service | Usage | Particularités |
 |---|---|---|
-| **Anthropic** | Assistant `/api/ask` | Wrapper `lib/integrations-anthropic-ai`, timeout 30 s |
+| **Anthropic (Claude)** | Assistant `/api/ask` | Appelé via le **proxy AI Integrations de Replit** — pas de clé Anthropic à gérer, la facturation passe par Replit. Wrapper `lib/integrations-anthropic-ai`, timeout 30 s |
 | **GloBI** | `/api/taxons/:cdNom/interactions` | Cache mémoire 1 h avec `X-Cache: HIT/MISS`, timeout 10 s, mapping cdNom ↔ nom scientifique |
 | **Wikipedia REST** | `/api/taxons/:cdNom/wikipedia` | Fallback FR → EN, cache HTTP `Cache-Control: max-age=3600` |
 | **Wikimedia Commons** | `/api/taxons/:cdNom/media` | Recherche d'images, proxy via `/api/image-proxy` pour contourner CORS |
