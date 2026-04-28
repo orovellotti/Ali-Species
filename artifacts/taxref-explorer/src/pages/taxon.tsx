@@ -1240,16 +1240,24 @@ function SensitivityScorePanel({ statuts }: { statuts: BdcStatut[] }) {
   );
 }
 
+const ALLOWED_CITATION_TAGS = new Set(["EM", "I", "B", "STRONG", "BR"]);
+
+/**
+ * Sanitize a bibliographic citation that may contain a tiny subset of inline
+ * HTML (italics for genus/species, line breaks). Uses DOMParser, which
+ * produces an inert document: scripts are not executed, external resources
+ * (img/iframe/etc.) are not loaded, and inline event handlers do not fire
+ * even if present in the input. We then walk the tree and strip any tag
+ * outside the allowlist, plus all attributes on the surviving tags.
+ */
 function sanitizeCitation(html: string): string {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  const allowed = new Set(["EM", "I", "B", "STRONG", "BR"]);
+  const doc = new DOMParser().parseFromString(html, "text/html");
   const walk = (node: Node) => {
     for (let i = node.childNodes.length - 1; i >= 0; i--) {
       const child = node.childNodes[i];
       if (child.nodeType === Node.ELEMENT_NODE) {
         const el = child as Element;
-        if (!allowed.has(el.tagName)) {
+        if (!ALLOWED_CITATION_TAGS.has(el.tagName)) {
           while (el.firstChild) el.parentNode!.insertBefore(el.firstChild, el);
           el.remove();
         } else {
@@ -1259,8 +1267,8 @@ function sanitizeCitation(html: string): string {
       }
     }
   };
-  walk(div);
-  return div.innerHTML;
+  walk(doc.body);
+  return doc.body.innerHTML;
 }
 
 function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
