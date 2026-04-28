@@ -6,7 +6,7 @@ const router: IRouter = Router();
 
 const GLOBI_BASE = "https://api.globalbioticinteractions.org";
 const CACHE_TTL_MS = 60 * 60 * 1000;
-const cache = new Map<number, { at: number; payload: any }>();
+const GLOBI_TIMEOUT_MS = 10000;
 
 const FOOD_GROUPS = [
   { id: "consumes", label: "Se nourrit de", types: ["eats", "preysOn"] },
@@ -20,9 +20,44 @@ interface GlobiAggregate {
   data: Array<[string, string, string[]]>;
 }
 
-export async function getInteractionsForCdNom(cdNom: number): Promise<any | null> {
+export interface InteractionPartner {
+  name: string;
+  cdNom: number | null;
+  rang: string | null;
+  nomVern: string | null;
+}
+
+export interface InteractionGroup {
+  id: string;
+  label: string;
+  count: number;
+  partners: InteractionPartner[];
+}
+
+export interface InteractionsPayload {
+  sourceTaxon: string;
+  cdNom: number;
+  totalPartners: number;
+  groups: InteractionGroup[];
+  attribution: { source: string; url: string };
+}
+
+interface CacheEntry {
+  at: number;
+  payload: InteractionsPayload;
+}
+
+const cache = new Map<number, CacheEntry>();
+
+function isFresh(entry: CacheEntry | undefined): entry is CacheEntry {
+  return !!entry && Date.now() - entry.at < CACHE_TTL_MS;
+}
+
+export async function getInteractionsForCdNom(
+  cdNom: number,
+): Promise<InteractionsPayload | null> {
   const cached = cache.get(cdNom);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.payload;
+  if (isFresh(cached)) return cached.payload;
 
   const [taxon] = await db
     .select({ cdNom: taxonsTable.cdNom, lbNom: taxonsTable.lbNom, rang: taxonsTable.rang })
@@ -46,7 +81,10 @@ export async function getInteractionsForCdNom(cdNom: number): Promise<any | null
   const allNames = new Set<string>();
   for (const set of partnersByGroup.values()) for (const n of set) allNames.add(n);
 
-  const nameToTaxon = new Map<string, { cdNom: number; lbNom: string; rang: string | null; nomVern: string | null }>();
+  const nameToTaxon = new Map<
+    string,
+    { cdNom: number; lbNom: string; rang: string | null; nomVern: string | null }
+  >();
   if (allNames.size > 0) {
     const matches = await db
       .select({
@@ -61,12 +99,19 @@ export async function getInteractionsForCdNom(cdNom: number): Promise<any | null
         eq(taxonsTable.cdNom, taxonsTable.cdRef),
       ));
     for (const m of matches) {
-      if (m.lbNom && !nameToTaxon.has(m.lbNom)) nameToTaxon.set(m.lbNom, m as any);
+      if (m.lbNom && !nameToTaxon.has(m.lbNom)) {
+        nameToTaxon.set(m.lbNom, {
+          cdNom: m.cdNom,
+          lbNom: m.lbNom,
+          rang: m.rang,
+          nomVern: m.nomVern,
+        });
+      }
     }
   }
 
-  const groups = FOOD_GROUPS.map((g) => {
-    const partners = [...partnersByGroup.get(g.id)!]
+  const groups: InteractionGroup[] = FOOD_GROUPS.map((g) => {
+    const partners: InteractionPartner[] = [...partnersByGroup.get(g.id)!]
       .map((name) => {
         const match = nameToTaxon.get(name);
         return {
@@ -84,7 +129,7 @@ export async function getInteractionsForCdNom(cdNom: number): Promise<any | null
   }).filter((g) => g.count > 0);
 
   const totalPartners = groups.reduce((s, g) => s + g.count, 0);
-  const payload = {
+  const payload: InteractionsPayload = {
     sourceTaxon: taxon.lbNom,
     cdNom: taxon.cdNom,
     totalPartners,
@@ -107,7 +152,7 @@ async function fetchGlobiGroup(taxonName: string, type: string): Promise<string[
   const url = `${GLOBI_BASE}/taxon/${encodeURIComponent(taxonName)}/${encodeURIComponent(type)}`;
   const r = await fetch(url, {
     headers: { "User-Agent": "AliSpecies/1.0 (https://ali-species.replit.app)" },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(GLOBI_TIMEOUT_MS),
   });
   if (!r.ok) return [];
   const json = (await r.json()) as GlobiAggregate;
@@ -119,21 +164,29 @@ async function fetchGlobiGroup(taxonName: string, type: string): Promise<string[
   return [...out];
 }
 
+export function _clearInteractionsCache(): void {
+  cache.clear();
+}
+
 router.get("/taxons/:cdNom/interactions", async (req, res): Promise<void> => {
-  const cdNom = parseInt(req.params.cdNom);
+  const cdNom = parseInt(req.params.cdNom, 10);
   if (!cdNom || Number.isNaN(cdNom)) {
     res.status(400).json({ error: "invalid cdNom" });
     return;
   }
-  const wasCached = cache.has(cdNom);
-  const payload = await getInteractionsForCdNom(cdNom);
-  if (!payload) {
-    res.status(404).json({ error: "taxon not found" });
-    return;
+  const wasFresh = isFresh(cache.get(cdNom));
+  try {
+    const payload = await getInteractionsForCdNom(cdNom);
+    if (!payload) {
+      res.status(404).json({ error: "taxon not found" });
+      return;
+    }
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("X-Cache", wasFresh ? "HIT" : "MISS");
+    res.json(payload);
+  } catch (err) {
+    res.status(502).json({ error: "interactions service unavailable" });
   }
-  res.setHeader("Cache-Control", "public, max-age=3600");
-  res.setHeader("X-Cache", wasCached ? "HIT" : "MISS");
-  res.json(payload);
 });
 
 export default router;

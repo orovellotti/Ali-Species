@@ -160,21 +160,41 @@ interface InteractionsPayload {
 function InteractionsSection({ cdNom }: { cdNom: number }) {
   const [data, setData] = useState<InteractionsPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setData(null);
+    setError(false);
     fetch(`${import.meta.env.BASE_URL}api/taxons/${cdNom}/interactions`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then(async (r) => {
+        if (r.status === 404) return null; // no taxon → silently hide
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((j) => { if (!cancelled) setData(j); })
-      .catch(() => { if (!cancelled) setData(null); })
+      .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [cdNom]);
 
   if (loading) return <Skeleton className="h-14 w-full rounded-2xl" />;
+  if (error) {
+    return (
+      <CollapsibleSection
+        icon={<Network className="w-4 h-4 text-primary" />}
+        title="Réseau trophique"
+        count={0}
+        defaultOpen={false}
+      >
+        <p className="text-xs text-muted-foreground">
+          Service GloBI momentanément indisponible. Réessayez plus tard.
+        </p>
+      </CollapsibleSection>
+    );
+  }
   if (!data || data.totalPartners === 0) return null;
 
   return (

@@ -1,12 +1,34 @@
 import { Router, type IRouter } from "express";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { getInteractionsForCdNom } from "./interactions.js";
+import { getInteractionsForCdNom, type InteractionGroup, type InteractionPartner } from "./interactions.js";
+import { runStatusBreakdown, type BreakdownFilters } from "../lib/breakdown.js";
+import { looksLikeSpeciesName } from "../lib/heuristics.js";
 
 const router: IRouter = Router();
 
-type Msg = { role: "user" | "assistant"; content: string };
+const ANTHROPIC_TIMEOUT_MS = 30_000;
+const MAX_QUESTION_LENGTH = 500;
+const MAX_HISTORY_MESSAGES = 10;
+const MAX_HISTORY_CONTENT = 2_000;
+
+const askBodySchema = z.object({
+  question: z.string().trim().min(1).max(MAX_QUESTION_LENGTH),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(MAX_HISTORY_CONTENT),
+      }),
+    )
+    .max(MAX_HISTORY_MESSAGES)
+    .optional()
+    .default([]),
+});
+
+type Msg = z.infer<typeof askBodySchema>["history"][number];
 
 interface Filters {
   name?: string;
@@ -22,7 +44,6 @@ interface Filters {
   cdSig?: string;
   groupe2Inpn?: string;
   habitat?: string;
-  countOnly?: boolean;
   limit?: number;
 }
 
@@ -93,7 +114,6 @@ const TOOL_DEFS = [
         cdSig: { type: "string", description: "Code SIG du territoire (région ou département). Ex: METRO (France métropolitaine), 11 (Île-de-France), 75 (Paris)... Laisse vide si pas précisé." },
         groupe2Inpn: { type: "string", description: "Grand groupe vernaculaire INPN (ex: Mammifères, Oiseaux, Reptiles, Amphibiens, Poissons, Insectes, Plantes à fleurs)." },
         habitat: { type: "string", description: "Code habitat: 1=marin, 2=eau douce, 3=terrestre, 4=marin/eau douce, 5=marin/terrestre, 6=eau douce/terrestre, 7=marin/eau douce/terrestre, 8=continental." },
-        countOnly: { type: "boolean", description: "Si true, ne retourne que le compte (utile pour 'combien y a-t-il...?')." },
         limit: { type: "number", description: "Nombre max d'exemples à renvoyer (défaut 12, max 30)." },
       },
       additionalProperties: false,
@@ -101,48 +121,53 @@ const TOOL_DEFS = [
   },
 ];
 
-interface BreakdownFilters {
-  statutType: string;
-  regne?: string;
-  classe?: string;
-  ordre?: string;
-  famille?: string;
-  genre?: string;
-  groupe2Inpn?: string;
-  cdSig?: string;
+interface SpeciesItem {
+  cdNom: number;
+  lbNom: string;
+  nomVern: string | null;
+  rang: string;
+  regne: string | null;
+  classe: string | null;
+  ordre: string | null;
+  famille: string | null;
 }
 
-async function runStatusBreakdown(filters: BreakdownFilters) {
-  const conds: any[] = [
-    sql`t.cd_nom = t.cd_ref`,
-    sql`t.rang = 'ES'`,
-    sql`s.cd_type_statut = ${filters.statutType}`,
-  ];
-  for (const [k, col] of [
-    ["regne", "regne"], ["classe", "classe"], ["ordre", "ordre"],
-    ["famille", "famille"], ["genre", "genre"], ["groupe2Inpn", "group2_inpn"],
-  ] as const) {
-    const v = (filters as any)[k];
-    if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
-  }
-  if (filters.cdSig) conds.push(sql`s.cd_sig = ${filters.cdSig}`);
-
-  const whereSql = sql.join(conds, sql` AND `);
-  const rowsRes = await db.execute(sql`
-    SELECT s.code_statut AS code, MAX(s.label_statut) AS label, COUNT(DISTINCT t.cd_nom)::int AS count
-    FROM taxons t JOIN bdc_statuts s ON s.cd_nom = t.cd_nom
-    WHERE ${whereSql}
-    GROUP BY s.code_statut
-    ORDER BY count DESC
-  `);
-  const rows = ((rowsRes as any).rows ?? rowsRes) as Array<{ code: string; label: string | null; count: number }>;
-  const totalCount = rows.reduce((s, r) => s + r.count, 0);
-  return { totalCount, breakdown: rows };
+interface TaxonRow {
+  cd_nom: number;
+  lb_nom: string;
+  nom_vern: string | null;
+  rang: string;
+  regne: string | null;
+  classe: string | null;
+  ordre: string | null;
+  famille: string | null;
 }
 
-async function runQuery(filters: Filters) {
-  const conds: any[] = [sql`t.cd_nom = t.cd_ref`];
-  const params: any = {};
+interface DbExecuteResult<T> {
+  rows?: T[];
+}
+
+function rowsOf<T>(res: unknown): T[] {
+  const r = res as DbExecuteResult<T> | T[];
+  if (Array.isArray(r)) return r;
+  return r.rows ?? [];
+}
+
+function mapTaxonRow(r: TaxonRow): SpeciesItem {
+  return {
+    cdNom: r.cd_nom,
+    lbNom: r.lb_nom,
+    nomVern: r.nom_vern,
+    rang: r.rang,
+    regne: r.regne,
+    classe: r.classe,
+    ordre: r.ordre,
+    famille: r.famille,
+  };
+}
+
+async function runQuery(filters: Filters): Promise<{ totalCount: number; items: SpeciesItem[] }> {
+  const conds: SQL[] = [sql`t.cd_nom = t.cd_ref`];
 
   const rang = filters.rang ?? "ES";
   if (rang) conds.push(sql`t.rang = ${rang}`);
@@ -151,17 +176,20 @@ async function runQuery(filters: Filters) {
     const pat = `%${filters.name.trim()}%`;
     conds.push(sql`(t.lb_nom ILIKE ${pat} OR t.nom_vern ILIKE ${pat})`);
   }
-  for (const [k, col] of [
+  const filterCols: ReadonlyArray<readonly [keyof Filters, string]> = [
     ["regne", "regne"], ["phylum", "phylum"], ["classe", "classe"],
     ["ordre", "ordre"], ["famille", "famille"], ["genre", "genre"],
     ["groupe2Inpn", "group2_inpn"], ["habitat", "habitat"],
-  ] as const) {
-    const v = (filters as any)[k];
-    if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
+  ];
+  for (const [k, col] of filterCols) {
+    const v = filters[k];
+    if (typeof v === "string" && v.length > 0) {
+      conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
+    }
   }
 
   if (filters.statutType || filters.statutCode || filters.cdSig) {
-    const subConds: any[] = [sql`s.cd_nom = t.cd_nom`];
+    const subConds: SQL[] = [sql`s.cd_nom = t.cd_nom`];
     if (filters.statutType) subConds.push(sql`s.cd_type_statut = ${filters.statutType}`);
     if (filters.statutCode) subConds.push(sql`s.code_statut = ${filters.statutCode}`);
     if (filters.cdSig) subConds.push(sql`s.cd_sig = ${filters.cdSig}`);
@@ -172,7 +200,7 @@ async function runQuery(filters: Filters) {
   const limit = Math.min(Math.max(filters.limit ?? 12, 1), 30);
 
   const countRow = await db.execute(sql`SELECT COUNT(*)::int AS c FROM taxons t WHERE ${whereSql}`);
-  const totalCount = ((countRow as any).rows ?? countRow)[0]?.c ?? 0;
+  const totalCount = rowsOf<{ c: number }>(countRow)[0]?.c ?? 0;
 
   const rowsResult = await db.execute(sql`
     SELECT t.cd_nom, t.lb_nom, t.nom_vern, t.rang, t.regne, t.classe, t.ordre, t.famille
@@ -181,47 +209,12 @@ async function runQuery(filters: Filters) {
     ORDER BY t.lb_nom
     LIMIT ${limit}
   `);
-  const items = ((rowsResult as any).rows ?? rowsResult).map((r: any) => ({
-    cdNom: r.cd_nom as number,
-    lbNom: r.lb_nom as string,
-    nomVern: r.nom_vern as string | null,
-    rang: r.rang as string,
-    regne: r.regne as string | null,
-    classe: r.classe as string | null,
-    ordre: r.ordre as string | null,
-    famille: r.famille as string | null,
-  }));
+  const items = rowsOf<TaxonRow>(rowsResult).map(mapTaxonRow);
 
   return { totalCount, items };
 }
 
-const QUESTION_KEYWORDS = [
-  "combien", "quel", "quels", "quelle", "quelles", "qui", "quoi", "où", "ou est", "comment", "pourquoi",
-  "liste", "donne", "donnez", "montre", "montrez", "affiche", "trouve", "cherche", "cite",
-  "qu'est", "c'est quoi", "explique", "raconte", "parle", "dis", "compte", "comptez",
-  "ventile", "ventilation", "répartition", "repartition", "breakdown", "statut", "statuts", "par statut",
-  "menacé", "menace", "menacée", "menacees", "menacés", "menacees",
-  "protégé", "protege", "protégée", "protegee", "protégés", "proteges",
-  "rouge", "vulnérable", "vulnerable", "danger", "uicn",
-  "famille de", "famille des", "espèces de", "especes de", "espèce de", "espece de",
-  "réseau", "reseau", "trophique", "mange", "mangé", "consomme", "prédateur", "predateur",
-  "et ", " ou ", " avec ", " dans ", " sur ", " pour ",
-];
-
-function looksLikeSpeciesName(q: string): boolean {
-  const s = q.trim();
-  if (!s || s.length > 60) return false;
-  if (/[?!]/.test(s)) return false;
-  const tokens = s.split(/\s+/);
-  if (tokens.length === 0 || tokens.length > 5) return false;
-  const low = s.toLowerCase();
-  for (const w of QUESTION_KEYWORDS) {
-    if (low.includes(w)) return false;
-  }
-  return true;
-}
-
-async function findExactSpecies(q: string): Promise<any[]> {
+async function findExactSpecies(q: string): Promise<SpeciesItem[]> {
   const trimmed = q.trim();
   const rowsRes = await db.execute(sql`
     SELECT cd_nom, lb_nom, nom_vern, rang, regne, classe, ordre, famille,
@@ -245,26 +238,22 @@ async function findExactSpecies(q: string): Promise<any[]> {
       lb_nom
     LIMIT 5
   `);
-  const rows = ((rowsRes as any).rows ?? rowsRes) as any[];
+  const rows = rowsOf<TaxonRow & { priority: number }>(rowsRes);
   return rows
     .filter((r) => r.priority < 4)
-    .map((r) => ({
-      cdNom: r.cd_nom as number,
-      lbNom: r.lb_nom as string,
-      nomVern: r.nom_vern as string | null,
-      rang: r.rang as string,
-      regne: r.regne as string | null,
-      classe: r.classe as string | null,
-      ordre: r.ordre as string | null,
-      famille: r.famille as string | null,
-    }));
+    .map(mapTaxonRow);
 }
 
 router.post("/ask", async (req, res): Promise<void> => {
-  const body = req.body ?? {};
-  const question = typeof body.question === "string" ? body.question.trim() : "";
-  const history: Msg[] = Array.isArray(body.history) ? body.history.slice(-10) : [];
-  if (!question) { res.status(400).json({ error: "question required" }); return; }
+  const parsed = askBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({
+      error: "invalid request body",
+      details: parsed.error.issues.map((i) => ({ path: i.path, message: i.message })),
+    });
+    return;
+  }
+  const { question, history } = parsed.data;
 
   // Fast path: if the question looks like just a species name, look it up directly
   // and skip the LLM call entirely.
@@ -306,7 +295,6 @@ Quand le résultat est revenu, formule une réponse synthétique en français qu
 - Pour get_interactions : résume les groupes (ex: "L'écureuil roux interagit avec 337 partenaires : il consomme 161 espèces (noisettes, faînes, champignons...), est consommé par 142 prédateurs (rapaces, mustélidés...), héberge 30 parasites et pollinise 4 plantes."). Mentionne quelques exemples par groupe.
 - N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa)
 - Invite à cliquer sur les cartes pour voir le détail
-- N'utilise JAMAIS countOnly=true (le paramètre est ignoré, on retourne toujours un échantillon en plus du compte)
 
 Indices pour traduire une question:
 - "mammifères" → classe=Mammalia ou groupe2Inpn=Mammifères
@@ -332,17 +320,36 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
     { role: "user", content: question },
   ];
 
-  let lastQueryResult: { totalCount: number; items: any[] } | null = null;
+  let lastQueryResult: { totalCount: number; items: SpeciesItem[] } | null = null;
   let usedFilters: Filters | null = null;
 
   for (let turn = 0; turn < 4; turn++) {
-    const resp = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      tools: TOOL_DEFS as any,
-      messages,
-    });
+    let resp;
+    try {
+      resp = await anthropic.messages.create(
+        {
+          model: "claude-sonnet-4-6",
+          max_tokens: 8192,
+          system: systemPrompt,
+          tools: TOOL_DEFS as any,
+          messages,
+        },
+        { timeout: ANTHROPIC_TIMEOUT_MS },
+      );
+    } catch (err) {
+      const isTimeout =
+        (err as { name?: string })?.name === "APIConnectionTimeoutError" ||
+        /timeout/i.test((err as Error)?.message ?? "");
+      res.status(isTimeout ? 504 : 502).json({
+        reply: isTimeout
+          ? "Le service IA met trop de temps à répondre. Réessayez dans un instant."
+          : "Le service IA est momentanément indisponible. Réessayez plus tard.",
+        results: lastQueryResult?.items ?? [],
+        totalCount: lastQueryResult?.totalCount ?? 0,
+        filters: usedFilters,
+      });
+      return;
+    }
 
     const toolUses = resp.content.filter((c: any) => c.type === "tool_use");
     const textParts = resp.content.filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n").trim();
@@ -397,11 +404,11 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
                 sourceTaxon: payload.sourceTaxon,
                 cdNom: payload.cdNom,
                 totalPartners: payload.totalPartners,
-                groups: payload.groups.map((g: any) => ({
+                groups: payload.groups.map((g: InteractionGroup) => ({
                   id: g.id,
                   label: g.label,
                   count: g.count,
-                  topPartners: g.partners.slice(0, 8).map((p: any) => ({
+                  topPartners: g.partners.slice(0, 8).map((p: InteractionPartner) => ({
                     name: p.name,
                     nomVern: p.nomVern,
                     cdNom: p.cdNom,

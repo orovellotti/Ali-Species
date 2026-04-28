@@ -5,6 +5,7 @@ import { z } from "zod";
 import { sql, eq, and, ilike, or, desc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 import { getInteractionsForCdNom } from "./interactions.js";
+import { runStatusBreakdown } from "../lib/breakdown.js";
 
 function buildServer(): McpServer {
   const server = new McpServer(
@@ -129,30 +130,19 @@ function buildServer(): McpServer {
       },
     },
     async (input) => {
-      const conds: any[] = [
-        sql`t.cd_nom = t.cd_ref`,
-        sql`t.rang = 'ES'`,
-        sql`s.cd_type_statut = ${input.statutType}`,
-      ];
-      for (const [k, col] of [
-        ["regne", "regne"], ["classe", "classe"], ["ordre", "ordre"],
-        ["famille", "famille"], ["genre", "genre"], ["groupe2Inpn", "group2_inpn"],
-      ] as const) {
-        const v = (input as any)[k];
-        if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
-      }
-      if (input.cdSig) conds.push(sql`s.cd_sig = ${input.cdSig}`);
-      const whereSql = sql.join(conds, sql` AND `);
-      const rowsRes = await db.execute(sql`
-        SELECT s.code_statut AS code, MAX(s.label_statut) AS label, COUNT(DISTINCT t.cd_nom)::int AS count
-        FROM taxons t JOIN bdc_statuts s ON s.cd_nom = t.cd_nom
-        WHERE ${whereSql}
-        GROUP BY s.code_statut
-        ORDER BY count DESC
-      `);
-      const rows = ((rowsRes as any).rows ?? rowsRes) as Array<{ code: string; label: string | null; count: number }>;
-      const totalTaxons = rows.reduce((s, r) => s + r.count, 0);
-      return { content: [{ type: "text", text: JSON.stringify({ statutType: input.statutType, totalTaxons, breakdown: rows }, null, 2) }] };
+      const { totalCount, breakdown } = await runStatusBreakdown(input);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { statutType: input.statutType, totalTaxons: totalCount, breakdown },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
     },
   );
 
