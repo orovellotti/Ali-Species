@@ -50,10 +50,10 @@ export default function Home() {
             Toutes les espèces de France, à portée de <span className="text-primary italic">question</span>.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
-            Plus de 700 000 animaux, plantes et champignons recensés en France — avec leur <span className="text-foreground font-medium">niveau de protection</span> (Liste Rouge, espèces protégées, directives européennes) et leurs <span className="text-foreground font-medium">liens avec les autres espèces</span> : qui mange qui, qui pollinise quoi, qui parasite qui.
+            Plus de 700 000 animaux, plantes et champignons vivent en France. Découvrez lesquels sont <span className="text-foreground font-medium">menacés ou protégés</span>, et <span className="text-foreground font-medium">qui mange qui, qui pollinise quoi, qui parasite qui</span>.
           </p>
           <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
-            Posez simplement votre question en français — l'assistant cherche pour vous et vous présente les espèces et leurs interactions.
+            Posez votre question en français — l'assistant cherche pour vous et vous montre les réponses.
           </p>
 
           <ConversationalBar />
