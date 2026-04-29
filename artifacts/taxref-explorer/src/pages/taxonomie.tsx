@@ -130,7 +130,7 @@ export default function Taxonomie() {
   const [treeData, setTreeData] = useState<any>(null);
   const [treeLoading, setTreeLoading] = useState(false);
   const [statutType, setStatutType] = useState<string>("");
-  const [view, setView] = useState<"treemap" | "barometer">("treemap");
+  const [view, setView] = useState<"treemap" | "barometer">("barometer");
   const [statusTypes, setStatusTypes] = useState<{ code: string; label: string; taxa: number; group?: string }[]>([]);
 
   useEffect(() => {
