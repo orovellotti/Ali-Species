@@ -1,12 +1,128 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useGetTaxonStats } from "@workspace/api-client-react";
-import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug, LayoutGrid, BarChart3 } from "lucide-react";
+import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug, LayoutGrid, BarChart3, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
 import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
 import { UicnBarometer } from "@/components/UicnBarometer";
+
+type StatusInfo = { description: string; href?: string };
+
+const STATUS_DESCRIPTIONS: Record<string, StatusInfo> = {
+  LRN: {
+    description:
+      "Liste rouge nationale UICN — évalue le risque de disparition des espèces sur le territoire français selon la méthodologie standardisée de l'UICN. Co-pilotée par le Comité français de l'UICN et le MNHN.",
+    href: "https://uicn.fr/liste-rouge-france/",
+  },
+  LRR: {
+    description:
+      "Liste rouge régionale — déclinaison de la méthode UICN à l'échelle d'une région administrative, conduite par les CSRPN et les comités régionaux UICN.",
+    href: "https://uicn.fr/listes-rouges-regionales/",
+  },
+  LRM: {
+    description:
+      "Liste rouge mondiale UICN — référence internationale du risque d'extinction des espèces, mise à jour par les groupes de spécialistes de l'UICN.",
+    href: "https://www.iucnredlist.org/",
+  },
+  LRE: {
+    description:
+      "Liste rouge européenne UICN — évaluation du risque d'extinction à l'échelle de l'Europe (UE 27 + pays voisins), réalisée pour le compte de la Commission européenne.",
+    href: "https://www.iucn.org/regions/europe/our-work/biodiversity-conservation/european-red-list-threatened-species",
+  },
+  DH: {
+    description:
+      "Directive 92/43/CEE « Habitats-Faune-Flore » — annexes II (sites Natura 2000), IV (protection stricte sur tout le territoire UE) et V (prélèvement encadré). Pilier de Natura 2000 avec la Directive Oiseaux.",
+    href: "https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX:31992L0043",
+  },
+  DO: {
+    description:
+      "Directive 2009/147/CE « Oiseaux » — protection de toutes les espèces d'oiseaux sauvages de l'Union européenne. Annexes I (sites Natura 2000), II (chasse), III (commercialisation).",
+    href: "https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX:32009L0147",
+  },
+  PN: {
+    description:
+      "Protection nationale — espèces protégées par arrêtés ministériels pris en application des articles L.411-1 et L.411-2 du Code de l'environnement. Interdisent destruction, capture, transport, perturbation intentionnelle, etc.",
+    href: "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006143734/",
+  },
+  PR: {
+    description:
+      "Protection régionale — arrêtés préfectoraux de région complétant la protection nationale, principalement pour la flore.",
+  },
+  PD: {
+    description:
+      "Protection départementale — arrêtés préfectoraux départementaux complétant la protection nationale (notamment outre-mer et régions à forts enjeux).",
+  },
+  ZDET: {
+    description:
+      "Espèces déterminantes ZNIEFF — espèces dont la présence justifie la création d'une Zone Naturelle d'Intérêt Écologique, Faunistique et Floristique. Listes validées par les CSRPN.",
+    href: "https://inpn.mnhn.fr/programme/inventaire-znieff/presentation",
+  },
+  PNA: {
+    description:
+      "Plan national d'actions — outils de protection ciblés pour les espèces les plus menacées : déclinaison opérationnelle de la stratégie nationale biodiversité, pilotée par le ministère chargé de l'écologie (DREAL/DEAL).",
+    href: "https://www.ecologie.gouv.fr/plans-nationaux-dactions-en-faveur-des-especes-menacees",
+  },
+  exPNA: {
+    description:
+      "Anciens Plans nationaux d'actions — espèces ayant bénéficié d'un PNA aujourd'hui clos.",
+  },
+  BERN: {
+    description:
+      "Convention de Berne (1979) — convention du Conseil de l'Europe relative à la conservation de la vie sauvage et du milieu naturel. Annexes I (flore strictement protégée), II (faune strictement protégée), III (faune protégée).",
+    href: "https://www.coe.int/fr/web/bern-convention",
+  },
+  BONN: {
+    description:
+      "Convention de Bonn (CMS, 1979) — convention sur la conservation des espèces migratrices appartenant à la faune sauvage. Annexes I (en danger), II (à conserver via accords) et accords régionaux (AEWA, EUROBATS, ASCOBANS, etc.).",
+    href: "https://www.cms.int/fr",
+  },
+  OSPAR: {
+    description:
+      "Convention OSPAR — protection du milieu marin de l'Atlantique du Nord-Est. Liste des espèces et habitats menacés et/ou en déclin.",
+    href: "https://www.ospar.org/",
+  },
+  BARC: {
+    description:
+      "Convention de Barcelone — protection du milieu marin et du littoral de la Méditerranée. Annexes II (espèces en danger ou menacées) et III (espèces dont l'exploitation est réglementée).",
+    href: "https://www.unep.org/unepmap/",
+  },
+  REGL: {
+    description:
+      "Réglementation diverses — arrêtés et décrets encadrant prélèvement, commerce, transport, détention d'espèces (chasse, pêche, fourrure, oisellerie, etc.).",
+  },
+  REGLII: {
+    description:
+      "Espèces exotiques envahissantes — réglementation à l'introduction (règlement UE 1143/2014 et déclinaisons nationales/territoriales). Interdiction d'importation, de détention, de transport, etc.",
+    href: "https://www.ecologie.gouv.fr/especes-exotiques-envahissantes",
+  },
+  REGLLUTTE: {
+    description:
+      "Espèces exotiques envahissantes — réglementation imposant la lutte active (arrachage, destruction, gestion populationnelle).",
+  },
+  REGLSO: {
+    description:
+      "Réglementations spécifiques outre-mer — encadrement des espèces dans les collectivités d'outre-mer (Guadeloupe, Martinique, Guyane, Réunion, Mayotte, etc.).",
+  },
+  POM: {
+    description:
+      "Pêcheries / espèces marines — encadrement spécifique de certaines espèces marines (tailles, quotas, zones).",
+  },
+  SENSNAT: {
+    description:
+      "Sensibilité de diffusion (national) — niveau (1 à 3) défini par le SINP indiquant si la diffusion publique précise des observations d'une espèce risque de la mettre en danger (collecte, dérangement).",
+    href: "https://inpn.mnhn.fr/docs/donnees_sensibles/MethodeNationaleSensibilite.pdf",
+  },
+  SENSREG: {
+    description:
+      "Sensibilité de diffusion (régional) — déclinaison régionale du niveau de sensibilité des données d'observation.",
+  },
+  SENSDEP: {
+    description:
+      "Sensibilité de diffusion (départemental) — déclinaison départementale du niveau de sensibilité des données.",
+  },
+};
 
 export default function Taxonomie() {
   const { data: stats } = useGetTaxonStats();
@@ -122,11 +238,6 @@ export default function Taxonomie() {
                 </button>
               )}
             </div>
-            {statutType && (
-              <span className="text-xs text-muted-foreground italic">
-                Espèces concernées par ce statut uniquement
-              </span>
-            )}
             <div className="sm:ml-auto inline-flex rounded-full border border-border bg-background p-1 text-xs">
               <button
                 type="button"
@@ -150,6 +261,31 @@ export default function Taxonomie() {
               </button>
             </div>
           </div>
+          {statutType && STATUS_DESCRIPTIONS[statutType] && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-3" data-testid="status-description">
+              <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div className="text-xs text-foreground/80 leading-relaxed">
+                <span className="font-medium text-foreground">
+                  {statusTypes.find((s) => s.code === statutType)?.label || statutType}
+                </span>
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                {STATUS_DESCRIPTIONS[statutType].description}
+                {STATUS_DESCRIPTIONS[statutType].href && (
+                  <>
+                    {" "}
+                    <a
+                      href={STATUS_DESCRIPTIONS[statutType].href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-dotted hover:text-foreground"
+                    >
+                      en savoir plus →
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           {view === "barometer" ? (
             <UicnBarometer
               statutType={statutType}
