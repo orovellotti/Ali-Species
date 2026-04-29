@@ -218,7 +218,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   const [resp, setResp] = useState<ApiResp | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [metric, setMetric] = useState<"threat" | "total">("threat");
+  const [metric, setMetric] = useState<"threat" | "total">("total");
 
   useEffect(() => {
     let ignore = false;
