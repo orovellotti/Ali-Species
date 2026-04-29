@@ -12,6 +12,7 @@ type Item = {
 
 type Props = {
   statutType: string;
+  statutLabel?: string;
 };
 
 const UICN_ORDER = ["EX", "RE", "CR", "EN", "VU", "NT", "LC", "DD", "NA"] as const;
@@ -50,7 +51,7 @@ const REGNE_COLORS: Record<string, string> = {
   Archaea: "#6a6a6a",
 };
 
-export function UicnBarometer({ statutType }: Props) {
+export function UicnBarometer({ statutType, statutLabel }: Props) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,10 +126,16 @@ export function UicnBarometer({ statutType }: Props) {
         <div>
           <h3 className="text-lg font-serif font-semibold text-foreground">
             Baromètre Liste rouge nationale (UICN)
+            {statutType && statutLabel ? (
+              <span className="block sm:inline text-sm font-sans font-normal text-muted-foreground sm:ml-2">
+                — restreint aux espèces : {statutLabel}
+              </span>
+            ) : null}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
             Distribution des catégories UICN par classe taxonomique, classée par
             % d'espèces menacées (VU + EN + CR + RE) décroissant.
+            {statutType ? " Le filtre du haut restreint la population analysée à ce sous-ensemble." : null}
           </p>
         </div>
         <div className="text-xs text-muted-foreground">

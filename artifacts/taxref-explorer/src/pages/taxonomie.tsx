@@ -151,7 +151,10 @@ export default function Taxonomie() {
             </div>
           </div>
           {view === "barometer" ? (
-            <UicnBarometer statutType={statutType} />
+            <UicnBarometer
+              statutType={statutType}
+              statutLabel={statusTypes.find((s) => s.code === statutType)?.label}
+            />
           ) : treeData && !treeLoading ? (
             <TaxonomyTreemap
               data={treeData}
