@@ -50,7 +50,7 @@ export default function Home() {
             Toutes les espèces de France, à portée de <span className="text-primary italic">question</span>.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
-            Plus de <span className="text-foreground font-medium">700 000 taxons du référentiel TAXREF v18</span> (faune, flore, fonge), enrichis de leurs <span className="text-foreground font-medium">statuts de conservation</span> (Liste Rouge UICN, protections nationales, directives Habitats &amp; Oiseaux) et de leurs <span className="text-foreground font-medium">réseaux trophiques</span> issus de la base GloBI.
+            Plus de <span className="text-foreground font-medium">700 000 taxons</span> de la faune, de la flore et de la fonge, avec leurs <span className="text-foreground font-medium">statuts de conservation</span> et leurs <span className="text-foreground font-medium">réseaux trophiques</span>.
           </p>
           <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
             Interrogation en langage naturel — l'assistant compose la requête, sélectionne les sources et restitue les résultats.
@@ -73,7 +73,9 @@ export default function Home() {
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-serif font-semibold">La biodiversité française en chiffres</h2>
-            <p className="text-muted-foreground mt-2">Source : référentiel TAXREF v18 du Muséum national d'Histoire naturelle</p>
+            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+              Données issues du référentiel <span className="font-medium">TAXREF v18</span> et de la <span className="font-medium">BdC Statuts v18</span> (PatriNat / MNHN), enrichies par les <span className="font-medium">Listes Rouges UICN</span>, <span className="font-medium">GBIF</span>, <span className="font-medium">Wikipedia</span> et la base d'interactions <span className="font-medium">GloBI</span>.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
