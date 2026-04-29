@@ -395,21 +395,33 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
       ? sql`AND t.cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${restrict})`
       : sql``;
 
-  const rowsRaw = await db.execute(sql`
-    SELECT t.regne,
-           COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
-           UPPER(s.code_statut) AS code,
-           MAX(s.lb_type_statut)        AS lb_type,
-           COUNT(DISTINCT t.cd_nom)::int AS c
-    FROM taxons t
-    JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = ${statutType}
-    WHERE t.cd_nom = t.cd_ref
-      AND t.rang = 'ES'
-      AND t.regne IS NOT NULL AND t.regne != ''
-      AND s.code_statut IS NOT NULL
-      ${restrictFilter}
-    GROUP BY 1, 2, 3
-  `);
+  const [rowsRaw, totalRowsRaw] = await Promise.all([
+    db.execute(sql`
+      SELECT t.regne,
+             COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
+             UPPER(s.code_statut) AS code,
+             MAX(s.lb_type_statut)        AS lb_type,
+             COUNT(DISTINCT t.cd_nom)::int AS c
+      FROM taxons t
+      JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = ${statutType}
+      WHERE t.cd_nom = t.cd_ref
+        AND t.rang = 'ES'
+        AND t.regne IS NOT NULL AND t.regne != ''
+        AND s.code_statut IS NOT NULL
+        ${restrictFilter}
+      GROUP BY 1, 2, 3
+    `),
+    db.execute(sql`
+      SELECT t.regne,
+             COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
+             COUNT(DISTINCT t.cd_nom)::int AS c
+      FROM taxons t
+      WHERE t.cd_nom = t.cd_ref
+        AND t.rang = 'ES'
+        AND t.regne IS NOT NULL AND t.regne != ''
+      GROUP BY 1, 2
+    `),
+  ]);
   const rows = ((rowsRaw as { rows?: unknown[] }).rows ?? rowsRaw) as Array<{
     regne: string | null;
     classe: string;
@@ -417,16 +429,34 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
     lb_type: string | null;
     c: number;
   }>;
+  const totalRows = ((totalRowsRaw as { rows?: unknown[] }).rows ?? totalRowsRaw) as Array<{
+    regne: string | null;
+    classe: string;
+    c: number;
+  }>;
+  const totalsByClass = new Map<string, number>();
+  for (const r of totalRows) {
+    const regne = r.regne || "Inconnu";
+    totalsByClass.set(`${regne}|||${r.classe}`, r.c);
+  }
 
   const isUicn = UICN_LIKE_TYPES.has(statutType);
   const lbType = rows.find((r) => r.lb_type)?.lb_type ?? statutType;
 
-  type Bucket = { regne: string; classe: string; total: number; codes: Record<string, number> };
+  type Bucket = {
+    regne: string;
+    classe: string;
+    total: number;
+    classTotal: number;
+    codes: Record<string, number>;
+  };
   const map = new Map<string, Bucket>();
   for (const r of rows) {
     const regne = r.regne || "Inconnu";
     const key = `${regne}|||${r.classe}`;
-    const cur = map.get(key) ?? { regne, classe: r.classe, total: 0, codes: {} };
+    const classTotal = totalsByClass.get(key) ?? 0;
+    const cur =
+      map.get(key) ?? { regne, classe: r.classe, total: 0, classTotal, codes: {} };
     cur.codes[r.code] = (cur.codes[r.code] || 0) + r.c;
     cur.total += r.c;
     map.set(key, cur);
@@ -434,12 +464,13 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
 
   const items = Array.from(map.values())
     .map((b) => {
-      if (!isUicn) return { ...b };
+      const pctConcerned = b.classTotal > 0 ? (b.total / b.classTotal) * 100 : 0;
+      if (!isUicn) return { ...b, pctConcerned };
       const threatened =
         (b.codes.VU || 0) + (b.codes.EN || 0) + (b.codes.CR || 0) +
         (b.codes["CR*"] || 0) + (b.codes.RE || 0) + (b.codes.EX || 0) + (b.codes.EW || 0);
       const pctMenace = b.total > 0 ? (threatened / b.total) * 100 : 0;
-      return { ...b, threatened, pctMenace };
+      return { ...b, threatened, pctMenace, pctConcerned };
     })
     .filter((b) => b.total >= 5)
     .sort((a, b) =>

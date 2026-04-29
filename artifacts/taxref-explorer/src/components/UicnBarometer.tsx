@@ -5,6 +5,8 @@ type Item = {
   regne: string;
   classe: string;
   total: number;
+  classTotal?: number;
+  pctConcerned?: number;
   threatened?: number;
   pctMenace?: number;
   codes: Record<string, number>;
@@ -487,20 +489,37 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                         </span>
                       </div>
                       <div
-                        className="relative h-6 rounded-md overflow-hidden bg-muted/40 flex"
-                        title={`${it.total.toLocaleString("fr-FR")} espèces concernées`}
+                        className="relative h-6 rounded-md overflow-hidden bg-muted/30 border border-border/40 flex"
+                        title={
+                          it.classTotal && it.classTotal > 0
+                            ? `${it.total.toLocaleString("fr-FR")} concernées sur ${it.classTotal.toLocaleString("fr-FR")} espèces de la classe (${(it.pctConcerned ?? 0).toFixed(1)}%)`
+                            : `${it.total.toLocaleString("fr-FR")} espèces concernées`
+                        }
                       >
-                        {segments.map(({ code, n }) => {
-                          const pct = (n / it.total) * 100;
-                          const meta = codeMeta[code];
+                        {(() => {
+                          const rawPct = it.classTotal && it.classTotal > 0
+                            ? (it.pctConcerned ?? 0)
+                            : 100;
+                          const fillPct = Math.min(100, rawPct);
                           return (
-                            <div
-                              key={code}
-                              style={{ width: `${pct}%`, backgroundColor: meta?.color || "#bbb" }}
-                              title={`${meta?.label || code} : ${n.toLocaleString("fr-FR")} (${pct.toFixed(1)}%)`}
-                            />
+                            <div className="flex h-full" style={{ width: `${fillPct}%` }}>
+                              {segments.map(({ code, n }) => {
+                                const pct = (n / it.total) * 100;
+                                const meta = codeMeta[code];
+                                return (
+                                  <div
+                                    key={code}
+                                    style={{
+                                      width: `${pct}%`,
+                                      backgroundColor: meta?.color || "#bbb",
+                                    }}
+                                    title={`${meta?.label || code} : ${n.toLocaleString("fr-FR")} (${pct.toFixed(1)}%)`}
+                                  />
+                                );
+                              })}
+                            </div>
                           );
-                        })}
+                        })()}
                       </div>
                       <div className="text-[11px] sm:text-xs text-right tabular-nums">
                         <div className="font-semibold text-foreground">
@@ -508,9 +527,18 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                             ? it.total.toLocaleString("fr-FR")
                             : `${(it.pctMenace ?? 0).toFixed(1)}%`}
                         </div>
-                        <div className="text-muted-foreground">
+                        <div
+                          className="text-muted-foreground"
+                          title={
+                            it.classTotal
+                              ? `${it.total.toLocaleString("fr-FR")} sur ${it.classTotal.toLocaleString("fr-FR")} espèces de la classe`
+                              : undefined
+                          }
+                        >
                           {showTotalMetric
-                            ? "espèces"
+                            ? it.classTotal && it.classTotal > 0
+                              ? `/ ${it.classTotal.toLocaleString("fr-FR")}`
+                              : "espèces"
                             : `${it.total.toLocaleString("fr-FR")} esp.`}
                         </div>
                       </div>
