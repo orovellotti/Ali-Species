@@ -21,12 +21,12 @@ type Turn = {
 };
 
 const SUGGESTIONS = [
-  "Quels mammifères sont protégés en France ?",
-  "Combien d'espèces d'oiseaux y a-t-il en France ?",
-  "Liste les amphibiens en danger critique",
-  "Montre-moi les espèces invasives interdites d'introduction",
-  "Quelles sont les ZNIEFF déterminantes en Bretagne ?",
-  "Donne-moi des exemples d'orchidées",
+  "Combien de mammifères sont protégés au niveau national en France métropolitaine ?",
+  "Liste les amphibiens classés En danger (EN) sur la Liste rouge nationale",
+  "Quelles chauves-souris sont inscrites à l'annexe II de la Directive Habitats ?",
+  "Donne-moi 10 orchidées du genre Ophrys présentes en France",
+  "Quels rapaces diurnes sont déterminants ZNIEFF en Bretagne ?",
+  "Que mange le Loup gris (Canis lupus) ?",
 ];
 
 export function ConversationalBar() {
