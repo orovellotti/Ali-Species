@@ -372,6 +372,63 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
   res.json({ name: "Vivant", children });
 });
 
+// Per-class UICN (Liste rouge nationale) breakdown — used by the Baromètre view.
+// Returns one row per (regne, classe) with counts by UICN code among species
+// that have at least one LRN status. The optional statutType narrows the
+// universe to species also bearing that status (so the bars stay consistent
+// with the page filter).
+router.get("/taxons/uicn-by-class", async (req, res): Promise<void> => {
+  const statutType = typeof req.query.statutType === "string" ? req.query.statutType.trim() : "";
+  const extraFilter = statutType
+    ? sql`AND t.cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${statutType})`
+    : sql``;
+
+  const rowsRaw = await db.execute(sql`
+    SELECT t.regne,
+           COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
+           UPPER(s.code_statut) AS code,
+           COUNT(DISTINCT t.cd_nom)::int AS c
+    FROM taxons t
+    JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = 'LRN'
+    WHERE t.cd_nom = t.cd_ref
+      AND t.rang = 'ES'
+      AND t.regne IS NOT NULL AND t.regne != ''
+      AND s.code_statut IS NOT NULL
+      ${extraFilter}
+    GROUP BY 1, 2, 3
+  `);
+  const rows = ((rowsRaw as { rows?: unknown[] }).rows ?? rowsRaw) as Array<{
+    regne: string | null;
+    classe: string;
+    code: string;
+    c: number;
+  }>;
+
+  const KNOWN = new Set(["LC", "NT", "VU", "EN", "CR", "RE", "EX", "DD", "NA", "NE"]);
+  type Bucket = { regne: string; classe: string; total: number; codes: Record<string, number> };
+  const map = new Map<string, Bucket>();
+  for (const r of rows) {
+    const code = KNOWN.has(r.code) ? r.code : "DD";
+    const regne = r.regne || "Inconnu";
+    const key = `${regne}|||${r.classe}`;
+    const cur = map.get(key) ?? { regne, classe: r.classe, total: 0, codes: {} };
+    cur.codes[code] = (cur.codes[code] || 0) + r.c;
+    cur.total += r.c;
+    map.set(key, cur);
+  }
+
+  const items = Array.from(map.values())
+    .map((b) => {
+      const threatened = (b.codes.VU || 0) + (b.codes.EN || 0) + (b.codes.CR || 0) + (b.codes.RE || 0) + (b.codes.EX || 0);
+      const pctMenace = b.total > 0 ? (threatened / b.total) * 100 : 0;
+      return { ...b, threatened, pctMenace };
+    })
+    .filter((b) => b.total >= 5) // ignore extremely small classes (statistical noise)
+    .sort((a, b) => b.pctMenace - a.pctMenace || b.total - a.total);
+
+  res.json({ items });
+});
+
 router.get("/taxons/stats", async (_req, res): Promise<void> => {
   const refOnly = eq(taxonsTable.cdNom, taxonsTable.cdRef);
 

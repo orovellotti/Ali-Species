@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useGetTaxonStats } from "@workspace/api-client-react";
-import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug } from "lucide-react";
+import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug, LayoutGrid, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
 import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
+import { UicnBarometer } from "@/components/UicnBarometer";
 
 export default function Taxonomie() {
   const { data: stats } = useGetTaxonStats();
@@ -13,6 +14,7 @@ export default function Taxonomie() {
   const [treeData, setTreeData] = useState<any>(null);
   const [treeLoading, setTreeLoading] = useState(false);
   const [statutType, setStatutType] = useState<string>("");
+  const [view, setView] = useState<"treemap" | "barometer">("treemap");
   const [statusTypes, setStatusTypes] = useState<{ code: string; label: string; taxa: number; group?: string }[]>([]);
 
   useEffect(() => {
@@ -125,8 +127,32 @@ export default function Taxonomie() {
                 Espèces concernées par ce statut uniquement
               </span>
             )}
+            <div className="sm:ml-auto inline-flex rounded-full border border-border bg-background p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setView("treemap")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${view === "treemap" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="view-treemap"
+                aria-pressed={view === "treemap"}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                Treemap
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("barometer")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${view === "barometer" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="view-barometer"
+                aria-pressed={view === "barometer"}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Baromètre UICN
+              </button>
+            </div>
           </div>
-          {treeData && !treeLoading ? (
+          {view === "barometer" ? (
+            <UicnBarometer statutType={statutType} />
+          ) : treeData && !treeLoading ? (
             <TaxonomyTreemap
               data={treeData}
               statutType={statutType}
