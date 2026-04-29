@@ -282,7 +282,29 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
     .groupBy(taxonsTable.regne, taxonsTable.phylum, taxonsTable.classe, taxonsTable.ordre, taxonsTable.famille)
     .orderBy(desc(sql`count(*)`));
 
-  type Tree5 = Record<string, Record<string, Record<string, Record<string, Record<string, number>>>>>;
+  // UICN (Liste rouge nationale) breakdown per (regne/phylum/classe/ordre/famille),
+  // filtered by the same statutType so the bars match the visible cells.
+  const uicnFilter = statutType
+    ? sql`AND t.cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${statutType})`
+    : sql``;
+  const uicnRowsRaw = await db.execute(sql`
+    SELECT t.regne, t.phylum, t.classe, t.ordre, t.famille,
+           UPPER(s.code_statut) AS code, COUNT(DISTINCT t.cd_nom)::int AS c
+    FROM taxons t
+    JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = 'LRN'
+    WHERE t.cd_nom = t.cd_ref AND t.rang = 'ES'
+      AND t.regne IS NOT NULL AND t.regne != ''
+      AND s.code_statut IS NOT NULL
+      ${uicnFilter}
+    GROUP BY 1,2,3,4,5,6
+  `);
+  const uicnRows = ((uicnRowsRaw as { rows?: unknown[] }).rows ?? uicnRowsRaw) as Array<{
+    regne: string | null; phylum: string | null; classe: string | null;
+    ordre: string | null; famille: string | null; code: string; c: number;
+  }>;
+
+  type UicnCounts = Record<string, number>;
+  type Tree5 = Record<string, Record<string, Record<string, Record<string, Record<string, { value: number; uicn: UicnCounts }>>>>>;
   const tree: Tree5 = {};
   for (const r of rows) {
     const regno = r.regne || "Inconnu";
@@ -290,11 +312,23 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
     const classe = r.classe || "Autre";
     const ordre = r.ordre || "Autre";
     const famille = r.famille || "Autre";
-    if (!tree[regno]) tree[regno] = {};
-    if (!tree[regno][phylum]) tree[regno][phylum] = {};
-    if (!tree[regno][phylum][classe]) tree[regno][phylum][classe] = {};
-    if (!tree[regno][phylum][classe][ordre]) tree[regno][phylum][classe][ordre] = {};
-    tree[regno][phylum][classe][ordre][famille] = (tree[regno][phylum][classe][ordre][famille] || 0) + r.count;
+    tree[regno] ??= {};
+    tree[regno][phylum] ??= {};
+    tree[regno][phylum][classe] ??= {};
+    tree[regno][phylum][classe][ordre] ??= {};
+    const cur = tree[regno][phylum][classe][ordre][famille];
+    if (cur) cur.value += r.count;
+    else tree[regno][phylum][classe][ordre][famille] = { value: r.count, uicn: {} };
+  }
+  for (const u of uicnRows) {
+    const regno = u.regne || "Inconnu";
+    const phylum = u.phylum || "Autre";
+    const classe = u.classe || "Autre";
+    const ordre = u.ordre || "Autre";
+    const famille = u.famille || "Autre";
+    const node = tree[regno]?.[phylum]?.[classe]?.[ordre]?.[famille];
+    if (!node) continue;
+    node.uicn[u.code] = (node.uicn[u.code] || 0) + u.c;
   }
 
   function sortAndSlice<T extends { children?: any[] }>(arr: T[], limit: number): T[] {
@@ -317,9 +351,10 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
               Object.entries(ordres).map(([ordre, familles]) => ({
                 name: ordre,
                 children: sortAndSlice(
-                  Object.entries(familles).map(([famille, value]) => ({
+                  Object.entries(familles).map(([famille, leaf]) => ({
                     name: famille,
-                    value,
+                    value: leaf.value,
+                    uicn: leaf.uicn,
                   })),
                   20
                 ),

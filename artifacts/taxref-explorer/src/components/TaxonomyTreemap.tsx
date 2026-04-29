@@ -1,12 +1,60 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { ChevronLeft, Loader2 } from "lucide-react";
 
+type UicnCounts = Record<string, number>;
+
 interface TreeNode {
   name: string;
   value?: number;
   children?: TreeNode[];
   cdNom?: number;
   nomVern?: string | null;
+  uicn?: UicnCounts;
+}
+
+const UICN_ORDER = ["LC", "NT", "VU", "EN", "CR", "RE", "DD"] as const;
+const UICN_COLORS: Record<string, string> = {
+  LC: "#5fa55a",
+  NT: "#c9d24a",
+  VU: "#f0b53c",
+  EN: "#e5762b",
+  CR: "#c0392b",
+  RE: "#5e1a1a",
+  DD: "#9a9a9a",
+};
+const UICN_LABELS: Record<string, string> = {
+  LC: "Préoccupation mineure",
+  NT: "Quasi menacé",
+  VU: "Vulnérable",
+  EN: "En danger",
+  CR: "En danger critique",
+  RE: "Régionalement éteinte",
+  DD: "Données insuffisantes",
+};
+
+const uicnCache = new WeakMap<TreeNode, UicnCounts>();
+function aggregateUicn(node: TreeNode): UicnCounts {
+  if (node.uicn && (!node.children || node.children.length === 0)) return node.uicn;
+  const cached = uicnCache.get(node);
+  if (cached) return cached;
+  const acc: UicnCounts = node.uicn ? { ...node.uicn } : {};
+  if (node.children) {
+    for (const c of node.children) {
+      const sub = aggregateUicn(c);
+      for (const [k, v] of Object.entries(sub)) {
+        acc[k] = (acc[k] || 0) + v;
+      }
+    }
+  }
+  uicnCache.set(node, acc);
+  return acc;
+}
+
+function uicnEvaluated(u: UicnCounts): number {
+  return UICN_ORDER.reduce((s, k) => (k === "DD" ? s : s + (u[k] || 0)), 0);
+}
+function uicnThreatened(u: UicnCounts): number {
+  return (u.VU || 0) + (u.EN || 0) + (u.CR || 0);
 }
 
 const KINGDOM_COLORS: Record<string, string> = {
@@ -61,6 +109,7 @@ interface DataItem {
   hasChildren: boolean;
   cdNom?: number;
   nomVern?: string | null;
+  uicn: UicnCounts;
 }
 
 interface LayoutItem extends DataItem {
@@ -192,6 +241,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
         hasChildren: !!child.children && child.children.length > 0,
         cdNom: child.cdNom,
         nomVern: child.nomVern,
+        uicn: aggregateUicn(child),
       }))
       .sort((a, b) => b.realValue - a.realValue);
     const maxVal = raw[0]?.realValue || 1;
@@ -369,7 +419,38 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
             const fontSize = Math.min(22, Math.max(10, Math.min(rect.w / 6, rect.h / 4)));
             const valueFontSize = Math.max(10, fontSize * 0.7);
             const gap = fontSize * 0.9;
-            const isLeaf = !item.hasChildren;
+
+            const evaluated = uicnEvaluated(item.uicn);
+            const threatened = uicnThreatened(item.uicn);
+            const pctThreatened = evaluated > 0 ? Math.round((threatened / evaluated) * 100) : null;
+            const showUicnBar = rect.w >= 60 && rect.h >= 50 && evaluated > 0;
+            // Tighter thresholds + the badge sits in the top-right corner;
+            // we also reserve horizontal space for the centered label below.
+            const showBadge = rect.w >= 110 && rect.h >= 64 && pctThreatened !== null && pctThreatened >= 5;
+            const labelMaxChars = Math.floor((rect.w - (showBadge ? 44 : 8)) / (fontSize * 0.55));
+
+            const barH = Math.min(7, Math.max(4, rect.h * 0.06));
+            const barInset = 4;
+            const barY = rect.y + rect.h - barH - 4;
+            const barW = rect.w - 3 - barInset * 2;
+            const barX = rect.x + 1.5 + barInset;
+
+            const segments: Array<{ k: string; w: number; x: number }> = [];
+            if (showUicnBar) {
+              const total = UICN_ORDER.reduce((s, k) => s + (item.uicn[k] || 0), 0);
+              if (total > 0) {
+                let cursor = 0;
+                for (const k of UICN_ORDER) {
+                  const v = item.uicn[k] || 0;
+                  if (v <= 0) continue;
+                  const w = (v / total) * barW;
+                  segments.push({ k, w, x: barX + cursor });
+                  cursor += w;
+                }
+              }
+            }
+
+            const labelYOffset = showUicnBar ? -(barH + 6) / 2 : 0;
 
             return (
               <g
@@ -391,7 +472,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
                 {showLabel && (
                   <text
                     x={rect.x + rect.w / 2}
-                    y={rect.y + rect.h / 2 - (showValue ? gap / 2 : 0)}
+                    y={rect.y + rect.h / 2 - (showValue ? gap / 2 : 0) + labelYOffset}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="#f0e8d0"
@@ -401,15 +482,15 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
                     letterSpacing="0.03em"
                     className="pointer-events-none select-none"
                   >
-                    {item.name.length > Math.floor(rect.w / (fontSize * 0.55))
-                      ? item.name.slice(0, Math.floor(rect.w / (fontSize * 0.55)) - 1) + "…"
+                    {item.name.length > labelMaxChars
+                      ? item.name.slice(0, Math.max(1, labelMaxChars - 1)) + "…"
                       : item.name}
                   </text>
                 )}
                 {showValue && (
                   <text
                     x={rect.x + rect.w / 2}
-                    y={rect.y + rect.h / 2 + gap / 2 + 2}
+                    y={rect.y + rect.h / 2 + gap / 2 + 2 + labelYOffset}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="rgba(240,232,208,0.65)"
@@ -420,6 +501,54 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
                   >
                     {item.realValue.toLocaleString("fr-FR")}
                   </text>
+                )}
+                {showUicnBar && (
+                  <g className="pointer-events-none">
+                    <rect
+                      x={barX}
+                      y={barY}
+                      width={barW}
+                      height={barH}
+                      fill="rgba(0,0,0,0.35)"
+                      rx={1.5}
+                    />
+                    {segments.map((seg) => (
+                      <rect
+                        key={seg.k}
+                        x={seg.x}
+                        y={barY}
+                        width={Math.max(0.5, seg.w - 0.5)}
+                        height={barH}
+                        fill={UICN_COLORS[seg.k]}
+                        rx={1}
+                      />
+                    ))}
+                  </g>
+                )}
+                {showBadge && (
+                  <g className="pointer-events-none">
+                    <rect
+                      x={rect.x + rect.w - 38}
+                      y={rect.y + 4}
+                      width={32}
+                      height={16}
+                      rx={8}
+                      fill={pctThreatened! >= 30 ? "#c0392b" : pctThreatened! >= 15 ? "#e5762b" : "#f0b53c"}
+                      opacity={0.92}
+                    />
+                    <text
+                      x={rect.x + rect.w - 22}
+                      y={rect.y + 12}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="#fff"
+                      fontSize={10}
+                      fontFamily={FONT_STACK}
+                      fontWeight="600"
+                    >
+                      {pctThreatened}%
+                    </text>
+                  </g>
                 )}
               </g>
             );
