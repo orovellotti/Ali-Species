@@ -38,7 +38,7 @@ export default function Taxonomie() {
     <Layout>
       <Helmet>
         <title>Statuts — ALI Species</title>
-        <meta name="description" content="Explorez visuellement la taxonomie du vivant en France : règnes, phyla, classes, ordres et familles. Filtrez par statut de conservation." />
+        <meta name="description" content="Explorez les statuts réglementaires et de conservation des espèces de France : protection, Liste rouge nationale, directives européennes, ZNIEFF. Sources : TAXREF v18 et BdC Statuts (PatriNat / INPN)." />
       </Helmet>
 
       <section className="pt-16 pb-10 px-4">
@@ -50,7 +50,10 @@ export default function Taxonomie() {
             Statuts
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Naviguez la classification du vivant — des règnes jusqu'aux familles. Filtrez par statut pour visualiser les espèces protégées, menacées ou invasives.
+            Parcourez les espèces de France selon leur statut réglementaire ou de conservation : protection nationale, Liste rouge UICN, directives européennes, ZNIEFF, espèces exotiques envahissantes. Cliquez sur les cellules pour descendre du règne jusqu'à l'espèce.
+          </p>
+          <p className="text-xs text-muted-foreground/80 max-w-2xl mx-auto mt-4 leading-relaxed">
+            <span className="font-medium">Sources :</span> taxonomie <a href="https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">TAXREF v18</a> et <a href="https://inpn.mnhn.fr/telechargement/referentielEspece/bdc-statuts-especes" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">BdC Statuts</a> produites par <a href="https://www.patrinat.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">PatriNat</a> (OFB – MNHN – CNRS – IRD), diffusées via l'<a href="https://inpn.mnhn.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">INPN</a>. Catégories UICN issues de la <a href="https://uicn.fr/liste-rouge-france/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">Liste rouge nationale</a> (UICN France &amp; MNHN).
           </p>
         </div>
       </section>
