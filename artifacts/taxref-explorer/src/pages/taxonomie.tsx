@@ -37,7 +37,7 @@ export default function Taxonomie() {
   return (
     <Layout>
       <Helmet>
-        <title>Arbre taxonomique — ALI Species</title>
+        <title>Statuts — ALI Species</title>
         <meta name="description" content="Explorez visuellement la taxonomie du vivant en France : règnes, phyla, classes, ordres et familles. Filtrez par statut de conservation." />
       </Helmet>
 
@@ -47,7 +47,7 @@ export default function Taxonomie() {
             <Network className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
-            Arbre taxonomique
+            Statuts
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Naviguez la classification du vivant — des règnes jusqu'aux familles. Filtrez par statut pour visualiser les espèces protégées, menacées ou invasives.
