@@ -327,8 +327,13 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
     .map(([regne, arr]) => {
       const total = arr.reduce((s, it) => s + it.total, 0);
       const threatened = arr.reduce((s, it) => s + (it.threatened || 0), 0);
+      // In total mode, sort by share of the class actually concerned (most-filled bar first)
+      // so the visualization reads from "most protected" to "least protected".
       const sorted = showTotalMetric
-        ? [...arr].sort((a, b) => b.total - a.total)
+        ? [...arr].sort(
+            (a, b) =>
+              (b.pctConcerned ?? 0) - (a.pctConcerned ?? 0) || b.total - a.total,
+          )
         : arr;
       return {
         regne,
