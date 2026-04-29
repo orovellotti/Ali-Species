@@ -50,10 +50,10 @@ export default function Home() {
             Toutes les espèces de France, à portée de <span className="text-primary italic">question</span>.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
-            Plus de 700 000 animaux, plantes et champignons vivent en France. Découvrez lesquels sont <span className="text-foreground font-medium">menacés ou protégés</span>, et <span className="text-foreground font-medium">qui mange qui, qui pollinise quoi, qui parasite qui</span>.
+            Plus de <span className="text-foreground font-medium">700 000 taxons du référentiel TAXREF v18</span> (faune, flore, fonge), enrichis de leurs <span className="text-foreground font-medium">statuts de conservation</span> (Liste Rouge UICN, protections nationales, directives Habitats &amp; Oiseaux) et de leurs <span className="text-foreground font-medium">réseaux trophiques</span> issus de la base GloBI.
           </p>
           <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
-            Posez votre question en français — l'assistant cherche pour vous et vous montre les réponses.
+            Interrogation en langage naturel — l'assistant compose la requête, sélectionne les sources et restitue les résultats.
           </p>
 
           <ConversationalBar />
