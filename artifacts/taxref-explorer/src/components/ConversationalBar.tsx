@@ -35,6 +35,17 @@ export function ConversationalBar() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function pickSuggestion(s: string) {
+    setInput(s);
+    const el = inputRef.current;
+    if (el) {
+      el.focus();
+      const len = s.length;
+      requestAnimationFrame(() => el.setSelectionRange(len, len));
+    }
+  }
 
   useEffect(() => {
     if (turns.length > 0 && scrollRef.current) {
@@ -87,6 +98,7 @@ export function ConversationalBar() {
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -114,7 +126,7 @@ export function ConversationalBar() {
             <button
               key={s}
               type="button"
-              onClick={() => void ask(s)}
+              onClick={() => pickSuggestion(s)}
               className="text-xs px-3 py-1.5 rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
               data-testid="button-suggestion"
             >
