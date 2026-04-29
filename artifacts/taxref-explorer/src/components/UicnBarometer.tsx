@@ -309,8 +309,30 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   const grandThreatened = resp.isUicn
     ? resp.items.reduce((s, it) => s + (it.threatened || 0), 0)
     : 0;
-  const top = resp.items.slice(0, 30);
   const headerSubject = statutType && statutLabel ? statutLabel : profile.title;
+
+  // Group by règne, keep at most 12 classes per group, then sort règnes by total desc.
+  const PER_GROUP_LIMIT = 12;
+  const byRegne = new Map<string, Item[]>();
+  for (const it of resp.items) {
+    const arr = byRegne.get(it.regne) ?? [];
+    arr.push(it);
+    byRegne.set(it.regne, arr);
+  }
+  const groups = Array.from(byRegne.entries())
+    .map(([regne, arr]) => {
+      const total = arr.reduce((s, it) => s + it.total, 0);
+      const threatened = arr.reduce((s, it) => s + (it.threatened || 0), 0);
+      return {
+        regne,
+        total,
+        threatened,
+        classCount: arr.length,
+        rows: arr.slice(0, PER_GROUP_LIMIT),
+        truncated: Math.max(0, arr.length - PER_GROUP_LIMIT),
+      };
+    })
+    .sort((a, b) => b.total - a.total);
 
   return (
     <div className="bg-background border border-border rounded-2xl p-5 md:p-6 shadow-sm">
@@ -354,88 +376,117 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
         ))}
       </div>
 
-      {/* Rows */}
-      <div className="space-y-2">
-        {top.map((it) => {
-          const dot = REGNE_COLORS[it.regne] || "#888";
-          // Build bar segments in code order; lump unknown/non-visible codes into __other__.
-          const segments: { code: string; n: number }[] = [];
-          let other = 0;
-          const visibleSet = new Set(codeOrder.filter((c) => c !== "__other__"));
-          for (const [c, n] of Object.entries(it.codes)) {
-            if (visibleSet.has(c)) continue; // handled below
-            other += n;
-          }
-          for (const c of codeOrder) {
-            if (c === "__other__") {
-              if (other > 0) segments.push({ code: c, n: other });
-            } else {
-              const n = it.codes[c] || 0;
-              if (n > 0) segments.push({ code: c, n });
-            }
-          }
+      {/* Groups */}
+      <div className="space-y-6">
+        {groups.map((g) => {
+          const dot = REGNE_COLORS[g.regne] || "#888";
+          const pctG = g.total > 0 ? (g.threatened / g.total) * 100 : 0;
           return (
-            <div
-              key={`${it.regne}-${it.classe}`}
-              className="grid grid-cols-[140px_1fr_90px] sm:grid-cols-[180px_1fr_110px] items-center gap-3"
-              data-testid={`barometer-row-${it.classe}`}
-            >
-              {/* Class label */}
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="inline-block w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: dot }}
-                  title={it.regne}
-                />
-                <span
-                  className="text-xs sm:text-sm font-medium text-foreground truncate"
-                  title={`${it.classe} (${it.regne})`}
-                >
-                  {it.classe}
-                </span>
+            <div key={g.regne} data-testid={`barometer-group-${g.regne}`}>
+              {/* Group header */}
+              <div className="flex items-baseline justify-between gap-3 pb-2 mb-3 border-b border-border/60">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: dot }}
+                  />
+                  <h4 className="text-sm sm:text-base font-serif font-semibold text-foreground truncate">
+                    {g.regne}
+                  </h4>
+                  <span className="text-[11px] text-muted-foreground italic">
+                    {g.classCount} classe{g.classCount > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="text-[11px] sm:text-xs text-muted-foreground text-right shrink-0">
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {g.total.toLocaleString("fr-FR")}
+                  </span>{" "}
+                  espèces
+                  {resp.isUicn && g.total > 0 && (
+                    <>
+                      <span className="mx-1.5 text-muted-foreground/60">·</span>
+                      <span style={{ color: "#c0392b" }} className="font-medium tabular-nums">
+                        {g.threatened.toLocaleString("fr-FR")} ({pctG.toFixed(1)}%) menacées
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Stacked bar */}
-              <div
-                className="relative h-6 rounded-md overflow-hidden bg-muted/40 flex"
-                title={`${it.total.toLocaleString("fr-FR")} espèces concernées`}
-              >
-                {segments.map(({ code, n }) => {
-                  const pct = (n / it.total) * 100;
-                  const meta = codeMeta[code];
+              {/* Class rows */}
+              <div className="space-y-2">
+                {g.rows.map((it) => {
+                  const segments: { code: string; n: number }[] = [];
+                  let other = 0;
+                  const visibleSet = new Set(codeOrder.filter((c) => c !== "__other__"));
+                  for (const [c, n] of Object.entries(it.codes)) {
+                    if (visibleSet.has(c)) continue;
+                    other += n;
+                  }
+                  for (const c of codeOrder) {
+                    if (c === "__other__") {
+                      if (other > 0) segments.push({ code: c, n: other });
+                    } else {
+                      const n = it.codes[c] || 0;
+                      if (n > 0) segments.push({ code: c, n });
+                    }
+                  }
                   return (
                     <div
-                      key={code}
-                      style={{ width: `${pct}%`, backgroundColor: meta?.color || "#bbb" }}
-                      title={`${meta?.label || code} : ${n.toLocaleString("fr-FR")} (${pct.toFixed(1)}%)`}
-                    />
+                      key={`${it.regne}-${it.classe}`}
+                      className="grid grid-cols-[140px_1fr_90px] sm:grid-cols-[180px_1fr_110px] items-center gap-3"
+                      data-testid={`barometer-row-${it.classe}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pl-4">
+                        <span
+                          className="text-xs sm:text-sm font-medium text-foreground truncate"
+                          title={`${it.classe} (${it.regne})`}
+                        >
+                          {it.classe}
+                        </span>
+                      </div>
+                      <div
+                        className="relative h-6 rounded-md overflow-hidden bg-muted/40 flex"
+                        title={`${it.total.toLocaleString("fr-FR")} espèces concernées`}
+                      >
+                        {segments.map(({ code, n }) => {
+                          const pct = (n / it.total) * 100;
+                          const meta = codeMeta[code];
+                          return (
+                            <div
+                              key={code}
+                              style={{ width: `${pct}%`, backgroundColor: meta?.color || "#bbb" }}
+                              title={`${meta?.label || code} : ${n.toLocaleString("fr-FR")} (${pct.toFixed(1)}%)`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="text-[11px] sm:text-xs text-right tabular-nums">
+                        <div className="font-semibold text-foreground">
+                          {resp.isUicn
+                            ? `${(it.pctMenace ?? 0).toFixed(1)}%`
+                            : it.total.toLocaleString("fr-FR")}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {resp.isUicn
+                            ? `${it.total.toLocaleString("fr-FR")} esp.`
+                            : "espèces"}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
 
-              {/* Stats */}
-              <div className="text-[11px] sm:text-xs text-right tabular-nums">
-                <div className="font-semibold text-foreground">
-                  {resp.isUicn
-                    ? `${(it.pctMenace ?? 0).toFixed(1)}%`
-                    : it.total.toLocaleString("fr-FR")}
-                </div>
-                <div className="text-muted-foreground">
-                  {resp.isUicn
-                    ? `${it.total.toLocaleString("fr-FR")} esp.`
-                    : "espèces"}
-                </div>
-              </div>
+              {g.truncated > 0 && (
+                <p className="mt-2 text-[11px] text-muted-foreground italic pl-4">
+                  + {g.truncated} autre{g.truncated > 1 ? "s" : ""} classe{g.truncated > 1 ? "s" : ""} non affichée{g.truncated > 1 ? "s" : ""}.
+                </p>
+              )}
             </div>
           );
         })}
       </div>
-
-      {resp.items.length > top.length && (
-        <p className="mt-4 text-[11px] text-muted-foreground text-center italic">
-          Affichage des {top.length} premières classes sur {resp.items.length}.
-        </p>
-      )}
     </div>
   );
 }
