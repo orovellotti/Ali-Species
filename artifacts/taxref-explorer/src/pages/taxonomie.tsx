@@ -146,7 +146,7 @@ export default function Taxonomie() {
                 aria-pressed={view === "barometer"}
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                Baromètre UICN
+                Baromètre
               </button>
             </div>
           </div>
