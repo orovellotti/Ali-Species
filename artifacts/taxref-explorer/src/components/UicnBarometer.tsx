@@ -216,6 +216,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   const [resp, setResp] = useState<ApiResp | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [metric, setMetric] = useState<"threat" | "total">("threat");
 
   useEffect(() => {
     let ignore = false;
@@ -319,16 +320,20 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
     arr.push(it);
     byRegne.set(it.regne, arr);
   }
+  const showTotalMetric = !resp.isUicn || metric === "total";
   const groups = Array.from(byRegne.entries())
     .map(([regne, arr]) => {
       const total = arr.reduce((s, it) => s + it.total, 0);
       const threatened = arr.reduce((s, it) => s + (it.threatened || 0), 0);
+      const sorted = showTotalMetric
+        ? [...arr].sort((a, b) => b.total - a.total)
+        : arr;
       return {
         regne,
         total,
         threatened,
         classCount: arr.length,
-        rows: arr.slice(0, PER_GROUP_LIMIT),
+        rows: sorted.slice(0, PER_GROUP_LIMIT),
         truncated: Math.max(0, arr.length - PER_GROUP_LIMIT),
       };
     })
@@ -346,19 +351,55 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
             {profile.subtitle}
           </p>
         </div>
-        <div className="text-xs text-muted-foreground text-left sm:text-right shrink-0">
-          <span className="font-medium text-foreground">
-            {grandTotal.toLocaleString("fr-FR")}
-          </span>{" "}
-          espèces concernées
-          {resp.isUicn && grandTotal > 0 && (
-            <>
-              , dont{" "}
-              <span className="font-medium" style={{ color: "#c0392b" }}>
-                {grandThreatened.toLocaleString("fr-FR")} (
-                {((grandThreatened / grandTotal) * 100).toFixed(1)}%) menacées
-              </span>
-            </>
+        <div className="flex flex-col sm:items-end gap-2 shrink-0">
+          <div className="text-xs text-muted-foreground text-left sm:text-right">
+            <span className="font-medium text-foreground">
+              {grandTotal.toLocaleString("fr-FR")}
+            </span>{" "}
+            espèces concernées
+            {resp.isUicn && grandTotal > 0 && (
+              <>
+                , dont{" "}
+                <span className="font-medium" style={{ color: "#c0392b" }}>
+                  {grandThreatened.toLocaleString("fr-FR")} (
+                  {((grandThreatened / grandTotal) * 100).toFixed(1)}%) menacées
+                </span>
+              </>
+            )}
+          </div>
+          {resp.isUicn && (
+            <div
+              className="inline-flex items-center text-[11px] rounded-full bg-muted/60 p-0.5"
+              role="group"
+              aria-label="Choisir la métrique affichée par classe"
+            >
+              <button
+                type="button"
+                onClick={() => setMetric("threat")}
+                className={`px-2.5 py-1 rounded-full transition-colors ${
+                  metric === "threat"
+                    ? "bg-background shadow-sm text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                aria-pressed={metric === "threat"}
+                data-testid="metric-threat"
+              >
+                % menacées
+              </button>
+              <button
+                type="button"
+                onClick={() => setMetric("total")}
+                className={`px-2.5 py-1 rounded-full transition-colors ${
+                  metric === "total"
+                    ? "bg-background shadow-sm text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                aria-pressed={metric === "total"}
+                data-testid="metric-total"
+              >
+                Total espèces
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -463,14 +504,14 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                       </div>
                       <div className="text-[11px] sm:text-xs text-right tabular-nums">
                         <div className="font-semibold text-foreground">
-                          {resp.isUicn
-                            ? `${(it.pctMenace ?? 0).toFixed(1)}%`
-                            : it.total.toLocaleString("fr-FR")}
+                          {showTotalMetric
+                            ? it.total.toLocaleString("fr-FR")
+                            : `${(it.pctMenace ?? 0).toFixed(1)}%`}
                         </div>
                         <div className="text-muted-foreground">
-                          {resp.isUicn
-                            ? `${it.total.toLocaleString("fr-FR")} esp.`
-                            : "espèces"}
+                          {showTotalMetric
+                            ? "espèces"
+                            : `${it.total.toLocaleString("fr-FR")} esp.`}
                         </div>
                       </div>
                     </div>
