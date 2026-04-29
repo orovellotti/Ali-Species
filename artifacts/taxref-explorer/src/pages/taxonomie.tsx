@@ -168,7 +168,7 @@ export default function Taxonomie() {
             Statuts
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Parcourez les espèces de France par type de réglementation.
+            Quelle part du vivant est réellement protégée ?
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(45, 122, 76, 0.10)", color: "#2d7a4c", borderColor: "rgba(45, 122, 76, 0.25)" }}>
