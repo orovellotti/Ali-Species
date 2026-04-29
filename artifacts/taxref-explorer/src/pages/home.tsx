@@ -33,10 +33,10 @@ export default function Home() {
   return (
     <Layout>
       <Helmet>
-        <title>ALI Species — All Life Intelligence — Explorez le monde vivant de la France</title>
-        <meta name="description" content="ALI Species — All Life Intelligence. Explorez 700 000 taxons de TAXREF v18 : classification, statuts de conservation (Liste Rouge UICN, protections, directives) et reseaux trophiques GloBI (proies, predateurs, parasites, pollinisation)." />
-        <meta property="og:title" content="ALI Species — All Life Intelligence" />
-        <meta property="og:description" content="Explorez 700 000 taxons de TAXREF v18 : statuts de conservation et reseaux trophiques de la biodiversite francaise." />
+        <title>ALI Species — Découvrez toutes les espèces de France</title>
+        <meta name="description" content="Plus de 700 000 espèces animales, végétales et fongiques de France, avec leur niveau de protection et leurs liens avec les autres espèces. Posez votre question en français." />
+        <meta property="og:title" content="ALI Species — Découvrez toutes les espèces de France" />
+        <meta property="og:description" content="Plus de 700 000 espèces de France, leurs statuts de protection et leurs interactions avec les autres espèces." />
         <meta property="og:type" content="website" />
       </Helmet>
       <section className="relative pt-24 pb-32 px-4 overflow-visible">
@@ -47,13 +47,13 @@ export default function Home() {
             <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight">
-            Explorez le referentiel du vivant en <span className="text-primary italic">langage naturel</span>.
+            Toutes les espèces de France, à portée de <span className="text-primary italic">question</span>.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
-            700 000 taxons de TAXREF v18 — flore, faune et champignons — avec leurs <span className="text-foreground font-medium">statuts de conservation</span> (Liste Rouge UICN, protections nationales, directives européennes) et leurs <span className="text-foreground font-medium">réseaux trophiques</span> (proies, prédateurs, parasites, pollinisation) issus de GloBI.
+            Plus de 700 000 animaux, plantes et champignons recensés en France — avec leur <span className="text-foreground font-medium">niveau de protection</span> (Liste Rouge, espèces protégées, directives européennes) et leurs <span className="text-foreground font-medium">liens avec les autres espèces</span> : qui mange qui, qui pollinise quoi, qui parasite qui.
           </p>
           <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
-            Posez votre question en français — l'assistant interroge la base et vous présente les espèces et leurs interactions.
+            Posez simplement votre question en français — l'assistant cherche pour vous et vous présente les espèces et leurs interactions.
           </p>
 
           <ConversationalBar />
@@ -64,7 +64,7 @@ export default function Home() {
             className="mt-6 inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
-            {randomLoading ? "Chargement..." : "Espece au hasard"}
+            {randomLoading ? "Chargement..." : "Une espèce au hasard"}
           </button>
         </div>
       </section>
@@ -72,8 +72,8 @@ export default function Home() {
       <section className="py-16 bg-card border-y border-border">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-serif font-semibold">Le vivant en chiffres</h2>
-            <p className="text-muted-foreground mt-2">Donnees du referentiel national</p>
+            <h2 className="text-2xl font-serif font-semibold">La biodiversité française en chiffres</h2>
+            <p className="text-muted-foreground mt-2">Source : référentiel TAXREF v18 du Muséum national d'Histoire naturelle</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
@@ -86,11 +86,11 @@ export default function Home() {
               ))
             ) : (
               <>
-                <StatCard icon={<Microscope className="w-4 h-4" />} value={stats.totalTaxons.toLocaleString("fr-FR")} label="Taxons" />
-                <StatCard icon={<Trees className="w-4 h-4" />} value={stats.totalSpecies.toLocaleString("fr-FR")} label="Especes" />
+                <StatCard icon={<Microscope className="w-4 h-4" />} value={stats.totalTaxons.toLocaleString("fr-FR")} label="Fiches" />
+                <StatCard icon={<Trees className="w-4 h-4" />} value={stats.totalSpecies.toLocaleString("fr-FR")} label="Espèces" />
                 <StatCard icon={<Layers className="w-4 h-4" />} value={stats.totalGenera.toLocaleString("fr-FR")} label="Genres" />
                 <StatCard icon={<BookOpen className="w-4 h-4" />} value={stats.totalFamilies.toLocaleString("fr-FR")} label="Familles" />
-                <StatCard icon={<ScrollText className="w-4 h-4" />} value={stats.totalStatuts.toLocaleString("fr-FR")} label="Statuts BDC" />
+                <StatCard icon={<ScrollText className="w-4 h-4" />} value={stats.totalStatuts.toLocaleString("fr-FR")} label="Statuts de protection" />
               </>
             )}
           </div>
@@ -109,23 +109,27 @@ export default function Home() {
       </section>
 
       <section className="py-24 px-4 container mx-auto max-w-5xl">
-        <h2 className="text-3xl font-serif font-semibold mb-10 text-center">Les grands regnes</h2>
+        <h2 className="text-3xl font-serif font-semibold mb-3 text-center">Explorez les trois grands règnes</h2>
+        <p className="text-muted-foreground text-center mb-10 max-w-2xl mx-auto">Cliquez sur un règne pour parcourir les espèces qu'il rassemble.</p>
         <div className="grid md:grid-cols-3 gap-8">
           <FeaturedCard 
             title="Animalia" 
-            desc="Des invertebres microscopiques aux mammiferes."
+            subtitle="Les animaux"
+            desc="Du plancton invisible aux grands mammifères, en passant par les insectes, poissons et oiseaux."
             fallbackImage={animaliaImg}
             cdNom={183716}
           />
           <FeaturedCard 
             title="Plantae" 
-            desc="Plantes a fleurs, fougeres, mousses et algues vertes."
+            subtitle="Les plantes"
+            desc="Plantes à fleurs, fougères, mousses et algues vertes."
             fallbackImage={plantaeImg}
             cdNom={187079}
           />
           <FeaturedCard 
             title="Fungi" 
-            desc="Champignons, moisissures et levures."
+            subtitle="Les champignons"
+            desc="Champignons, moisissures et levures — un règne à part entière."
             fallbackImage={fungiImg}
             cdNom={187496}
           />
@@ -147,7 +151,7 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode, value: string
   );
 }
 
-function FeaturedCard({ title, desc, fallbackImage, cdNom }: { title: string, desc: string, fallbackImage: string, cdNom: number }) {
+function FeaturedCard({ title, subtitle, desc, fallbackImage, cdNom }: { title: string, subtitle: string, desc: string, fallbackImage: string, cdNom: number }) {
   return (
     <Link href={taxonUrl(cdNom, title)} className="group block">
       <div className="relative h-64 rounded-2xl overflow-hidden mb-4 bg-muted">
@@ -157,7 +161,10 @@ function FeaturedCard({ title, desc, fallbackImage, cdNom }: { title: string, de
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <h3 className="absolute bottom-4 left-4 text-2xl font-serif font-bold text-white">{title}</h3>
+        <div className="absolute bottom-4 left-4 right-4">
+          <h3 className="text-2xl font-serif font-bold text-white italic">{title}</h3>
+          <p className="text-sm text-white/90 font-medium">{subtitle}</p>
+        </div>
       </div>
       <p className="text-muted-foreground group-hover:text-foreground transition-colors">{desc}</p>
     </Link>
