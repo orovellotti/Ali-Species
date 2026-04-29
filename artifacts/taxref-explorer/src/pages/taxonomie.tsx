@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useGetTaxonStats } from "@workspace/api-client-react";
-import { ShieldAlert, X, Network } from "lucide-react";
+import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug } from "lucide-react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { taxonUrl } from "@/lib/constants";
@@ -50,9 +50,31 @@ export default function Taxonomie() {
             Statuts
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Parcourez les espèces de France selon leur statut réglementaire ou de conservation : protection nationale, Liste rouge UICN, directives européennes, ZNIEFF, espèces exotiques envahissantes. Cliquez sur les cellules pour descendre du règne jusqu'à l'espèce.
+            Parcourez les espèces de France selon leur statut réglementaire ou de conservation. Cliquez sur les cellules pour descendre du règne jusqu'à l'espèce.
           </p>
-          <p className="text-xs text-muted-foreground/80 max-w-2xl mx-auto mt-4 leading-relaxed">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(45, 122, 76, 0.10)", color: "#2d7a4c", borderColor: "rgba(45, 122, 76, 0.25)" }}>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Protection nationale
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(192, 57, 43, 0.10)", color: "#a02e22", borderColor: "rgba(192, 57, 43, 0.25)" }}>
+              <HeartPulse className="w-3.5 h-3.5" />
+              Liste rouge UICN
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(33, 90, 160, 0.10)", color: "#215aa0", borderColor: "rgba(33, 90, 160, 0.25)" }}>
+              <Stars className="w-3.5 h-3.5" />
+              Natura 2000
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(120, 75, 145, 0.10)", color: "#6a4082", borderColor: "rgba(120, 75, 145, 0.25)" }}>
+              <MapPin className="w-3.5 h-3.5" />
+              ZNIEFF
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(217, 119, 36, 0.12)", color: "#a85e1a", borderColor: "rgba(217, 119, 36, 0.28)" }}>
+              <Bug className="w-3.5 h-3.5" />
+              Espèces envahissantes
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground/80 max-w-2xl mx-auto mt-6 leading-relaxed">
             <span className="font-medium">Sources :</span> taxonomie <a href="https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">TAXREF v18</a> et <a href="https://inpn.mnhn.fr/telechargement/referentielEspece/bdc-statuts-especes" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">BdC Statuts</a> produites par <a href="https://www.patrinat.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">PatriNat</a> (OFB – MNHN – CNRS – IRD), diffusées via l'<a href="https://inpn.mnhn.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">INPN</a>. Catégories UICN issues de la <a href="https://uicn.fr/liste-rouge-france/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">Liste rouge nationale</a> (UICN France &amp; MNHN).
           </p>
         </div>
