@@ -395,10 +395,21 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
       ? sql`AND t.cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_type_statut = ${restrict})`
       : sql``;
 
+  // Plantae's TAXREF "Equisetopsida" class lumps together every vascular plant
+  // (~31k species). To make the barometer readable, we substitute the order rank
+  // for that one class only — so users see Asterales, Poales, Polypodiales, etc.
+  const groupExpr = sql`
+    CASE
+      WHEN t.regne = 'Plantae' AND t.classe = 'Equisetopsida' AND t.ordre IS NOT NULL AND t.ordre != ''
+        THEN t.ordre
+      ELSE COALESCE(NULLIF(t.classe, ''), 'Autre')
+    END
+  `;
+
   const [rowsRaw, totalRowsRaw] = await Promise.all([
     db.execute(sql`
       SELECT t.regne,
-             COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
+             ${groupExpr} AS classe,
              UPPER(s.code_statut) AS code,
              MAX(s.lb_type_statut)        AS lb_type,
              COUNT(DISTINCT t.cd_nom)::int AS c
@@ -413,7 +424,7 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
     `),
     db.execute(sql`
       SELECT t.regne,
-             COALESCE(NULLIF(t.classe, ''), 'Autre') AS classe,
+             ${groupExpr} AS classe,
              COUNT(DISTINCT t.cd_nom)::int AS c
       FROM taxons t
       WHERE t.cd_nom = t.cd_ref
