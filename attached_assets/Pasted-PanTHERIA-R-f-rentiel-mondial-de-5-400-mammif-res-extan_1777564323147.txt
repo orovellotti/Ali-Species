@@ -1,0 +1,41 @@
+PanTHERIA
+Référentiel mondial de 5 400+ mammifères extants avec 45+ traits : masse, longueur, BMR, longévité, gestation, portée, sevrage, activité, régime, habitat, distribution géographique, climat. Publié dans Ecological Archives. Pour Ontologia : 123 mammifères TAXREF matchés, 1 266 traits.
+
+Éditeur
+Ecological Society of America (Ecological Archives)
+Licence
+Liberal academic (citation libre)
+Lien
+esapubs.org/archive/ecol/E090/184
+Jones K.E. et al. 2009. PanTHERIA: a species-level database of life history,
+ecology, and geography of extant and recently extinct mammals.
+Ecology 90:2648. Ecological Archives E090-184.
+AVONET
+Base morphologique, écologique et géographique couvrant TOUS les oiseaux (11 009 species). 11 mesures morphologiques principales (bec, ailes, masse, tarse, queue) + 90 020 individus échantillonnés + habitat, régime, migration, range. Pour Ontologia : 407 oiseaux TAXREF matchés, 7 976 traits.
+
+Éditeur
+Tobias J.A. et al. (hosted Figshare)
+Licence
+CC-BY 4.0
+Lien
+figshare.com/AVONET
+Tobias J.A. et al. 2022. AVONET: morphological, ecological and geographical
+data for all birds. Ecology Letters 25:581-597.
+doi: 10.1111/ele.13898
+AmphiBIO
+Base globale de 17 traits écologiques sur 6 500+ amphibiens : habitat (fossorial, arboreal, aquatic, terrestrial), régime (arthropodes, vertébrés, fruits…), cycle d'activité, taille, reproduction, élévation. Pour Ontologia : 38 amphibiens TAXREF matchés, 534 traits.
+
+Éditeur
+Oliveira B.F. et al. (hosted Figshare)
+Licence
+CC-BY 4.0
+Lien
+doi.org/10.6084/m9.figshare.4644424.v5
+Oliveira B.F. et al. 2017. AmphiBIO, a global database for amphibian
+ecological traits. Scientific Data 4:170123.
+doi: 10.1038/sdata.2017.123
+SquamBase
+Base de 11 744 squamates (lézards + serpents) avec morphologie (longueur, masse, SVL), life history, distribution, habitat, régime. 18 ans de travail manuel, 10 285 sources littérature. Pour Ontologia : 35 squamates TAXREF matchés, 387 traits.
+
+Éditeur
+Meiri S. et al. 

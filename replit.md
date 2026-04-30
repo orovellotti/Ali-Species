@@ -67,6 +67,18 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 - `pnpm --filter @workspace/scripts run import-taxref` — import TAXREF data into DB
+- `pnpm --filter @workspace/scripts run ingest-pantheria` — ingest PanTHERIA mammal traits
+- `pnpm --filter @workspace/scripts run ingest-avonet` — ingest AVONET bird traits
+- `pnpm --filter @workspace/scripts run ingest-amphibio` — ingest AmphiBIO amphibian traits
+
+## Trait Sources (Static, DB-cached)
+
+The `species_traits` table (PK = `cd_nom` + `source`) caches per-species traits from open scientific datasets, joined to TAXREF by case-insensitive `lb_nom` and restricted by `classe`. The `/api/taxons/:cdNom/traits` endpoint merges these with live Wikidata data and returns `staticSources[]` alongside `traits[]`. Wikidata failures degrade gracefully (the panel still renders DB sources). Sources currently active:
+
+- **PanTHERIA** (Mammalia, ~466 species, 18-trait blocks) — Jones et al. 2009, Ecological Archives E090-184.
+- **AVONET** (Aves, ~1865 species, 17-trait blocks) — Tobias et al. 2022, Ecology Letters 25:581-597, CC-BY 4.0.
+- **AmphiBIO** (Amphibia, ~193 species, 14-trait blocks) — Oliveira et al. 2017, Scientific Data 4:170123, CC-BY 4.0.
+- **SquamBase** — registered in source registry; data ingestion pending an open download URL for the Wiley supplementary materials.
 
 ## Database Schema
 

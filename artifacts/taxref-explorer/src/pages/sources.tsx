@@ -150,6 +150,54 @@ const SOURCES: Source[] = [
       "Vrandečić D. & Krötzsch M. (2014). Wikidata: A Free Collaborative Knowledgebase. Communications of the ACM 57(10), 78-85. https://doi.org/10.1145/2629489 — données interrogées en temps réel via l'endpoint SPARQL https://query.wikidata.org/sparql",
   },
   {
+    id: "pantheria",
+    name: "PanTHERIA",
+    description:
+      "Référentiel mondial de plus de 5 400 mammifères extants et récemment éteints, avec 45+ traits de cycle de vie, écologie et biogéographie : masse corporelle, longueur, BMR, longévité, gestation, taille de portée, sevrage, cycle d'activité, régime alimentaire, domaine vital, densité de population, distribution géographique, climat. Chaque fiche d'espèce de mammifère affiche un bloc dédié avec les traits PanTHERIA disponibles.",
+    publisher: "Ecological Society of America (Ecological Archives)",
+    license: "Liberal academic (citation libre).",
+    url: "https://esapubs.org/archive/ecol/E090/184/",
+    urlLabel: "esapubs.org/archive/ecol/E090/184",
+    citation:
+      "Jones K.E. et al. (2009). PanTHERIA: a species-level database of life history, ecology, and geography of extant and recently extinct mammals. Ecology 90:2648. Ecological Archives E090-184.",
+  },
+  {
+    id: "avonet",
+    name: "AVONET",
+    description:
+      "Base morphologique, écologique et géographique couvrant l'ensemble des oiseaux du monde (≈ 11 000 espèces) à partir de plus de 90 000 individus mesurés. Onze mesures morphologiques principales (bec : longueur culmen et narines, largeur, profondeur ; tarse ; aile ; distance de Kipp ; secondaire 1 ; indice main-aile ; queue ; masse) plus habitat principal, niveau et niche trophique, mode de vie, comportement migratoire, taille de l'aire de répartition. Les fiches d'oiseaux affichent un bloc dédié AVONET.",
+    publisher: "Tobias J.A. et al. (hébergé sur Figshare)",
+    license: "CC-BY 4.0.",
+    url: "https://doi.org/10.6084/m9.figshare.16586228",
+    urlLabel: "figshare.com/AVONET",
+    citation:
+      "Tobias J.A. et al. (2022). AVONET: morphological, ecological and geographical data for all birds. Ecology Letters 25:581-597. https://doi.org/10.1111/ele.13898",
+  },
+  {
+    id: "amphibio",
+    name: "AmphiBIO",
+    description:
+      "Base globale de 17 traits écologiques pour plus de 6 500 amphibiens : habitat (fouisseur, terrestre, aquatique, arboricole), régime alimentaire (feuilles, fleurs, graines, fruits, arthropodes, vertébrés), cycle d'activité (diurne, nocturne, crépusculaire), masse, taille corporelle et à maturité, longévité, taille et fréquence des pontes, mode de reproduction (direct, larvaire, vivipare). Les fiches d'amphibiens affichent un bloc dédié AmphiBIO.",
+    publisher: "Oliveira B.F. et al. (hébergé sur Figshare)",
+    license: "CC-BY 4.0.",
+    url: "https://doi.org/10.6084/m9.figshare.4644424.v5",
+    urlLabel: "doi.org/10.6084/m9.figshare.4644424.v5",
+    citation:
+      "Oliveira B.F. et al. (2017). AmphiBIO, a global database for amphibian ecological traits. Scientific Data 4:170123. https://doi.org/10.1038/sdata.2017.123",
+  },
+  {
+    id: "squambase",
+    name: "SquamBase",
+    description:
+      "Base de 11 744 squamates (lézards et serpents) couvrant morphologie (longueur totale, longueur museau-cloaque, masse), traits de cycle de vie, distribution géographique, habitat et régime alimentaire. Compilation de 18 ans de travail manuel à partir de 10 285 références de la littérature primaire. Source répertoriée dans ALI Species ; intégration des valeurs prévue dès la disponibilité d'une URL de téléchargement libre des matériaux supplémentaires.",
+    publisher: "Meiri S. et al.",
+    license: "CC-BY 4.0 (matériel supplémentaire de l'article).",
+    url: "https://onlinelibrary.wiley.com/doi/10.1111/geb.13812",
+    urlLabel: "onlinelibrary.wiley.com — geb.13812",
+    citation:
+      "Meiri S. et al. (2024). SquamBase — a database of squamate (Reptilia: Squamata) traits. Global Ecology and Biogeography 33:e13812. https://doi.org/10.1111/geb.13812",
+  },
+  {
     id: "claude",
     name: "Anthropic Claude (modèle de langage)",
     description:

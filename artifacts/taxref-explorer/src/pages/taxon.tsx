@@ -175,6 +175,22 @@ interface TraitsPayload {
   traits: TraitValue[];
   externalIds: { id: string; label: string; value: string; url: string }[];
   attribution: { source: string; url: string; license: string };
+  staticSources?: StaticTraitSource[];
+  wikidataAvailable?: boolean;
+}
+interface StaticTraitField {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+}
+interface StaticTraitSource {
+  source: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  license: string;
+  citation: string;
+  traits: StaticTraitField[];
 }
 
 function TraitsSection({ cdNom }: { cdNom: number }) {
@@ -208,22 +224,25 @@ function TraitsSection({ cdNom }: { cdNom: number }) {
         defaultOpen={false}
       >
         <p className="text-xs text-muted-foreground">
-          Service Wikidata momentanément indisponible. Réessayez plus tard.
+          Service de traits momentanément indisponible. Réessayez plus tard.
         </p>
       </CollapsibleSection>
     );
   }
   if (!data) return null;
 
-  const totalCount = data.traits.length + data.externalIds.length;
+  const staticSources = data.staticSources || [];
+  const staticTraitCount = staticSources.reduce((s, src) => s + src.traits.length, 0);
+  const totalCount = data.traits.length + data.externalIds.length + staticTraitCount;
   if (totalCount === 0) return null;
+  const headerCount = data.traits.length + staticTraitCount;
 
   return (
     <CollapsibleSection
       icon={<Sparkles className="w-4 h-4 text-primary" />}
       title="Traits biologiques"
-      count={data.traits.length}
-      defaultOpen={data.traits.length > 0}
+      count={headerCount}
+      defaultOpen={headerCount > 0}
     >
       {data.itemDescription && (
         <p className="text-sm text-muted-foreground mb-4 italic">{data.itemDescription}</p>
@@ -262,6 +281,57 @@ function TraitsSection({ cdNom }: { cdNom: number }) {
           ))}
         </div>
       )}
+
+      {staticSources.map((src) => (
+        <div
+          key={src.source}
+          className="mb-4 pt-3 border-t border-border/50"
+          data-testid={`trait-source-${src.source}`}
+        >
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {src.sourceLabel} <span className="text-muted-foreground/60 normal-case">· {src.traits.length} traits</span>
+              </span>
+            </div>
+            <a
+              href={src.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-medium text-primary/70 hover:text-primary inline-flex items-center gap-0.5"
+              title={src.citation}
+            >
+              {src.license}
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {src.traits.map((t) => (
+              <div
+                key={t.id}
+                className="p-3 bg-background border border-border rounded-xl"
+                data-testid={`trait-${src.source}-${t.id}`}
+              >
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t.label}
+                  </span>
+                  <span className="text-[10px] font-medium text-primary/60" title={src.citation}>
+                    {src.sourceLabel}
+                  </span>
+                </div>
+                <div className="text-base font-semibold text-foreground">
+                  {t.value}
+                  {t.unit && (
+                    <span className="text-sm font-normal text-muted-foreground ml-1">{t.unit}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {data.externalIds.length > 0 && (
         <div className="pt-3 border-t border-border/50">

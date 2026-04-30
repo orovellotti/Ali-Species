@@ -6,6 +6,9 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "import-taxref": "tsx ./src/import-taxref.ts",
+    "ingest-pantheria": "tsx ./src/ingest-pantheria.ts",
+    "ingest-amphibio": "tsx ./src/ingest-amphibio.ts",
+    "ingest-avonet": "tsx ./src/ingest-avonet.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

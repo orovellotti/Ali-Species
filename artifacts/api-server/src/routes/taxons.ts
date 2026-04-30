@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
-import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
+import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable } from "@workspace/db";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -722,6 +722,20 @@ interface TraitValue {
   sourceUrl: string;
   raw?: string | number;
 }
+interface StaticTraitField {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+}
+interface StaticTraitSource {
+  source: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  license: string;
+  citation: string;
+  traits: StaticTraitField[];
+}
 interface TraitsPayload {
   scientificName: string;
   wikidataQid: string | null;
@@ -732,6 +746,75 @@ interface TraitsPayload {
   traits: TraitValue[];
   externalIds: { id: string; label: string; value: string; url: string }[];
   attribution: { source: string; url: string; license: string };
+  staticSources: StaticTraitSource[];
+  wikidataAvailable: boolean;
+}
+
+const STATIC_SOURCE_META: Record<string, Omit<StaticTraitSource, "traits">> = {
+  pantheria: {
+    source: "pantheria",
+    sourceLabel: "PanTHERIA",
+    sourceUrl: "https://esapubs.org/archive/ecol/E090/184/",
+    license: "Liberal academic (citation libre)",
+    citation:
+      "Jones K.E. et al. 2009. PanTHERIA: a species-level database of life history, ecology, and geography of extant and recently extinct mammals. Ecology 90:2648.",
+  },
+  avonet: {
+    source: "avonet",
+    sourceLabel: "AVONET",
+    sourceUrl: "https://figshare.com/s/b990722d72a26b5bfead",
+    license: "CC-BY 4.0",
+    citation:
+      "Tobias J.A. et al. 2022. AVONET: morphological, ecological and geographical data for all birds. Ecology Letters 25:581-597.",
+  },
+  amphibio: {
+    source: "amphibio",
+    sourceLabel: "AmphiBIO",
+    sourceUrl: "https://doi.org/10.6084/m9.figshare.4644424.v5",
+    license: "CC-BY 4.0",
+    citation:
+      "Oliveira B.F. et al. 2017. AmphiBIO, a global database for amphibian ecological traits. Scientific Data 4:170123.",
+  },
+  squambase: {
+    source: "squambase",
+    sourceLabel: "SquamBase",
+    sourceUrl: "https://onlinelibrary.wiley.com/doi/10.1111/geb.13812",
+    license: "CC-BY 4.0",
+    citation:
+      "Meiri S. et al. 2024. SquamBase — a database of squamate (Reptilia: Squamata) traits. Global Ecology and Biogeography.",
+  },
+};
+
+interface DbTraitField {
+  label: string;
+  value: string;
+  unit?: string;
+  raw?: number | string;
+}
+
+async function fetchStaticTraits(cdNom: number): Promise<StaticTraitSource[]> {
+  try {
+    const rows = await db
+      .select({ source: speciesTraitsTable.source, traits: speciesTraitsTable.traits })
+      .from(speciesTraitsTable)
+      .where(eq(speciesTraitsTable.cdNom, cdNom));
+    if (rows.length === 0) return [];
+    const out: StaticTraitSource[] = [];
+    for (const row of rows) {
+      const meta = STATIC_SOURCE_META[row.source];
+      if (!meta) continue;
+      const traitMap = row.traits as Record<string, DbTraitField> | null;
+      if (!traitMap || typeof traitMap !== "object") continue;
+      const traits: StaticTraitField[] = Object.entries(traitMap)
+        .filter(([, v]) => v && typeof v === "object" && typeof v.value === "string")
+        .map(([id, v]) => ({ id, label: v.label, value: v.value, unit: v.unit }));
+      if (traits.length === 0) continue;
+      out.push({ ...meta, traits });
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 const IUCN_QID_LABELS: Record<string, string> = {
@@ -800,6 +883,7 @@ router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
 
   const rawName = taxon.lbNom.trim();
   const scientificName = escapeSparqlLiteral(rawName);
+  const staticSources = await fetchStaticTraits(cdNom);
   if (!rawName) {
     res.json({
       scientificName: "",
@@ -811,6 +895,8 @@ router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
       traits: [],
       externalIds: [],
       attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+      staticSources,
+      wikidataAvailable: true,
     } satisfies TraitsPayload);
     return;
   }
@@ -878,7 +964,21 @@ LIMIT 1`.trim();
 
     if (!r.ok) {
       req.log.warn({ status: r.status, scientificName }, "Wikidata SPARQL failed");
-      res.status(502).json({ error: "Wikidata unavailable" });
+      const fallback: TraitsPayload = {
+        scientificName: rawName,
+        wikidataQid: null,
+        wikidataUrl: null,
+        itemLabel: null,
+        itemDescription: null,
+        imageUrl: null,
+        traits: [],
+        externalIds: [],
+        attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+        staticSources,
+        wikidataAvailable: false,
+      };
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.json(fallback);
       return;
     }
 
@@ -898,6 +998,8 @@ LIMIT 1`.trim();
         traits: [],
         externalIds: [],
         attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+        staticSources,
+        wikidataAvailable: true,
       };
       setTraitsCache(cdNom, empty);
       res.setHeader("Cache-Control", "public, max-age=3600");
@@ -1006,6 +1108,8 @@ LIMIT 1`.trim();
       traits,
       externalIds,
       attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+      staticSources,
+      wikidataAvailable: true,
     };
 
     setTraitsCache(cdNom, payload);
@@ -1013,7 +1117,21 @@ LIMIT 1`.trim();
     res.json(payload);
   } catch (err) {
     req.log.warn({ err: err instanceof Error ? err.message : String(err), scientificName }, "Wikidata traits fetch failed");
-    res.status(502).json({ error: "Wikidata unavailable" });
+    const fallback: TraitsPayload = {
+      scientificName: rawName,
+      wikidataQid: null,
+      wikidataUrl: null,
+      itemLabel: null,
+      itemDescription: null,
+      imageUrl: null,
+      traits: [],
+      externalIds: [],
+      attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+      staticSources,
+      wikidataAvailable: false,
+    };
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.json(fallback);
   }
 });
 
