@@ -327,6 +327,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
     .map(([regne, arr]) => {
       const total = arr.reduce((s, it) => s + it.total, 0);
       const threatened = arr.reduce((s, it) => s + (it.threatened || 0), 0);
+      const regneTotal = arr.reduce((s, it) => s + (it.classTotal ?? 0), 0);
       // In total mode, sort by share of the class actually concerned (most-filled bar first)
       // so the visualization reads from "most protected" to "least protected".
       const sorted = showTotalMetric
@@ -339,12 +340,14 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
         regne,
         total,
         threatened,
+        regneTotal,
         classCount: arr.length,
         rows: sorted.slice(0, PER_GROUP_LIMIT),
         truncated: Math.max(0, arr.length - PER_GROUP_LIMIT),
       };
     })
-    .sort((a, b) => b.total - a.total);
+    // Order règnes by their total taxonomic richness (largest kingdom first).
+    .sort((a, b) => b.regneTotal - a.regneTotal || b.total - a.total);
 
   return (
     <div className="bg-background border border-border rounded-2xl p-5 md:p-6 shadow-sm">
