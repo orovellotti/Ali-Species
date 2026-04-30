@@ -685,6 +685,338 @@ router.get("/taxons/:cdNom/statuts", async (req, res): Promise<void> => {
   res.json(statuts);
 });
 
+type TraitsCacheEntry = { ts: number; data: TraitsPayload };
+const TRAITS_CACHE = new Map<number, TraitsCacheEntry>();
+const TRAITS_TTL_MS = 12 * 60 * 60 * 1000;
+const TRAITS_CACHE_MAX = 5000;
+
+function escapeSparqlLiteral(s: string): string {
+  return s.replace(/[\\"\t\n\r\f\b]/g, (c) => {
+    switch (c) {
+      case "\\": return "\\\\";
+      case '"': return '\\"';
+      case "\t": return "\\t";
+      case "\n": return "\\n";
+      case "\r": return "\\r";
+      case "\f": return "\\f";
+      case "\b": return "\\b";
+      default: return c;
+    }
+  });
+}
+
+function setTraitsCache(cdNom: number, data: TraitsPayload): void {
+  if (TRAITS_CACHE.size >= TRAITS_CACHE_MAX) {
+    const firstKey = TRAITS_CACHE.keys().next().value;
+    if (firstKey !== undefined) TRAITS_CACHE.delete(firstKey);
+  }
+  TRAITS_CACHE.set(cdNom, { ts: Date.now(), data });
+}
+
+interface TraitValue {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+  source: "Wikidata";
+  sourceUrl: string;
+  raw?: string | number;
+}
+interface TraitsPayload {
+  scientificName: string;
+  wikidataQid: string | null;
+  wikidataUrl: string | null;
+  itemLabel: string | null;
+  itemDescription: string | null;
+  imageUrl: string | null;
+  traits: TraitValue[];
+  externalIds: { id: string; label: string; value: string; url: string }[];
+  attribution: { source: string; url: string; license: string };
+}
+
+const IUCN_QID_LABELS: Record<string, string> = {
+  Q211005: "EX – Éteint",
+  Q239509: "EW – Éteint à l'état sauvage",
+  Q219127: "CR – En danger critique",
+  Q11394: "EN – En danger",
+  Q278113: "VU – Vulnérable",
+  Q719675: "NT – Quasi menacé",
+  Q211194: "LC – Préoccupation mineure",
+  Q3245245: "DD – Données insuffisantes",
+  Q3350324: "NE – Non évalué",
+};
+
+function fmtNumber(n: number, digits = 2): string {
+  if (!isFinite(n)) return String(n);
+  if (n >= 100) return n.toFixed(0);
+  if (n >= 10) return n.toFixed(1);
+  return n.toFixed(digits).replace(/\.?0+$/, "");
+}
+
+function humanMass(kg: number): { value: string; unit: string } {
+  if (kg < 0.001) return { value: fmtNumber(kg * 1_000_000), unit: "mg" };
+  if (kg < 1) return { value: fmtNumber(kg * 1000), unit: "g" };
+  if (kg >= 1000) return { value: fmtNumber(kg / 1000), unit: "t" };
+  return { value: fmtNumber(kg), unit: "kg" };
+}
+function humanLength(m: number): { value: string; unit: string } {
+  if (m < 0.01) return { value: fmtNumber(m * 1000), unit: "mm" };
+  if (m < 1) return { value: fmtNumber(m * 100), unit: "cm" };
+  if (m >= 1000) return { value: fmtNumber(m / 1000), unit: "km" };
+  return { value: fmtNumber(m), unit: "m" };
+}
+function humanDuration(s: number): { value: string; unit: string } {
+  const days = s / 86400;
+  if (days < 1) return { value: fmtNumber(s / 3600), unit: "h" };
+  if (days < 60) return { value: fmtNumber(days), unit: "j" };
+  const years = days / 365.25;
+  if (years < 1) return { value: fmtNumber(days / 30.44), unit: "mois" };
+  return { value: fmtNumber(years), unit: "ans" };
+}
+
+router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
+  const cdNom = parseInt(raw, 10);
+  if (isNaN(cdNom)) {
+    res.status(400).json({ error: "Invalid cdNom" });
+    return;
+  }
+
+  const now = Date.now();
+  const cached = TRAITS_CACHE.get(cdNom);
+  if (cached && now - cached.ts < TRAITS_TTL_MS) {
+    res.json(cached.data);
+    return;
+  }
+
+  const [taxon] = await db
+    .select({ lbNom: taxonsTable.lbNom })
+    .from(taxonsTable)
+    .where(eq(taxonsTable.cdNom, cdNom));
+  if (!taxon) {
+    res.status(404).json({ error: "Taxon not found" });
+    return;
+  }
+
+  const rawName = taxon.lbNom.trim();
+  const scientificName = escapeSparqlLiteral(rawName);
+  if (!rawName) {
+    res.json({
+      scientificName: "",
+      wikidataQid: null,
+      wikidataUrl: null,
+      itemLabel: null,
+      itemDescription: null,
+      imageUrl: null,
+      traits: [],
+      externalIds: [],
+      attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+    } satisfies TraitsPayload);
+    return;
+  }
+
+  const sparql = `
+SELECT ?item ?itemLabel ?itemDescription
+  (SAMPLE(?image_) AS ?image)
+  (MIN(?massKg_) AS ?massKgMin) (MAX(?massKg_) AS ?massKgMax)
+  (MIN(?lengthM_) AS ?lengthMMin) (MAX(?lengthM_) AS ?lengthMMax)
+  (MIN(?heightM_) AS ?heightMMin) (MAX(?heightM_) AS ?heightMMax)
+  (MAX(?lifespanS_) AS ?lifespanS)
+  (SAMPLE(?gestationS_) AS ?gestationS)
+  (SAMPLE(?incubationS_) AS ?incubationS)
+  (MIN(?clutch_) AS ?clutchMin) (MAX(?clutch_) AS ?clutchMax)
+  (SAMPLE(?inaturalist_) AS ?inaturalist)
+  (SAMPLE(?gbif_) AS ?gbif)
+  (SAMPLE(?eol_) AS ?eol)
+  (SAMPLE(?ncbi_) AS ?ncbi)
+  (SAMPLE(?ipni_) AS ?ipni)
+  (SAMPLE(?powo_) AS ?powo)
+  (SAMPLE(?worms_) AS ?worms)
+  (SAMPLE(?itis_) AS ?itis)
+  (SAMPLE(?col_) AS ?col)
+  (SAMPLE(?msw_) AS ?msw)
+  (SAMPLE(?bhl_) AS ?bhl)
+  (SAMPLE(?wfo_) AS ?wfo)
+WHERE {
+  { SELECT ?item WHERE { ?item wdt:P225 "${scientificName}" . } LIMIT 1 }
+  OPTIONAL { ?item wdt:P18 ?image_. }
+  OPTIONAL { ?item p:P2067/psn:P2067/wikibase:quantityAmount ?massKg_. }
+  OPTIONAL { ?item p:P2043/psn:P2043/wikibase:quantityAmount ?lengthM_. }
+  OPTIONAL { ?item p:P2048/psn:P2048/wikibase:quantityAmount ?heightM_. }
+  OPTIONAL { ?item p:P2250/psn:P2250/wikibase:quantityAmount ?lifespanS_. }
+  OPTIONAL { ?item p:P3063/psn:P3063/wikibase:quantityAmount ?gestationS_. }
+  OPTIONAL { ?item p:P3015/psn:P3015/wikibase:quantityAmount ?incubationS_. }
+  OPTIONAL { ?item wdt:P3019 ?clutch_. }
+  OPTIONAL { ?item wdt:P3151 ?inaturalist_. }
+  OPTIONAL { ?item wdt:P846 ?gbif_. }
+  OPTIONAL { ?item wdt:P830 ?eol_. }
+  OPTIONAL { ?item wdt:P685 ?ncbi_. }
+  OPTIONAL { ?item wdt:P961 ?ipni_. }
+  OPTIONAL { ?item wdt:P5037 ?powo_. }
+  OPTIONAL { ?item wdt:P850 ?worms_. }
+  OPTIONAL { ?item wdt:P815 ?itis_. }
+  OPTIONAL { ?item wdt:P10585 ?col_. }
+  OPTIONAL { ?item wdt:P959 ?msw_. }
+  OPTIONAL { ?item wdt:P687 ?bhl_. }
+  OPTIONAL { ?item wdt:P7715 ?wfo_. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
+}
+GROUP BY ?item ?itemLabel ?itemDescription
+LIMIT 1`.trim();
+
+  try {
+    const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const r = await fetch(url, {
+      headers: {
+        "Accept": "application/sparql-results+json",
+        "User-Agent": "ALI-Species/1.0 (+https://replit.com) traits-panel",
+      },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
+
+    if (!r.ok) {
+      req.log.warn({ status: r.status, scientificName }, "Wikidata SPARQL failed");
+      res.status(502).json({ error: "Wikidata unavailable" });
+      return;
+    }
+
+    const json = await r.json() as {
+      results?: { bindings?: Array<Record<string, { value: string }>> };
+    };
+    const row = json.results?.bindings?.[0];
+
+    if (!row || !row.item) {
+      const empty: TraitsPayload = {
+        scientificName: rawName,
+        wikidataQid: null,
+        wikidataUrl: null,
+        itemLabel: null,
+        itemDescription: null,
+        imageUrl: null,
+        traits: [],
+        externalIds: [],
+        attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+      };
+      setTraitsCache(cdNom, empty);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.json(empty);
+      return;
+    }
+
+    const get = (k: string): string | undefined => row[k]?.value;
+    const itemUri = get("item") || "";
+    const qid = itemUri.split("/").pop() || null;
+    const wikidataUrl = qid ? `https://www.wikidata.org/wiki/${qid}` : null;
+    const sourceUrl = wikidataUrl || "https://www.wikidata.org";
+
+    const traits: TraitValue[] = [];
+    const num = (k: string): number | null => {
+      const v = get(k);
+      if (!v) return null;
+      const n = parseFloat(v);
+      return isFinite(n) && n > 0 ? n : null;
+    };
+    const fmtRange = (
+      lo: number | null,
+      hi: number | null,
+      conv: (x: number) => { value: string; unit: string },
+      reformat: (x: number, unit: string) => string,
+    ): { value: string; unit: string } | null => {
+      const a = lo ?? hi;
+      const b = hi ?? lo;
+      if (a == null || b == null) return null;
+      const target = conv(Math.max(a, b));
+      const aStr = reformat(a, target.unit);
+      const bStr = reformat(b, target.unit);
+      if (a === b || aStr === bStr) return { value: aStr, unit: target.unit };
+      return { value: `${aStr} – ${bStr}`, unit: target.unit };
+    };
+    const reformatMass = (kg: number, unit: string): string => {
+      const v = unit === "mg" ? kg * 1_000_000 : unit === "g" ? kg * 1000 : unit === "t" ? kg / 1000 : kg;
+      return fmtNumber(v);
+    };
+    const reformatLength = (m: number, unit: string): string => {
+      const v = unit === "mm" ? m * 1000 : unit === "cm" ? m * 100 : unit === "km" ? m / 1000 : m;
+      return fmtNumber(v);
+    };
+
+    const mass = fmtRange(num("massKgMin"), num("massKgMax"), humanMass, reformatMass);
+    if (mass) traits.push({ id: "mass", label: "Masse corporelle", value: mass.value, unit: mass.unit, source: "Wikidata", sourceUrl });
+
+    const length = fmtRange(num("lengthMMin"), num("lengthMMax"), humanLength, reformatLength);
+    if (length) traits.push({ id: "length", label: "Longueur", value: length.value, unit: length.unit, source: "Wikidata", sourceUrl });
+
+    const height = fmtRange(num("heightMMin"), num("heightMMax"), humanLength, reformatLength);
+    if (height) traits.push({ id: "height", label: "Hauteur / taille", value: height.value, unit: height.unit, source: "Wikidata", sourceUrl });
+
+    const lifespanS = num("lifespanS");
+    if (lifespanS) {
+      const h = humanDuration(lifespanS);
+      traits.push({ id: "lifespan", label: "Longévité maximale", value: h.value, unit: h.unit, source: "Wikidata", sourceUrl });
+    }
+    const gestationS = num("gestationS");
+    if (gestationS) {
+      const h = humanDuration(gestationS);
+      traits.push({ id: "gestation", label: "Gestation", value: h.value, unit: h.unit, source: "Wikidata", sourceUrl });
+    }
+    const incubationS = num("incubationS");
+    if (incubationS) {
+      const h = humanDuration(incubationS);
+      traits.push({ id: "incubation", label: "Incubation", value: h.value, unit: h.unit, source: "Wikidata", sourceUrl });
+    }
+    const clutchLo = num("clutchMin");
+    const clutchHi = num("clutchMax");
+    if (clutchLo || clutchHi) {
+      const lo = clutchLo ?? clutchHi!;
+      const hi = clutchHi ?? clutchLo!;
+      const value = lo === hi ? fmtNumber(lo, 1) : `${fmtNumber(lo, 1)} – ${fmtNumber(hi, 1)}`;
+      const max = Math.max(lo, hi);
+      traits.push({ id: "clutch", label: "Taille de couvée / portée", value, unit: max > 1 ? "œufs/petits" : "œuf/petit", source: "Wikidata", sourceUrl });
+    }
+
+    const idDefs: Array<[string, string, (v: string) => string]> = [
+      ["inaturalist", "iNaturalist", (v) => `https://www.inaturalist.org/taxa/${v}`],
+      ["gbif", "GBIF", (v) => `https://www.gbif.org/species/${v}`],
+      ["eol", "EOL", (v) => `https://eol.org/pages/${v}`],
+      ["ncbi", "NCBI Taxonomy", (v) => `https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=${v}`],
+      ["itis", "ITIS", (v) => `https://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value=${v}`],
+      ["col", "Catalogue of Life", (v) => `https://www.catalogueoflife.org/data/taxon/${v}`],
+      ["worms", "WoRMS", (v) => `https://www.marinespecies.org/aphia.php?p=taxdetails&id=${v}`],
+      ["msw", "Mammal Species of the World", (v) => `https://www.departments.bucknell.edu/biology/resources/msw3/browse.asp?id=${v}`],
+      ["powo", "Plants of the World Online", (v) => `https://powo.science.kew.org/taxon/${v}`],
+      ["ipni", "IPNI", (v) => `https://www.ipni.org/n/${v}`],
+      ["wfo", "World Flora Online", (v) => `https://www.worldfloraonline.org/taxon/${v}`],
+      ["bhl", "Biodiversity Heritage Library", (v) => `https://www.biodiversitylibrary.org/openurl?pid=title:${v}`],
+    ];
+    const externalIds: TraitsPayload["externalIds"] = [];
+    for (const [key, label, build] of idDefs) {
+      const v = get(key);
+      if (v) externalIds.push({ id: key, label, value: v, url: build(v) });
+    }
+
+    const payload: TraitsPayload = {
+      scientificName: rawName,
+      wikidataQid: qid,
+      wikidataUrl,
+      itemLabel: get("itemLabel") || null,
+      itemDescription: get("itemDescription") || null,
+      imageUrl: get("image") || null,
+      traits,
+      externalIds,
+      attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+    };
+
+    setTraitsCache(cdNom, payload);
+    res.setHeader("Cache-Control", "public, max-age=43200, stale-while-revalidate=86400");
+    res.json(payload);
+  } catch (err) {
+    req.log.warn({ err: err instanceof Error ? err.message : String(err), scientificName }, "Wikidata traits fetch failed");
+    res.status(502).json({ error: "Wikidata unavailable" });
+  }
+});
+
 router.get("/taxons/:cdNom/wikipedia", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
   const cdNom = parseInt(raw, 10);

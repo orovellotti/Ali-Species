@@ -138,6 +138,18 @@ const SOURCES: Source[] = [
       "INPN (2024). Inventaire National du Patrimoine Naturel. UMS PatriNat (OFB-MNHN-CNRS-IRD), Muséum national d'Histoire naturelle, Paris. https://inpn.mnhn.fr",
   },
   {
+    id: "wikidata",
+    name: "Wikidata",
+    description:
+      "Base de connaissances collaborative et structurée du mouvement Wikimedia, alignée avec Wikipédia. Source du panneau « Traits biologiques » des fiches espèces : masse corporelle, longueur, longévité, gestation, incubation, taille de portée, ainsi que les identifiants externes (iNaturalist, GBIF, EOL, NCBI Taxonomy, ITIS, Catalogue of Life, WoRMS, MSW, POWO, IPNI, World Flora Online…). Les valeurs numériques sont normalisées en unités SI puis converties pour l'affichage. Chaque champ porte un badge cliquable pointant vers l'élément Wikidata d'origine.",
+    publisher: "Wikimedia Foundation & contributeurs Wikidata",
+    license: "CC0 1.0 (domaine public).",
+    url: "https://www.wikidata.org/",
+    urlLabel: "wikidata.org",
+    citation:
+      "Vrandečić D. & Krötzsch M. (2014). Wikidata: A Free Collaborative Knowledgebase. Communications of the ACM 57(10), 78-85. https://doi.org/10.1145/2629489 — données interrogées en temps réel via l'endpoint SPARQL https://query.wikidata.org/sparql",
+  },
+  {
     id: "claude",
     name: "Anthropic Claude (modèle de langage)",
     description:
