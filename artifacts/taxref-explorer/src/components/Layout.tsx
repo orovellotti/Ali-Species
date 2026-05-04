@@ -1,14 +1,17 @@
 import { Link } from "wouter";
+import { Trans, useTranslation } from "react-i18next";
 import aliLogo from "@/assets/images/ali-logo.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 import globiLogo from "@/assets/images/globi-logo.png";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { t } = useTranslation();
   return (
     <div className="min-h-[100dvh] flex flex-col selection:bg-primary/20 selection:text-primary">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -22,25 +25,26 @@ export function Layout({ children }: LayoutProps) {
                   className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/15 text-primary text-[9px] font-bold uppercase tracking-wider ring-1 ring-primary/20"
                   data-testid="badge-beta"
                 >
-                  Beta
+                  {t("nav.beta")}
                 </span>
               </span>
-              <span className="text-[10px] text-muted-foreground tracking-widest uppercase">All Life Intelligence</span>
+              <span className="text-[10px] text-muted-foreground tracking-widest uppercase">{t("nav.tagline")}</span>
             </div>
           </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
-            <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">Statuts</Link>
-            <Link href="/sources" className="hover:text-foreground transition-colors" data-testid="link-sources">Sources</Link>
-            <Link href="/a-propos" className="hover:text-foreground transition-colors">A propos</Link>
+          <nav className="flex items-center gap-4 sm:gap-6 text-sm font-medium text-muted-foreground">
+            <Link href="/" className="hidden sm:inline-flex hover:text-foreground transition-colors">{t("nav.home")}</Link>
+            <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">{t("nav.statuses")}</Link>
+            <Link href="/sources" className="hover:text-foreground transition-colors" data-testid="link-sources">{t("nav.sources")}</Link>
+            <Link href="/a-propos" className="hover:text-foreground transition-colors">{t("nav.about")}</Link>
             <Link
               href="/a-propos#mcp"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
               data-testid="link-mcp-header"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider">MCP</span>
               <span className="text-xs">API</span>
             </Link>
+            <LanguageSwitcher />
           </nav>
         </div>
       </header>
@@ -77,24 +81,24 @@ export function Layout({ children }: LayoutProps) {
 
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              Donnees issues du referentiel taxonomique national{" "}
-              <a href="https://inpn.mnhn.fr/accueil/recherche-de-donnees/taxref" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">TAXREF v18</a>
+              {t("footer.dataFromIntro")}
+              <a href="https://inpn.mnhn.fr/accueil/recherche-de-donnees/taxref" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">{t("footer.taxrefName")}</a>
             </p>
             <p className="text-sm text-muted-foreground">
-              TAXREF est produit par{" "}
-              <a href="https://www.patrinat.fr/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">PatriNat</a>
-              {" "}(OFB - MNHN - CNRS - IRD), centre d'expertise et de donnees sur le patrimoine naturel.
+              {t("footer.producedByPre")}
+              <a href="https://www.patrinat.fr/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">{t("footer.patrinatName")}</a>
+              {t("footer.producedByPost")}
             </p>
             <p className="text-sm text-muted-foreground">
-              Reseaux trophiques fournis par{" "}
-              <a href="https://www.globalbioticinteractions.org/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">GloBI</a>
-              {" "}(Global Biotic Interactions), agregateur ouvert d'interactions ecologiques entre especes.
+              {t("footer.networksByPre")}
+              <a href="https://www.globalbioticinteractions.org/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">{t("footer.globiName")}</a>
+              {t("footer.networksByPost")}
             </p>
           </div>
 
           <div className="flex flex-col items-center gap-3 pt-4">
             <p className="text-sm text-muted-foreground text-center max-w-xl">
-              Une idee de projet autour de la biodiversite, de la donnee naturaliste ou du vivant&nbsp;?
+              {t("footer.contactPrompt")}
             </p>
             <a
               href="https://www.natural-solutions.eu/contact"
@@ -102,7 +106,7 @@ export function Layout({ children }: LayoutProps) {
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
             >
-              Contactez Natural Solutions
+              {t("footer.contactCta")}
               <span aria-hidden="true">&rarr;</span>
             </a>
           </div>
@@ -122,8 +126,10 @@ export function Layout({ children }: LayoutProps) {
           </div>
 
           <p className="text-xs text-muted-foreground/60 text-center">
-            Images fournies par Wikipedia et Wikimedia Commons.
+            {t("footer.imagesCredit")}
           </p>
+          {/* Trans usage to satisfy unused-import in TS while keeping API usable in pages */}
+          <span className="hidden"><Trans i18nKey="common.loading" /></span>
         </div>
       </footer>
     </div>

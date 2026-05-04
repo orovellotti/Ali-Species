@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { Sparkles, Send, Loader2, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { taxonUrl } from "@/lib/constants";
+import { localeNumber } from "@/i18n";
 
 type ResultItem = {
   cdNom: number;
@@ -20,15 +22,6 @@ type Turn = {
   totalCount: number;
 };
 
-const SUGGESTIONS = [
-  "Combien de mammifères sont protégés au niveau national en France métropolitaine ?",
-  "Liste les amphibiens classés En danger (EN) sur la Liste rouge nationale",
-  "Quelles chauves-souris sont inscrites à l'annexe II de la Directive Habitats ?",
-  "Donne-moi 10 orchidées du genre Ophrys présentes en France",
-  "Quels rapaces diurnes sont déterminants ZNIEFF en Bretagne ?",
-  "Que mange le Loup gris (Canis lupus) ?",
-];
-
 export function ConversationalBar() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,6 +29,9 @@ export function ConversationalBar() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
+  const suggestions = (t("conversational.suggestions", { returnObjects: true }) as unknown as string[]) ?? [];
 
   function pickSuggestion(s: string) {
     setInput(s);
@@ -65,7 +61,7 @@ export function ConversationalBar() {
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history }),
+        body: JSON.stringify({ question, history, lang }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -80,7 +76,7 @@ export function ConversationalBar() {
       ]);
       setInput("");
     } catch (e: any) {
-      setError(e.message ?? "Erreur");
+      setError(e.message ?? "Error");
     } finally {
       setLoading(false);
     }
@@ -103,7 +99,7 @@ export function ConversationalBar() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
-          placeholder="Posez une question : « combien d'oiseaux protégés en France ? »"
+          placeholder={t("conversational.placeholder")}
           className="w-full bg-background border border-border rounded-full pl-14 pr-14 py-4 text-base text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm transition-all"
           data-testid="input-conversational"
         />
@@ -112,7 +108,7 @@ export function ConversationalBar() {
           disabled={loading || !input.trim()}
           className="absolute inset-y-0 right-0 flex items-center justify-center pr-2"
           data-testid="button-ask"
-          aria-label="Envoyer"
+          aria-label={t("conversational.submitAria")}
         >
           <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -122,7 +118,7 @@ export function ConversationalBar() {
 
       {turns.length === 0 && !loading && (
         <div className="mt-4 flex flex-wrap justify-center gap-2 px-2">
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s}
               type="button"
@@ -138,14 +134,14 @@ export function ConversationalBar() {
 
       {error && (
         <div className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-left">
-          Une erreur est survenue : {error}
+          {t("conversational.errorPrefix")}{error}
         </div>
       )}
 
       {turns.length > 0 && (
         <div ref={scrollRef} className="mt-8 space-y-8 text-left">
-          {turns.map((t, idx) => (
-            <ConversationTurn key={idx} turn={t} />
+          {turns.map((tn, idx) => (
+            <ConversationTurn key={idx} turn={tn} lang={lang} />
           ))}
           <div className="flex justify-center pt-2">
             <button
@@ -154,7 +150,7 @@ export function ConversationalBar() {
               className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
               data-testid="button-reset"
             >
-              <RotateCcw className="w-3 h-3" /> Nouvelle conversation
+              <RotateCcw className="w-3 h-3" /> {t("conversational.newConversation")}
             </button>
           </div>
         </div>
@@ -163,7 +159,8 @@ export function ConversationalBar() {
   );
 }
 
-function ConversationTurn({ turn }: { turn: Turn }) {
+function ConversationTurn({ turn, lang }: { turn: Turn; lang: string }) {
+  const { t } = useTranslation();
   return (
     <div>
       <div className="flex justify-end mb-3">
@@ -204,7 +201,7 @@ function ConversationTurn({ turn }: { turn: Turn }) {
             )}
             {turn.totalCount > turn.results.length && turn.results.length > 0 && (
               <div className="mt-2 text-xs text-muted-foreground italic">
-                Affichage de {turn.results.length} sur {turn.totalCount.toLocaleString("fr-FR")} résultats
+                {t("conversational.pagingPre")}{turn.results.length}{t("conversational.pagingMid")}{localeNumber(turn.totalCount, lang)}{t("conversational.pagingPost")}
               </div>
             )}
           </div>

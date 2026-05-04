@@ -2,12 +2,15 @@ import { Layout } from "@/components/Layout";
 import { ExternalLink, Copy, Check, Sparkles } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 
 export default function About() {
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
   const [copied, setCopied] = useState(false);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(mcpUrl);
@@ -19,56 +22,49 @@ export default function About() {
   return (
     <Layout>
       <Helmet>
-        <title>A propos – ALI Species</title>
-        <meta name="description" content="ALI Species (All Life Intelligence) est une application web pour explorer le referentiel taxonomique national TAXREF v18. Produit par PatriNat, developpe par Natural Solutions." />
-        <meta property="og:title" content="A propos – ALI Species" />
-        <meta property="og:description" content="ALI Species (All Life Intelligence) est une application web pour explorer le referentiel taxonomique national TAXREF v18." />
+        <html lang={lang} />
+        <title>{t("about.title")}</title>
+        <meta name="description" content={t("about.metaDescription")} />
+        <meta property="og:title" content={t("about.title")} />
+        <meta property="og:description" content={t("about.metaDescription")} />
       </Helmet>
       <div className="container mx-auto px-4 py-16 max-w-3xl">
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-8">
-          A propos
+          {t("about.heading")}
         </h1>
 
         <div className="space-y-10">
           <section className="space-y-4">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">ALI Species</h2>
-            <p className="text-sm text-muted-foreground/70 italic mb-2">All Life Intelligence</p>
-            <p className="text-muted-foreground leading-relaxed">
-              ALI Species est une application web permettant d'explorer le referentiel taxonomique national francais (TAXREF). Elle offre une interface intuitive pour rechercher, consulter et naviguer parmi les taxons recenses en France.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              L'application permet de rechercher des taxons par nom scientifique ou nom vernaculaire, de visualiser la classification hierarchique complete, et de consulter les images associees depuis Wikipedia et Wikimedia Commons.
-            </p>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.aliName")}</h2>
+            <p className="text-sm text-muted-foreground/70 italic mb-2">{t("about.aliTagline")}</p>
+            <p className="text-muted-foreground leading-relaxed">{t("about.aliP1")}</p>
+            <p className="text-muted-foreground leading-relaxed">{t("about.aliP2")}</p>
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">TAXREF v18</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              TAXREF est le referentiel taxonomique national pour la faune, la flore et la fonge de France metropolitaine et d'outre-mer. Il est la reference pour la denomination et la classification des especes dans les programmes nationaux de connaissance et de conservation de la biodiversite.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              Cette application utilise la version 18 de TAXREF, la derniere version disponible du referentiel.
-            </p>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.taxrefHeading")}</h2>
+            <p className="text-muted-foreground leading-relaxed">{t("about.taxrefP1")}</p>
+            <p className="text-muted-foreground leading-relaxed">{t("about.taxrefP2")}</p>
             <a 
               href="https://inpn.mnhn.fr/accueil/recherche-de-donnees/taxref" 
               target="_blank" 
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
             >
-              Consulter TAXREF sur le site de l'INPN
+              {t("about.taxrefLink")}
               <ExternalLink className="w-4 h-4" />
             </a>
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">PatriNat</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.patrinatHeading")}</h2>
             <div className="flex flex-col sm:flex-row items-start gap-6">
               <a href="https://www.patrinat.fr/" target="_blank" rel="noreferrer" className="shrink-0 hover:opacity-80 transition-opacity">
                 <img src={patrinatLogo} alt="PatriNat" className="w-40 object-contain" />
               </a>
               <div className="space-y-4">
                 <p className="text-muted-foreground leading-relaxed">
-                  TAXREF est produit par <strong className="text-foreground">PatriNat</strong> (OFB - MNHN - CNRS - IRD), le centre d'expertise et de donnees sur le patrimoine naturel. PatriNat assure des missions d'expertise et de gestion des connaissances pour ses tutelles au benefice des politiques publiques et de la recherche en biodiversite.
+                  <Trans i18nKey="about.patrinatBody" components={{ s: <strong className="text-foreground" /> }} />
                 </p>
                 <a 
                   href="https://www.patrinat.fr/" 
@@ -76,7 +72,7 @@ export default function About() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
                 >
-                  Visiter le site de PatriNat
+                  {t("about.patrinatLink")}
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </div>
@@ -84,14 +80,14 @@ export default function About() {
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Natural Solutions</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.natsolHeading")}</h2>
             <div className="flex flex-col sm:flex-row items-start gap-6">
               <a href="https://www.natural-solutions.eu/" target="_blank" rel="noreferrer" className="shrink-0 hover:opacity-80 transition-opacity">
                 <img src={nsLogo} alt="Natural Solutions" className="w-36 object-contain" />
               </a>
               <div className="space-y-4">
                 <p className="text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">Natural Solutions</strong> est une entreprise specialisee dans le developpement de solutions numeriques au service de la biodiversite et de l'environnement. Elle accompagne les acteurs de la conservation dans la gestion et la valorisation de leurs donnees naturalistes.
+                  <Trans i18nKey="about.natsolBody" components={{ s: <strong className="text-foreground" /> }} />
                 </p>
                 <a 
                   href="https://www.natural-solutions.eu/" 
@@ -99,7 +95,7 @@ export default function About() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
                 >
-                  Visiter le site de Natural Solutions
+                  {t("about.natsolLink")}
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </div>
@@ -109,14 +105,14 @@ export default function About() {
           <section className="p-8 rounded-2xl bg-foreground/[0.03] border border-border space-y-4" id="mcp">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="text-2xl font-serif font-semibold text-foreground">Serveur MCP</h2>
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/15 text-primary rounded-full">Nouveau</span>
+              <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.mcpHeading")}</h2>
+              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/15 text-primary rounded-full">{t("about.mcpNew")}</span>
             </div>
             <p className="text-muted-foreground leading-relaxed">
-              ALI Species expose un serveur <strong className="text-foreground">Model Context Protocol</strong> (MCP) qui permet a un assistant IA (Claude, ChatGPT, Cursor, ...) de rechercher dans TAXREF, consulter la classification et les statuts de conservation directement depuis une conversation.
+              <Trans i18nKey="about.mcpBody" components={{ s: <strong className="text-foreground" /> }} />
             </p>
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">URL du serveur</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("about.mcpUrlLabel")}</div>
               <div className="flex items-stretch gap-0 rounded-lg border border-border bg-background overflow-hidden">
                 <code className="flex-1 px-4 py-3 text-sm font-mono text-foreground truncate">{mcpUrl}</code>
                 <button
@@ -124,59 +120,53 @@ export default function About() {
                   className="px-4 flex items-center gap-1.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   data-testid="button-copy-mcp"
                 >
-                  {copied ? <><Check className="w-4 h-4" /> Copie</> : <><Copy className="w-4 h-4" /> Copier</>}
+                  {copied ? <><Check className="w-4 h-4" /> {t("about.mcpCopied")}</> : <><Copy className="w-4 h-4" /> {t("about.mcpCopy")}</>}
                 </button>
               </div>
             </div>
             <div className="space-y-2 pt-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outils disponibles</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("about.mcpToolsLabel")}</div>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">search_taxons</code> — recherche par nom scientifique ou vernaculaire</li>
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_taxon</code> — detail complet d'un taxon par cdNom</li>
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_classification</code> — hierarchie taxonomique complete</li>
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_statuts</code> — statuts BDC (listes rouges, protections, directives)</li>
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">status_breakdown</code> — repartition des taxons par code de statut, avec filtres taxonomiques</li>
-                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_interactions</code> — reseau trophique d'un taxon (proies, predateurs, parasites, pollinisation) via GloBI</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">search_taxons</code> — {t("about.mcpTools.search")}</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_taxon</code> — {t("about.mcpTools.get")}</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_classification</code> — {t("about.mcpTools.classification")}</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_statuts</code> — {t("about.mcpTools.statuts")}</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">status_breakdown</code> — {t("about.mcpTools.breakdown")}</li>
+                <li className="flex items-start gap-2"><code className="text-primary font-mono text-xs mt-0.5">get_interactions</code> — {t("about.mcpTools.interactions")}</li>
               </ul>
             </div>
-            <p className="text-xs text-muted-foreground/80 pt-1">
-              Transport : Streamable HTTP (sans session). Compatible avec Claude Desktop, Cursor, et tout client MCP recent.
-            </p>
+            <p className="text-xs text-muted-foreground/80 pt-1">{t("about.mcpTransport")}</p>
           </section>
 
           <section className="p-8 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Soutenez le projet</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              ALI Species est un projet open source dedie a la valorisation de la biodiversite francaise. Pour continuer a developper de nouvelles fonctionnalites, ameliorer l'experience utilisateur et enrichir les donnees disponibles, nous avons besoin de votre soutien.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              Que vous soyez une institution publique, une collectivite, une association naturaliste ou une entreprise engagee pour l'environnement, vous pouvez participer au financement et au developpement d'ALI Species.
-            </p>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.supportHeading")}</h2>
+            <p className="text-muted-foreground leading-relaxed">{t("about.supportP1")}</p>
+            <p className="text-muted-foreground leading-relaxed">{t("about.supportP2")}</p>
             <a
               href="https://www.natural-solutions.eu/contact"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors mt-2"
             >
-              Contactez Natural Solutions
+              {t("about.supportCta")}
               <ExternalLink className="w-4 h-4" />
             </a>
           </section>
 
           <section className="space-y-4 pt-6 border-t border-border">
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Sources des donnees</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.sourcesHeading")}</h2>
             <ul className="space-y-3 text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong className="text-foreground">Taxonomie :</strong> TAXREF v18, produit par PatriNat, diffuse par l'
+                  <strong className="text-foreground">{t("about.sourcesTaxonomy")}</strong>{t("about.sourcesTaxonomyBody")}
                   <a href="https://inpn.mnhn.fr/" target="_blank" rel="noreferrer" className="text-primary hover:underline">INPN</a>
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong className="text-foreground">Images :</strong> Wikipedia et Wikimedia Commons (licence libre)
+                  <strong className="text-foreground">{t("about.sourcesImages")}</strong>{t("about.sourcesImagesBody")}
                 </span>
               </li>
             </ul>

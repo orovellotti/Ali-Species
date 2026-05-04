@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 export const TAXONOMIC_RANKS: Record<string, string> = {
   Dumm: "Racine",
   KD: "Regne",
@@ -39,8 +41,10 @@ export const TAXONOMIC_RANKS: Record<string, string> = {
 };
 
 export function formatRank(rankCode: string | null | undefined): string {
-  if (!rankCode) return "Rang inconnu";
-  return TAXONOMIC_RANKS[rankCode] || rankCode;
+  if (!rankCode) return i18n.t("ranks.unknown");
+  const key = `ranks.${rankCode}`;
+  const translated = i18n.t(key);
+  return translated !== key ? translated : rankCode;
 }
 
 export const HABITAT_LABELS: Record<string, string> = {
@@ -56,7 +60,9 @@ export const HABITAT_LABELS: Record<string, string> = {
 
 export function formatHabitat(code: string | null | undefined): string {
   if (!code) return "";
-  return HABITAT_LABELS[code] || code;
+  const key = `habitats.${code}`;
+  const translated = i18n.t(key);
+  return translated !== key ? translated : code;
 }
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -79,7 +85,9 @@ export const STATUS_LABELS: Record<string, string> = {
 
 export function formatStatus(code: string | null | undefined): string {
   if (!code) return "";
-  return STATUS_LABELS[code] || code;
+  const key = `statuses.${code}`;
+  const translated = i18n.t(key);
+  return translated !== key ? translated : code;
 }
 
 export function slugify(text: string): string {

@@ -7,7 +7,9 @@ import aliLogo from "@/assets/images/ali-logo.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
+import { Trans, useTranslation } from "react-i18next";
 import { taxonUrl } from "@/lib/constants";
+import { localeNumber } from "@/i18n";
 import animaliaImg from "@/assets/images/animalia.png";
 import plantaeImg from "@/assets/images/plantae.png";
 import fungiImg from "@/assets/images/fungi.png";
@@ -17,6 +19,8 @@ export default function Home() {
   const { data: stats, isLoading: statsLoading } = useGetTaxonStats();
   const [, navigate] = useLocation();
   const [randomLoading, setRandomLoading] = useState(false);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
 
   const handleRandom = useCallback(async () => {
     setRandomLoading(true);
@@ -33,10 +37,11 @@ export default function Home() {
   return (
     <Layout>
       <Helmet>
-        <title>ALI Species — Découvrez toutes les espèces de France</title>
-        <meta name="description" content="Plus de 700 000 espèces animales, végétales et fongiques de France, avec leur niveau de protection et leurs liens avec les autres espèces. Posez votre question en français." />
-        <meta property="og:title" content="ALI Species — Découvrez toutes les espèces de France" />
-        <meta property="og:description" content="Plus de 700 000 espèces de France, leurs statuts de protection et leurs interactions avec les autres espèces." />
+        <html lang={lang} />
+        <title>{t("home.title")}</title>
+        <meta name="description" content={t("home.metaDescription")} />
+        <meta property="og:title" content={t("home.ogTitle")} />
+        <meta property="og:description" content={t("home.ogDescription")} />
         <meta property="og:type" content="website" />
       </Helmet>
       <section className="relative pt-24 pb-32 px-4 overflow-visible">
@@ -47,13 +52,15 @@ export default function Home() {
             <img src={aliLogo} alt="ALI Species" className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight">
-            Toutes les espèces de France, à portée de <span className="text-primary italic">question</span>.
+            {t("home.heroTitlePre")}
+            <span className="text-primary italic">{t("home.heroTitleHighlight")}</span>
+            {t("home.heroTitlePost")}
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
-            Plus de <span className="text-foreground font-medium">700 000 taxons</span> de la faune, de la flore et de la fonge, avec leurs <span className="text-foreground font-medium">statuts de conservation</span> et leurs <span className="text-foreground font-medium">réseaux trophiques</span>.
+            <Trans i18nKey="home.heroSubtitle" components={{ s: <span className="text-foreground font-medium" /> }} />
           </p>
           <p className="text-sm text-muted-foreground/80 mb-12 max-w-2xl mx-auto">
-            Interrogation en langage naturel — l'assistant compose la requête, sélectionne les sources et restitue les résultats.
+            {t("home.heroNote")}
           </p>
 
           <ConversationalBar />
@@ -64,7 +71,7 @@ export default function Home() {
             className="mt-6 inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             <Shuffle className={`w-4 h-4 ${randomLoading ? "animate-spin" : ""}`} />
-            {randomLoading ? "Chargement..." : "Une espèce au hasard"}
+            {randomLoading ? t("home.randomLoading") : t("home.randomCta")}
           </button>
         </div>
       </section>
@@ -72,9 +79,9 @@ export default function Home() {
       <section className="py-16 bg-card border-y border-border">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-serif font-semibold">La biodiversité française en chiffres</h2>
+            <h2 className="text-2xl font-serif font-semibold">{t("home.statsTitle")}</h2>
             <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Données issues du référentiel <span className="font-medium">TAXREF v18</span> et de la <span className="font-medium">BdC Statuts v18</span> (PatriNat / MNHN), enrichies par les <span className="font-medium">Listes Rouges UICN</span>, <span className="font-medium">GBIF</span>, <span className="font-medium">Wikipedia</span> et la base d'interactions <span className="font-medium">GloBI</span>.
+              <Trans i18nKey="home.statsSubtitle" components={{ s: <span className="font-medium" /> }} />
             </p>
           </div>
 
@@ -88,11 +95,11 @@ export default function Home() {
               ))
             ) : (
               <>
-                <StatCard icon={<Microscope className="w-4 h-4" />} value={stats.totalTaxons.toLocaleString("fr-FR")} label="Fiches" />
-                <StatCard icon={<Trees className="w-4 h-4" />} value={stats.totalSpecies.toLocaleString("fr-FR")} label="Espèces" />
-                <StatCard icon={<Layers className="w-4 h-4" />} value={stats.totalGenera.toLocaleString("fr-FR")} label="Genres" />
-                <StatCard icon={<BookOpen className="w-4 h-4" />} value={stats.totalFamilies.toLocaleString("fr-FR")} label="Familles" />
-                <StatCard icon={<ScrollText className="w-4 h-4" />} value={stats.totalStatuts.toLocaleString("fr-FR")} label="Statuts de protection" />
+                <StatCard icon={<Microscope className="w-4 h-4" />} value={localeNumber(stats.totalTaxons, lang)} label={t("home.statCardRecords")} />
+                <StatCard icon={<Trees className="w-4 h-4" />} value={localeNumber(stats.totalSpecies, lang)} label={t("home.statCardSpecies")} />
+                <StatCard icon={<Layers className="w-4 h-4" />} value={localeNumber(stats.totalGenera, lang)} label={t("home.statCardGenera")} />
+                <StatCard icon={<BookOpen className="w-4 h-4" />} value={localeNumber(stats.totalFamilies, lang)} label={t("home.statCardFamilies")} />
+                <StatCard icon={<ScrollText className="w-4 h-4" />} value={localeNumber(stats.totalStatuts, lang)} label={t("home.statCardStatuses")} />
               </>
             )}
           </div>
@@ -102,7 +109,7 @@ export default function Home() {
               {stats.kingdomCounts.map(k => (
                 <div key={k.regne} className="px-4 py-2 bg-background border border-border/50 rounded-full text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <span className="text-foreground">{k.regne}</span>
-                  <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{k.count.toLocaleString("fr-FR")}</span>
+                  <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{localeNumber(k.count, lang)}</span>
                 </div>
               ))}
             </div>
@@ -111,27 +118,27 @@ export default function Home() {
       </section>
 
       <section className="py-24 px-4 container mx-auto max-w-5xl">
-        <h2 className="text-3xl font-serif font-semibold mb-3 text-center">Explorez les trois grands règnes</h2>
-        <p className="text-muted-foreground text-center mb-10 max-w-2xl mx-auto">Cliquez sur un règne pour parcourir les espèces qu'il rassemble.</p>
+        <h2 className="text-3xl font-serif font-semibold mb-3 text-center">{t("home.kingdomsTitle")}</h2>
+        <p className="text-muted-foreground text-center mb-10 max-w-2xl mx-auto">{t("home.kingdomsSubtitle")}</p>
         <div className="grid md:grid-cols-3 gap-8">
           <FeaturedCard 
             title="Animalia" 
-            subtitle="Les animaux"
-            desc="Du plancton invisible aux grands mammifères, en passant par les insectes, poissons et oiseaux."
+            subtitle={t("home.cardAnimaliaSubtitle")}
+            desc={t("home.cardAnimaliaDesc")}
             fallbackImage={animaliaImg}
             cdNom={183716}
           />
           <FeaturedCard 
             title="Plantae" 
-            subtitle="Les plantes"
-            desc="Plantes à fleurs, fougères, mousses et algues vertes."
+            subtitle={t("home.cardPlantaeSubtitle")}
+            desc={t("home.cardPlantaeDesc")}
             fallbackImage={plantaeImg}
             cdNom={187079}
           />
           <FeaturedCard 
             title="Fungi" 
-            subtitle="Les champignons"
-            desc="Champignons, moisissures et levures — un règne à part entière."
+            subtitle={t("home.cardFungiSubtitle")}
+            desc={t("home.cardFungiDesc")}
             fallbackImage={fungiImg}
             cdNom={187496}
           />

@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { ChevronLeft, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { localeNumber } from "@/i18n";
 
 type UicnCounts = Record<string, number>;
 
@@ -21,15 +23,6 @@ const UICN_COLORS: Record<string, string> = {
   CR: "#c0392b",
   RE: "#5e1a1a",
   DD: "#9a9a9a",
-};
-const UICN_LABELS: Record<string, string> = {
-  LC: "Préoccupation mineure",
-  NT: "Quasi menacé",
-  VU: "Vulnérable",
-  EN: "En danger",
-  CR: "En danger critique",
-  RE: "Régionalement éteinte",
-  DD: "Données insuffisantes",
 };
 
 const uicnCache = new WeakMap<TreeNode, UicnCounts>();
@@ -68,7 +61,7 @@ const KINGDOM_COLORS: Record<string, string> = {
   Orthornavirae: "#7a2e2e",
 };
 
-function adjustColor(hex: string, lightenAmount: number, saturationShift: number = 0): string {
+function adjustColor(hex: string, lightenAmount: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -210,6 +203,9 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
   const [lazyChildren, setLazyChildren] = useState<Record<string, TreeNode[]>>({});
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
+  const depthLabels = (t("treemap.depthLabels", { returnObjects: true }) as unknown as string[]) ?? [];
 
   const lazyKey = useCallback((segments: string[]) => `${statutType || ""}::${segments.join("/")}`, [statutType]);
 
@@ -354,12 +350,11 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
     setTooltip(null);
   }, []);
 
-  const depthLabels = ["Regnes", "Embranchements", "Classes", "Ordres", "Familles", "Genres", "Especes"];
-  const currentLabel = depthLabels[path.length] || "Groupes";
+  const currentLabel = depthLabels[path.length] || t("treemap.fallbackGroupLabel");
   const isSpeciesLevel = path.length === 6;
 
   if (treemapItems.length === 0) {
-    return <div className="p-8 text-center text-muted-foreground">Aucune donnee disponible</div>;
+    return <div className="p-8 text-center text-muted-foreground">{t("treemap.noData")}</div>;
   }
 
   return (
@@ -372,7 +367,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
             >
               <ChevronLeft className="w-4 h-4" />
-              Retour
+              {t("treemap.backButton")}
             </button>
           )}
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -380,7 +375,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
               onClick={() => setPath([])}
               className="hover:text-foreground transition-colors"
             >
-              Vivant
+              {t("treemap.rootLabel")}
             </button>
             {path.map((segment, i) => (
               <span key={i} className="flex items-center gap-1.5">
@@ -398,9 +393,9 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
         <div className="text-sm text-muted-foreground flex items-center gap-2">
           {loadingKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           {isSpeciesLevel ? (
-            <span><span className="font-medium text-foreground">{treemapItems.length}</span> especes</span>
+            <span><span className="font-medium text-foreground">{treemapItems.length}</span> {t("treemap.speciesUnit")}</span>
           ) : (
-            <span><span className="font-medium text-foreground">{totalSpecies.toLocaleString("fr-FR")}</span> especes · {treemapItems.length} {currentLabel.toLowerCase()}</span>
+            <span><span className="font-medium text-foreground">{localeNumber(totalSpecies, lang)}</span> {t("treemap.speciesUnit")} · {treemapItems.length} {currentLabel.toLowerCase()}</span>
           )}
         </div>
       </div>
@@ -424,8 +419,6 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
             const threatened = uicnThreatened(item.uicn);
             const pctThreatened = evaluated > 0 ? Math.round((threatened / evaluated) * 100) : null;
             const showUicnBar = rect.w >= 60 && rect.h >= 50 && evaluated > 0;
-            // Tighter thresholds + the badge sits in the top-right corner;
-            // we also reserve horizontal space for the centered label below.
             const showBadge = rect.w >= 110 && rect.h >= 64 && pctThreatened !== null && pctThreatened >= 5;
             const labelMaxChars = Math.floor((rect.w - (showBadge ? 44 : 8)) / (fontSize * 0.55));
 
@@ -499,7 +492,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
                     fontWeight="400"
                     className="pointer-events-none select-none"
                   >
-                    {item.realValue.toLocaleString("fr-FR")}
+                    {localeNumber(item.realValue, lang)}
                   </text>
                 )}
                 {showUicnBar && (
@@ -565,7 +558,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
               <div className="text-xs mt-0.5" style={{ color: "rgba(240,232,208,0.85)" }}>{tooltip.vern}</div>
             )}
             <div className="text-xs" style={{ color: "rgba(240,232,208,0.6)" }}>
-              {isSpeciesLevel ? "Cliquer pour voir la fiche" : `${tooltip.value.toLocaleString("fr-FR")} especes`}
+              {isSpeciesLevel ? t("treemap.tooltipClickSpecies") : `${localeNumber(tooltip.value, lang)} ${t("treemap.tooltipSpeciesCount")}`}
             </div>
           </div>
         )}
@@ -573,7 +566,7 @@ export function TaxonomyTreemap({ data, onNavigateToTaxon, onNavigateToCdNom, st
 
       {path.length === 0 && (
         <p className="text-center text-xs text-muted-foreground mt-3">
-          Cliquez sur un groupe pour explorer ses sous-groupes
+          {t("treemap.rootHint")}
         </p>
       )}
     </div>

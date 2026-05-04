@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { localeNumber } from "@/i18n";
 
 type Item = {
   regne: string;
@@ -25,10 +27,12 @@ type Props = {
 };
 
 // ---------- Per-status-type display registry ----------
+// Per-code labels are intentionally kept in French — they are the official
+// INPN / BdC Statuts terminology that is also displayed in the source data.
+// The barometer title (per type) is translated separately via i18n.
 
 type CodeInfo = { label: string; color: string; threat?: boolean };
 type TypeProfile = {
-  title: string;
   subtitle: string;
   codes: Record<string, CodeInfo>;
   fallbackPalette: string[];
@@ -48,7 +52,6 @@ const NEUTRAL_PALETTE = [
 ];
 
 const UICN_PROFILE: TypeProfile = {
-  title: "Liste rouge nationale (UICN)",
   subtitle:
     "Distribution des catégories UICN par classe taxonomique, classée par % d'espèces menacées (VU + EN + CR + RE + EX) décroissant.",
   codes: {
@@ -71,11 +74,10 @@ const UICN_PROFILE: TypeProfile = {
 
 const PROFILES: Record<string, TypeProfile> = {
   LRN: UICN_PROFILE,
-  LRR: { ...UICN_PROFILE, title: "Liste rouge régionale (UICN)" },
-  LRM: { ...UICN_PROFILE, title: "Liste rouge mondiale (UICN)" },
-  LRE: { ...UICN_PROFILE, title: "Liste rouge européenne (UICN)" },
+  LRR: { ...UICN_PROFILE },
+  LRM: { ...UICN_PROFILE },
+  LRE: { ...UICN_PROFILE },
   DH: {
-    title: "Directive Habitats-Faune-Flore",
     subtitle:
       "Répartition des espèces inscrites aux annexes II, IV et V de la Directive 92/43/CEE par classe taxonomique.",
     codes: {
@@ -86,7 +88,6 @@ const PROFILES: Record<string, TypeProfile> = {
     fallbackPalette: NEUTRAL_PALETTE,
   },
   DO: {
-    title: "Directive Oiseaux",
     subtitle:
       "Répartition des oiseaux inscrits aux annexes de la Directive 2009/147/CE par classe.",
     codes: {
@@ -99,56 +100,47 @@ const PROFILES: Record<string, TypeProfile> = {
     fallbackPalette: NEUTRAL_PALETTE,
   },
   PN: {
-    title: "Protection nationale",
     subtitle:
       "Répartition des espèces protégées par arrêté ministériel par classe taxonomique. Codes = arrêtés du Code de l'environnement.",
     codes: {},
     fallbackPalette: ["#1d6b3a", "#2d7a4c", "#3e8a5e", "#4f9a70", "#60aa82", "#71ba94", "#82caa6", "#94dab8", "#a5eaca", "#b6fadc"],
   },
   PR: {
-    title: "Protection régionale",
     subtitle: "Répartition des espèces protégées par arrêté régional, par classe.",
     codes: {},
     fallbackPalette: ["#1d6b3a", "#2d7a4c", "#3e8a5e", "#4f9a70", "#60aa82", "#71ba94", "#82caa6", "#94dab8", "#a5eaca", "#b6fadc"],
   },
   PD: {
-    title: "Protection départementale",
     subtitle: "Répartition des espèces protégées par arrêté préfectoral départemental, par classe.",
     codes: {},
     fallbackPalette: ["#1d6b3a", "#2d7a4c", "#3e8a5e", "#4f9a70", "#60aa82", "#71ba94", "#82caa6", "#94dab8", "#a5eaca", "#b6fadc"],
   },
   ZDET: {
-    title: "ZNIEFF déterminantes",
     subtitle: "Espèces déterminantes pour les ZNIEFF, comptées par classe.",
     codes: { TRUE: { label: "Espèce déterminante ZNIEFF", color: "#6a4082" } },
     fallbackPalette: ["#6a4082"],
   },
   PNA: {
-    title: "Plans nationaux d'actions",
     subtitle: "Espèces concernées par un PNA, par classe.",
     codes: { TRUE: { label: "Sous PNA", color: "#2d7a4c" } },
     fallbackPalette: ["#2d7a4c"],
   },
   REGL: {
-    title: "Réglementation",
     subtitle: "Répartition des espèces sous réglementation spécifique, par classe.",
     codes: {},
     fallbackPalette: ["#a85e1a", "#b96e2b", "#ca7e3c", "#db8e4d", "#ec9e5e", "#fdae6f"],
   },
   REGLII: {
-    title: "Réglementation introduction (EEE)",
     subtitle: "Espèces exotiques envahissantes réglementées à l'introduction, par classe.",
     codes: {},
     fallbackPalette: ["#c0392b", "#d04a3c", "#e05b4d", "#f06c5e", "#ff7d6f"],
   },
   REGLLUTTE: {
-    title: "Réglementation lutte (EEE)",
     subtitle: "Espèces exotiques envahissantes réglementées à la lutte, par classe.",
     codes: {},
     fallbackPalette: ["#c0392b", "#d04a3c", "#e05b4d", "#f06c5e", "#ff7d6f"],
   },
   BERN: {
-    title: "Convention de Berne",
     subtitle: "Inscription en annexes I, II et III de la Convention de Berne, par classe.",
     codes: {
       IBE1: { label: "Annexe I — flore strictement protégée", color: "#1f5fa6" },
@@ -158,13 +150,11 @@ const PROFILES: Record<string, TypeProfile> = {
     fallbackPalette: NEUTRAL_PALETTE,
   },
   BONN: {
-    title: "Convention de Bonn",
     subtitle: "Inscription dans la Convention sur les espèces migratrices, par classe.",
     codes: {},
     fallbackPalette: NEUTRAL_PALETTE,
   },
   SENSNAT: {
-    title: "Sensibilité de diffusion (national)",
     subtitle: "Niveau de sensibilité national pour la diffusion des données (1 = faible, 3 = très sensible).",
     codes: {
       "1": { label: "Niveau 1 — sensibilité faible", color: "#5fa55a" },
@@ -174,7 +164,6 @@ const PROFILES: Record<string, TypeProfile> = {
     fallbackPalette: NEUTRAL_PALETTE,
   },
   SENSREG: {
-    title: "Sensibilité de diffusion (régional)",
     subtitle: "Niveau de sensibilité régional (1 = faible, 3 = très sensible).",
     codes: {
       "1": { label: "Niveau 1", color: "#5fa55a" },
@@ -184,7 +173,6 @@ const PROFILES: Record<string, TypeProfile> = {
     fallbackPalette: NEUTRAL_PALETTE,
   },
   SENSDEP: {
-    title: "Sensibilité de diffusion (départemental)",
     subtitle: "Niveau de sensibilité départemental (1 = faible, 3 = très sensible).",
     codes: {
       "1": { label: "Niveau 1", color: "#5fa55a" },
@@ -196,7 +184,6 @@ const PROFILES: Record<string, TypeProfile> = {
 };
 
 const DEFAULT_PROFILE: TypeProfile = {
-  title: "Statut",
   subtitle: "Répartition des codes de statut par classe taxonomique.",
   codes: {},
   fallbackPalette: NEUTRAL_PALETTE,
@@ -219,6 +206,8 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [metric, setMetric] = useState<"threat" | "total">("total");
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
 
   useEffect(() => {
     let ignore = false;
@@ -250,6 +239,11 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   }, [statutType]);
 
   const profile = (resp && PROFILES[resp.statutType]) || DEFAULT_PROFILE;
+  const profileTitleI18n = resp
+    ? (t(`barometer.profiles.${resp.statutType}.title`, {
+        defaultValue: t("barometer.fallback.title"),
+      }) as string)
+    : (t("barometer.fallback.title") as string);
 
   // Compute the set of visible codes (top by global count) + an "Autres" bucket.
   const { codeOrder, codeMeta } = useMemo(() => {
@@ -274,7 +268,6 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
       meta["__other__"] = { label: "Autres", color: "#bcbcbc" };
       visible.push("__other__");
     }
-    // For UICN-like, prefer logical severity order rather than count order.
     if (resp.isUicn) {
       const severity = ["EX", "EW", "RE", "RE?", "CR*", "CR", "EN", "VU", "NT", "LC", "DD", "NA", "NE"];
       visible.sort((a, b) => {
@@ -293,17 +286,17 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground">
         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-        Chargement du baromètre…
+        {t("barometer.loading")}
       </div>
     );
   }
   if (error) {
-    return <div className="py-12 text-center text-sm text-red-600">Erreur : {error}</div>;
+    return <div className="py-12 text-center text-sm text-red-600">{t("barometer.errorPrefix")}{error}</div>;
   }
   if (!resp || resp.items.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
-        Aucune classe avec données pour ce statut.
+        {t("barometer.noData")}
       </div>
     );
   }
@@ -312,9 +305,8 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
   const grandThreatened = resp.isUicn
     ? resp.items.reduce((s, it) => s + (it.threatened || 0), 0)
     : 0;
-  const headerSubject = statutType && statutLabel ? statutLabel : profile.title;
+  const headerSubject = statutType && statutLabel ? statutLabel : profileTitleI18n;
 
-  // Group by règne, keep at most 12 classes per group, then sort règnes by total desc.
   const PER_GROUP_LIMIT = 12;
   const byRegne = new Map<string, Item[]>();
   for (const it of resp.items) {
@@ -328,8 +320,6 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
       const total = arr.reduce((s, it) => s + it.total, 0);
       const threatened = arr.reduce((s, it) => s + (it.threatened || 0), 0);
       const regneTotal = arr.reduce((s, it) => s + (it.classTotal ?? 0), 0);
-      // In total mode, sort by raw number of species concerned by the status
-      // (largest count first) so the most populated groups appear at the top.
       const sorted = showTotalMetric
         ? [...arr].sort((a, b) => b.total - a.total)
         : arr;
@@ -343,7 +333,6 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
         truncated: Math.max(0, arr.length - PER_GROUP_LIMIT),
       };
     })
-    // Order règnes by their total taxonomic richness (largest kingdom first).
     .sort((a, b) => b.regneTotal - a.regneTotal || b.total - a.total);
 
   return (
@@ -352,7 +341,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-5">
         <div>
           <h3 className="text-lg font-serif font-semibold text-foreground">
-            Baromètre — {headerSubject}
+            {t("barometer.title")} — {headerSubject}
           </h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
             {profile.subtitle}
@@ -361,15 +350,15 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
         <div className="flex flex-col sm:items-end gap-2 shrink-0">
           <div className="text-xs text-muted-foreground text-left sm:text-right">
             <span className="font-medium text-foreground">
-              {grandTotal.toLocaleString("fr-FR")}
+              {localeNumber(grandTotal, lang)}
             </span>{" "}
-            espèces concernées
+            {t("barometer.speciesConcerned")}
             {resp.isUicn && grandTotal > 0 && (
               <>
-                , dont{" "}
+                {t("barometer.speciesThreatenedPre")}
                 <span className="font-medium" style={{ color: "#c0392b" }}>
-                  {grandThreatened.toLocaleString("fr-FR")} (
-                  {((grandThreatened / grandTotal) * 100).toFixed(1)}%) menacées
+                  {localeNumber(grandThreatened, lang)} (
+                  {((grandThreatened / grandTotal) * 100).toFixed(1)}%){t("barometer.speciesThreatenedPost")}
                 </span>
               </>
             )}
@@ -378,7 +367,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
             <div
               className="inline-flex items-center text-[11px] rounded-full bg-muted/60 p-0.5"
               role="group"
-              aria-label="Choisir la métrique affichée par classe"
+              aria-label={t("barometer.metricThreatened")}
             >
               <button
                 type="button"
@@ -391,7 +380,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                 aria-pressed={metric === "threat"}
                 data-testid="metric-threat"
               >
-                % menacées
+                {t("barometer.metricThreatened")}
               </button>
               <button
                 type="button"
@@ -404,7 +393,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                 aria-pressed={metric === "total"}
                 data-testid="metric-total"
               >
-                Total espèces
+                {t("barometer.metricTotal")}
               </button>
             </div>
           )}
@@ -431,7 +420,6 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
           const pctG = g.total > 0 ? (g.threatened / g.total) * 100 : 0;
           return (
             <div key={g.regne} data-testid={`barometer-group-${g.regne}`}>
-              {/* Group header */}
               <div className="flex items-baseline justify-between gap-3 pb-2 mb-3 border-b border-border/60">
                 <div className="flex items-center gap-2 min-w-0">
                   <span
@@ -442,26 +430,25 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                     {g.regne}
                   </h4>
                   <span className="text-[11px] text-muted-foreground italic">
-                    {g.classCount} classe{g.classCount > 1 ? "s" : ""}
+                    {g.classCount} {g.classCount > 1 ? t("barometer.classCountPlural") : t("barometer.classCountSingular")}
                   </span>
                 </div>
                 <div className="text-[11px] sm:text-xs text-muted-foreground text-right shrink-0">
                   <span className="font-semibold text-foreground tabular-nums">
-                    {g.total.toLocaleString("fr-FR")}
+                    {localeNumber(g.total, lang)}
                   </span>{" "}
-                  espèces
+                  {t("barometer.speciesLabel")}
                   {resp.isUicn && g.total > 0 && (
                     <>
                       <span className="mx-1.5 text-muted-foreground/60">·</span>
                       <span style={{ color: "#c0392b" }} className="font-medium tabular-nums">
-                        {g.threatened.toLocaleString("fr-FR")} ({pctG.toFixed(1)}%) menacées
+                        {localeNumber(g.threatened, lang)} ({pctG.toFixed(1)}%){t("barometer.threatenedLabel")}
                       </span>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* Class rows */}
               <div className="space-y-2">
                 {g.rows.map((it) => {
                   const segments: { code: string; n: number }[] = [];
@@ -497,8 +484,8 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                         className="relative h-6 rounded-md overflow-hidden bg-muted/30 border border-border/40 flex"
                         title={
                           it.classTotal && it.classTotal > 0
-                            ? `${it.total.toLocaleString("fr-FR")} concernées sur ${it.classTotal.toLocaleString("fr-FR")} espèces de la classe (${(it.pctConcerned ?? 0).toFixed(1)}%)`
-                            : `${it.total.toLocaleString("fr-FR")} espèces concernées`
+                            ? `${localeNumber(it.total, lang)} / ${localeNumber(it.classTotal, lang)} (${(it.pctConcerned ?? 0).toFixed(1)}%)`
+                            : `${localeNumber(it.total, lang)}`
                         }
                       >
                         {(() => {
@@ -518,7 +505,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                                       width: `${pct}%`,
                                       backgroundColor: meta?.color || "#bbb",
                                     }}
-                                    title={`${meta?.label || code} : ${n.toLocaleString("fr-FR")} (${pct.toFixed(1)}%)`}
+                                    title={`${meta?.label || code} : ${localeNumber(n, lang)} (${pct.toFixed(1)}%)`}
                                   />
                                 );
                               })}
@@ -529,22 +516,22 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
                       <div className="text-[11px] sm:text-xs text-right tabular-nums">
                         <div className="font-semibold text-foreground">
                           {showTotalMetric
-                            ? it.total.toLocaleString("fr-FR")
+                            ? localeNumber(it.total, lang)
                             : `${(it.pctMenace ?? 0).toFixed(1)}%`}
                         </div>
                         <div
                           className="text-muted-foreground"
                           title={
                             it.classTotal
-                              ? `${it.total.toLocaleString("fr-FR")} sur ${it.classTotal.toLocaleString("fr-FR")} espèces de la classe`
+                              ? `${localeNumber(it.total, lang)} / ${localeNumber(it.classTotal, lang)}`
                               : undefined
                           }
                         >
                           {showTotalMetric
                             ? it.classTotal && it.classTotal > 0
-                              ? `/ ${it.classTotal.toLocaleString("fr-FR")}`
-                              : "espèces"
-                            : `${it.total.toLocaleString("fr-FR")} esp.`}
+                              ? `/ ${localeNumber(it.classTotal, lang)}`
+                              : t("barometer.speciesLabel")
+                            : `${localeNumber(it.total, lang)} ${t("barometer.speciesLabel")}`}
                         </div>
                       </div>
                     </div>
@@ -554,7 +541,7 @@ export function UicnBarometer({ statutType, statutLabel }: Props) {
 
               {g.truncated > 0 && (
                 <p className="mt-2 text-[11px] text-muted-foreground italic pl-4">
-                  + {g.truncated} autre{g.truncated > 1 ? "s" : ""} classe{g.truncated > 1 ? "s" : ""} non affichée{g.truncated > 1 ? "s" : ""}.
+                  {t("barometer.truncatedPre")}{g.truncated}{g.truncated > 1 ? t("barometer.truncatedPlural") : t("barometer.truncatedSingular")}
                 </p>
               )}
             </div>

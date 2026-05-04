@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Search, Loader2, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getSearchTaxonsQueryKey, useSearchTaxons } from "@workspace/api-client-react";
 import { formatRank, taxonUrl } from "@/lib/constants";
@@ -11,6 +12,7 @@ export function SearchAutocomplete() {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const debouncedQuery = useDebounce(query, 300);
+  const { t } = useTranslation();
 
   const { data: results, isLoading } = useSearchTaxons(
     { q: debouncedQuery, limit: 8 },
@@ -31,7 +33,7 @@ export function SearchAutocomplete() {
         </div>
         <Input
           type="text"
-          placeholder="Rechercher par nom scientifique ou nom commun..."
+          placeholder={t("search.placeholder")}
           className="flex-1 border-0 bg-transparent h-14 px-4 text-base focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none placeholder:text-muted-foreground/70"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -50,7 +52,7 @@ export function SearchAutocomplete() {
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           {results.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm" data-testid="text-no-results">
-              Aucun taxon trouve pour "{debouncedQuery}".
+              {t("search.noResults", { query: debouncedQuery })}
             </div>
           ) : (
             <ul className="py-2" data-testid="list-search-results">

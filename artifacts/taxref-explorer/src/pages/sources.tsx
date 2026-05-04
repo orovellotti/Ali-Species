@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { Link } from "wouter";
 import { BookOpen, ExternalLink } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Source = {
   id: string;
@@ -13,6 +14,8 @@ type Source = {
   citation: string;
 };
 
+// Bibliographic data — kept in original French (formal scientific citations
+// from INPN / PatriNat / UICN / etc.). UI chrome around them is translated.
 const SOURCES: Source[] = [
   {
     id: "taxref",
@@ -211,19 +214,20 @@ const SOURCES: Source[] = [
 ];
 
 export default function Sources() {
+  const { t } = useTranslation();
   return (
     <Layout>
       <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
         {/* Breadcrumb */}
         <nav
           className="text-xs text-muted-foreground mb-6"
-          aria-label="Fil d'Ariane"
+          aria-label="Breadcrumb"
         >
           <Link href="/" className="hover:text-foreground transition-colors">
-            Accueil
+            {t("sources.breadcrumbHome")}
           </Link>{" "}
           <span className="mx-1.5">/</span>{" "}
-          <span className="text-foreground">Sources</span>
+          <span className="text-foreground">{t("sources.breadcrumbCurrent")}</span>
         </nav>
 
         {/* Header */}
@@ -232,27 +236,20 @@ export default function Sources() {
             <BookOpen className="w-6 h-6 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
-            Sources & citations
+            {t("sources.heading")}
           </h1>
           <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-3">
-            ALI Species agrège plusieurs jeux de données ouverts de référence
-            sur la biodiversité française : référentiel taxonomique national,
-            base de connaissance des statuts juridiques et de menace,
-            interactions écologiques, et textes réglementaires européens et
-            français. Chaque source est listée ci-dessous avec son éditeur, sa
-            licence et la citation formelle à reprendre pour tout usage dérivé.
+            {t("sources.subtitle")}
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Sur les fiches espèces et le baromètre de la page{" "}
+            {t("sources.crossRefIntro")}
             <Link
               href="/taxonomie"
               className="underline decoration-dotted hover:text-foreground"
             >
-              Statuts
+              {t("sources.crossRefStatuses")}
             </Link>
-            , chaque chiffre renvoie aux jeux de données ci-dessous (TAXREF
-            pour la taxonomie, BdC Statuts pour les pourcentages, GloBI pour
-            les interactions).
+            {t("sources.crossRefOutro")}
           </p>
         </div>
 
@@ -273,13 +270,13 @@ export default function Sources() {
               </p>
 
               <dl className="grid grid-cols-[90px_1fr] sm:grid-cols-[110px_1fr] gap-x-4 gap-y-2 text-sm mb-4">
-                <dt className="text-muted-foreground">Éditeur</dt>
+                <dt className="text-muted-foreground">{t("sources.publisherLabel")}</dt>
                 <dd className="text-foreground">{s.publisher}</dd>
 
-                <dt className="text-muted-foreground">Licence</dt>
+                <dt className="text-muted-foreground">{t("sources.licenseLabel")}</dt>
                 <dd className="text-foreground">{s.license}</dd>
 
-                <dt className="text-muted-foreground">Lien</dt>
+                <dt className="text-muted-foreground">{t("sources.linkLabel")}</dt>
                 <dd>
                   <a
                     href={s.url}
@@ -304,11 +301,10 @@ export default function Sources() {
         <section className="mt-10 p-5 rounded-lg border border-border/60 bg-muted/30">
           <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
-            Données ouvertes — RDF / SPARQL
+            {t("sources.rdfHeading")}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            L'intégralité du graphe ALi species (TAXREF v18, BdC Statuts, traits PanTHERIA / AVONET / AmphiBIO,
-            mappings Wikidata et interactions GloBI pré-matérialisées) est disponible en RDF (Turtle) sous licence{" "}
+            {t("sources.rdfBody")}
             <a
               href="https://creativecommons.org/licenses/by/4.0/"
               target="_blank"
@@ -317,7 +313,7 @@ export default function Sources() {
             >
               CC-BY 4.0
             </a>
-            . Vocabulaires standards : Darwin Core, SKOS, OWL, Relations Ontology, DCTERMS.
+            {t("sources.rdfBodyEnd")}
           </p>
           <ul className="mt-3 text-sm space-y-1.5">
             <li>
@@ -328,27 +324,26 @@ export default function Sources() {
                 rel="noopener noreferrer"
                 className="underline decoration-dotted hover:text-foreground inline-flex items-center gap-1"
               >
-                interface SPARQL interactive (YASGUI)
+                {t("sources.rdfYasgui")}
                 <ExternalLink className="w-3 h-3" />
               </a>
             </li>
             <li>
-              <span className="font-mono text-xs">/api/sparql/status</span> — état du triplestore (taille, dump chargé)
+              <span className="font-mono text-xs">/api/sparql/status</span> — {t("sources.rdfStatus")}
             </li>
           </ul>
         </section>
 
         {/* Footer note */}
         <p className="mt-10 text-xs text-muted-foreground text-center italic">
-          Une donnée vous semble incorrecte ou obsolète ? Signalez-le sur la
-          page{" "}
+          {t("sources.feedbackPre")}
           <Link
             href="/a-propos"
             className="underline decoration-dotted hover:text-foreground"
           >
-            À propos
+            {t("sources.feedbackLink")}
           </Link>
-          .
+          {t("sources.feedbackPost")}
         </p>
       </div>
     </Layout>

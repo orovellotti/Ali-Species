@@ -4,12 +4,16 @@ import { useGetTaxonStats } from "@workspace/api-client-react";
 import { ShieldAlert, X, Network, ShieldCheck, HeartPulse, Stars, MapPin, Bug, LayoutGrid, BarChart3, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
+import { useTranslation } from "react-i18next";
 import { taxonUrl } from "@/lib/constants";
 import { TaxonomyTreemap } from "@/components/TaxonomyTreemap";
 import { UicnBarometer } from "@/components/UicnBarometer";
+import { localeNumber } from "@/i18n";
 
 type StatusInfo = { description: string; href?: string };
 
+// Glossaire scientifique (BdC Statuts / INPN) — conservé en français de référence.
+// Les éléments d'interface autour sont traduits.
 const STATUS_DESCRIPTIONS: Record<string, StatusInfo> = {
   LRN: {
     description:
@@ -132,6 +136,8 @@ export default function Taxonomie() {
   const [statutType, setStatutType] = useState<string>("");
   const [view, setView] = useState<"treemap" | "barometer">("barometer");
   const [statusTypes, setStatusTypes] = useState<{ code: string; label: string; taxa: number; group?: string }[]>([]);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
 
   useEffect(() => {
     fetch("/api/status-types")
@@ -155,8 +161,9 @@ export default function Taxonomie() {
   return (
     <Layout>
       <Helmet>
-        <title>Statuts — ALI Species</title>
-        <meta name="description" content="Explorez les statuts réglementaires et de conservation des espèces de France : protection, Liste rouge nationale, directives européennes, ZNIEFF. Sources : TAXREF v18 et BdC Statuts (PatriNat / INPN)." />
+        <html lang={lang} />
+        <title>{t("taxonomie.title")}</title>
+        <meta name="description" content={t("taxonomie.metaDescription")} />
       </Helmet>
 
       <section className="pt-16 pb-10 px-4">
@@ -165,35 +172,36 @@ export default function Taxonomie() {
             <Network className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
-            Statuts
+            {t("taxonomie.heading")}
           </h1>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Quelle part du vivant est réellement protégée ?
+            {t("taxonomie.subtitle")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(45, 122, 76, 0.10)", color: "#2d7a4c", borderColor: "rgba(45, 122, 76, 0.25)" }}>
               <ShieldCheck className="w-3.5 h-3.5" />
-              Protection nationale
+              {t("taxonomie.chipProtection")}
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(192, 57, 43, 0.10)", color: "#a02e22", borderColor: "rgba(192, 57, 43, 0.25)" }}>
               <HeartPulse className="w-3.5 h-3.5" />
-              Liste rouge UICN
+              {t("taxonomie.chipUicn")}
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(33, 90, 160, 0.10)", color: "#215aa0", borderColor: "rgba(33, 90, 160, 0.25)" }}>
               <Stars className="w-3.5 h-3.5" />
-              Natura 2000
+              {t("taxonomie.chipNatura")}
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(120, 75, 145, 0.10)", color: "#6a4082", borderColor: "rgba(120, 75, 145, 0.25)" }}>
               <MapPin className="w-3.5 h-3.5" />
-              ZNIEFF
+              {t("taxonomie.chipZnieff")}
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: "rgba(217, 119, 36, 0.12)", color: "#a85e1a", borderColor: "rgba(217, 119, 36, 0.28)" }}>
               <Bug className="w-3.5 h-3.5" />
-              Espèces envahissantes
+              {t("taxonomie.chipInvasive")}
             </span>
           </div>
           <p className="text-xs text-muted-foreground/80 max-w-2xl mx-auto mt-6 leading-relaxed">
-            <span className="font-medium">Sources :</span> taxonomie <a href="https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">TAXREF v18</a> et <a href="https://inpn.mnhn.fr/telechargement/referentielEspece/bdc-statuts-especes" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">BdC Statuts</a> produites par <a href="https://www.patrinat.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">PatriNat</a> (OFB – MNHN – CNRS – IRD), diffusées via l'<a href="https://inpn.mnhn.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">INPN</a>. Catégories UICN issues de la <a href="https://uicn.fr/liste-rouge-france/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">Liste rouge nationale</a> (UICN France &amp; MNHN).
+            <span className="font-medium">{t("taxonomie.sourcesNote")}</span>{" "}
+            <a href="https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">TAXREF v18</a> · <a href="https://inpn.mnhn.fr/telechargement/referentielEspece/bdc-statuts-especes" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">BdC Statuts</a> · <a href="https://www.patrinat.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">PatriNat</a> (OFB – MNHN – CNRS – IRD) · <a href="https://inpn.mnhn.fr/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">INPN</a> · <a href="https://uicn.fr/liste-rouge-france/" target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-foreground">UICN France &amp; MNHN</a>.
           </p>
         </div>
       </section>
@@ -203,7 +211,7 @@ export default function Taxonomie() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 px-1">
             <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
               <ShieldAlert className="w-4 h-4" />
-              <span>Filtrer par statut :</span>
+              <span>{t("taxonomie.filterLabel")}</span>
             </div>
             <div className="relative flex-1 w-full sm:w-auto sm:max-w-md">
               <select
@@ -212,17 +220,17 @@ export default function Taxonomie() {
                 className="w-full appearance-none bg-background border border-border rounded-full pl-4 pr-10 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
                 data-testid="select-status-type"
               >
-                <option value="">Toutes les especes ({stats?.totalTaxons?.toLocaleString("fr-FR") || "..."})</option>
+                <option value="">{t("taxonomie.allSpecies")} ({stats?.totalTaxons ? localeNumber(stats.totalTaxons, lang) : "..."})</option>
                 {Object.entries(
                   statusTypes.reduce<Record<string, typeof statusTypes>>((acc, s) => {
-                    const g = s.group || "Autres";
+                    const g = s.group || "—";
                     (acc[g] ||= []).push(s);
                     return acc;
                   }, {})
                 ).map(([group, items]) => (
                   <optgroup key={group} label={group}>
                     {items.map(s => (
-                      <option key={s.code} value={s.code}>{s.label} ({s.taxa.toLocaleString("fr-FR")})</option>
+                      <option key={s.code} value={s.code}>{s.label} ({localeNumber(s.taxa, lang)})</option>
                     ))}
                   </optgroup>
                 ))}
@@ -232,7 +240,7 @@ export default function Taxonomie() {
                   type="button"
                   onClick={() => setStatutType("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Effacer le filtre"
+                  aria-label={t("taxonomie.clearFilter")}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -247,7 +255,7 @@ export default function Taxonomie() {
                 aria-pressed={view === "treemap"}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                Treemap
+                {t("taxonomie.viewTreemap")}
               </button>
               <button
                 type="button"
@@ -257,7 +265,7 @@ export default function Taxonomie() {
                 aria-pressed={view === "barometer"}
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                Baromètre
+                {t("taxonomie.viewBarometer")}
               </button>
             </div>
           </div>
@@ -279,7 +287,7 @@ export default function Taxonomie() {
                       rel="noopener noreferrer"
                       className="underline decoration-dotted hover:text-foreground"
                     >
-                      en savoir plus →
+                      {t("taxonomie.learnMore")}
                     </a>
                   </>
                 )}
@@ -309,7 +317,7 @@ export default function Taxonomie() {
             />
           ) : (
             <div className="flex items-center justify-center h-[420px] border border-border rounded-xl bg-card">
-              <div className="animate-pulse text-muted-foreground">Chargement de la taxonomie...</div>
+              <div className="animate-pulse text-muted-foreground">{t("taxonomie.loadingTaxonomy")}</div>
             </div>
           )}
         </div>
