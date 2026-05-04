@@ -11,6 +11,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "oxigraph-server"
+
+[[workflows.workflow]]
+name = "oxigraph-server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "/nix/store/67k2qbsx90k0059d671r8ynx8qhy6i5x-oxigraph-0.3.20/bin/oxigraph_server serve-read-only -l /home/runner/workspace/exports/oxigraph-store --bind 0.0.0.0:9000"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

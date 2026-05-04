@@ -300,6 +300,44 @@ export default function Sources() {
           ))}
         </div>
 
+        {/* Linked Open Data section */}
+        <section className="mt-10 p-5 rounded-lg border border-border/60 bg-muted/30">
+          <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <BookOpen className="w-4 h-4" />
+            Données ouvertes — RDF / SPARQL
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            L'intégralité du graphe ALi species (TAXREF v18, BdC Statuts, traits PanTHERIA / AVONET / AmphiBIO,
+            mappings Wikidata et interactions GloBI pré-matérialisées) est disponible en RDF (Turtle) sous licence{" "}
+            <a
+              href="https://creativecommons.org/licenses/by/4.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-dotted hover:text-foreground"
+            >
+              CC-BY 4.0
+            </a>
+            . Vocabulaires standards : Darwin Core, SKOS, OWL, Relations Ontology, DCTERMS.
+          </p>
+          <ul className="mt-3 text-sm space-y-1.5">
+            <li>
+              <span className="font-mono text-xs">/api/sparql</span> —{" "}
+              <a
+                href="/api/sparql/ui"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-dotted hover:text-foreground inline-flex items-center gap-1"
+              >
+                interface SPARQL interactive (YASGUI)
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </li>
+            <li>
+              <span className="font-mono text-xs">/api/sparql/status</span> — état du triplestore (taille, dump chargé)
+            </li>
+          </ul>
+        </section>
+
         {/* Footer note */}
         <p className="mt-10 text-xs text-muted-foreground text-center italic">
           Une donnée vous semble incorrecte ou obsolète ? Signalez-le sur la

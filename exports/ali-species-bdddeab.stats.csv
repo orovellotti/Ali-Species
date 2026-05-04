@@ -1,0 +1,10 @@
+metric,value
+git_sha,bdddeab
+generated_at,2026-05-04T10:32:57.970Z
+taxon_count,708685
+status_count,447664
+trait_row_count,2524
+wikidata_link_count,0
+globi_link_count,0
+triples_emitted,17275141
+output_file,exports/ali-species-bdddeab.ttl.gz

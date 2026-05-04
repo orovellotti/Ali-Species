@@ -9,14 +9,23 @@
     "ingest-pantheria": "tsx ./src/ingest-pantheria.ts",
     "ingest-amphibio": "tsx ./src/ingest-amphibio.ts",
     "ingest-avonet": "tsx ./src/ingest-avonet.ts",
+    "rdf-export": "tsx ./src/rdf-export.ts",
+    "materialize-wikidata": "tsx ./src/materialize-wikidata.ts",
+    "materialize-globi": "tsx ./src/materialize-globi.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@types/n3": "^1.26.1",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   },
   "dependencies": {
     "@types/pg": "^8.20.0",
-    "pg": "^8.20.0"
+    "@workspace/db": "workspace:*",
+    "@workspace/rdf-vocab": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "n3": "^2.0.3",
+    "pg": "^8.20.0",
+    "pg-cursor": "^2.19.0"
   }
 }
