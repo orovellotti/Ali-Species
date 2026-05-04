@@ -171,6 +171,12 @@ export const en = {
       "Give me 10 orchids of the genus Ophrys present in France",
       "Which diurnal raptors are ZNIEFF determinants in Brittany?",
       "What does the Grey Wolf (Canis lupus) eat?",
+      "Which protected raptors have the largest wing length?",
+      "Top 10 longest-living mammals present in France",
+      "Nocturnal amphibians with the smallest clutch size",
+      "Show me the biological traits of the European Otter",
+      "Which nectarivorous birds are in the AVONET database?",
+      "Carnivores of France ranked by body mass",
     ],
   },
   treemap: {

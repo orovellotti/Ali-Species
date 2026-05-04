@@ -171,6 +171,12 @@ export const fr = {
       "Donne-moi 10 orchidées du genre Ophrys présentes en France",
       "Quels rapaces diurnes sont déterminants ZNIEFF en Bretagne ?",
       "Que mange le Loup gris (Canis lupus) ?",
+      "Quels rapaces protégés ont la plus grande envergure d'aile ?",
+      "Top 10 des mammifères les plus longévifs présents en France",
+      "Amphibiens nocturnes avec la plus faible taille de ponte",
+      "Donne-moi les traits biologiques de la Loutre d'Europe",
+      "Quels oiseaux nectarivores trouve-t-on dans la base AVONET ?",
+      "Carnivores de France triés par masse corporelle",
     ],
   },
   treemap: {
