@@ -7,6 +7,7 @@ import { getInteractionsForCdNom, type InteractionGroup, type InteractionPartner
 import { runStatusBreakdown, type BreakdownFilters } from "../lib/breakdown.js";
 import { looksLikeSpeciesName } from "../lib/heuristics.js";
 import { runQuery, type Filters, type SpeciesItem } from "../lib/query.js";
+import { runTraitQuery, getTraitsBundle, TRAIT_KEYS, type TraitFilters, type TraitSource } from "../lib/traitsQuery.js";
 
 const router: IRouter = Router();
 
@@ -70,6 +71,57 @@ const TOOL_DEFS = [
       type: "object" as const,
       properties: {
         cdNom: { type: "number", description: "Identifiant TAXREF (cdNom) du taxon source." },
+      },
+      required: ["cdNom"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "query_traits",
+    description:
+      "Filtre, trie et liste des espèces selon leurs traits biologiques (mesures écologiques et morphologiques) issus des bases PanTHERIA (mammifères), AVONET (oiseaux) ou AmphiBIO (amphibiens). Utilise ce tool pour répondre à toute question quantitative sur des traits : 'le plus gros mammifère', 'oiseaux avec la plus grande envergure', 'amphibiens avec la ponte la plus faible', 'rapaces protégés triés par masse', 'mammifères carnivores avec longévité > 20 ans', etc. Tu peux combiner avec un filtre statut (statutType + statutCode) et un filtre taxonomique (classe, ordre, famille). IMPORTANT: choisis la bonne 'source' selon le groupe (mammifères=pantheria, oiseaux=avonet, amphibiens=amphibio). Si tu veux trier ou filtrer par valeur, fournis 'traitKey' parmi la liste autorisée. Si tu veux juste lister les taxa qui ont des traits dans une source, omets traitKey.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        source: {
+          type: "string",
+          enum: ["pantheria", "avonet", "amphibio"],
+          description: "OBLIGATOIRE. Base de traits à interroger. pantheria=mammifères, avonet=oiseaux, amphibio=amphibiens.",
+        },
+        traitKey: {
+          type: "string",
+          description: `Clé du trait à filtrer/trier. Clés valides par source — pantheria: ${TRAIT_KEYS.pantheria.join(", ")}. avonet: ${TRAIT_KEYS.avonet.join(", ")}. amphibio: ${TRAIT_KEYS.amphibio.join(", ")}. Choisis la clé qui correspond à la question (ex: 'le plus gros mammifère' → adultBodyMass, 'envergure des oiseaux' → wingLen, 'ponte amphibiens' → litterMax ou reproOutput).`,
+        },
+        minValue: { type: "number", description: "Valeur minimale (sur le 'raw' numérique du trait). Optionnel." },
+        maxValue: { type: "number", description: "Valeur maximale (sur le 'raw' numérique du trait). Optionnel." },
+        valueContains: { type: "string", description: "Sous-chaîne à chercher dans la valeur textuelle du trait (utile pour traits catégoriels: habitat, lifestyle, trophicNiche, diet, reproMode, activity)." },
+        sortBy: {
+          type: "string",
+          enum: ["value_desc", "value_asc", "name"],
+          description: "Tri du résultat. 'value_desc' = du plus grand au plus petit (ex: plus grosse masse). 'value_asc' = du plus petit au plus grand. 'name' = alphabétique. Nécessite traitKey numérique pour value_*.",
+        },
+        regne: { type: "string", description: "Filtrer par règne." },
+        classe: { type: "string", description: "Filtrer par classe (Mammalia, Aves, Amphibia...)." },
+        ordre: { type: "string", description: "Filtrer par ordre (Carnivora, Passeriformes...)." },
+        famille: { type: "string", description: "Filtrer par famille." },
+        groupe2Inpn: { type: "string", description: "Grand groupe INPN (Mammifères, Oiseaux, Amphibiens...)." },
+        statutType: { type: "string", description: "Code de type de statut pour restreindre aux taxa ayant ce statut (PN, LRN, DH, DO, REGLII, ZDET, etc.)." },
+        statutCode: { type: "string", description: "Code de statut spécifique (CR, EN, VU, II, IV...)." },
+        cdSig: { type: "string", description: "Code SIG du territoire (METRO, 11, 75...)." },
+        limit: { type: "number", description: "Nombre max de résultats (défaut 12, max 30)." },
+      },
+      required: ["source"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_traits",
+    description:
+      "Retourne tous les traits biologiques connus pour un taxon (PanTHERIA + AVONET + AmphiBIO selon disponibilité). Utilise ce tool quand l'utilisateur demande les caractéristiques, traits, mensurations, écologie d'une espèce précise (ex: 'quels sont les traits du loup', 'combien pèse le rouge-gorge', 'longévité du sonneur'). Si tu n'as pas le cdNom, fais d'abord query_taxa.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        cdNom: { type: "number", description: "Identifiant TAXREF (cdNom) du taxon." },
       },
       required: ["cdNom"],
       additionalProperties: false,
@@ -205,17 +257,21 @@ router.post("/ask", async (req, res): Promise<void> => {
 
 Tu réponds toujours en français, de manière concise (2-4 phrases), naturelle et précise.
 
-Tu disposes de trois tools :
+Tu disposes de cinq tools :
 - "query_taxa" : pour lister/compter des taxons selon des filtres (taxonomie, statut, territoire...). Utilise-le pour répondre à toute question portant sur des espèces.
 - "status_breakdown" : pour obtenir la répartition agrégée des taxons par code de statut, pour un type de statut donné. Utilise-le quand l'utilisateur demande une vue "par statut" / "par catégorie" / "répartition" / "ventilation" — par exemple : "répartition Liste Rouge des oiseaux", "combien d'espèces dans chaque catégorie UICN", "breakdown des protégées par annexe", "statut par statut".
 - "get_interactions" : pour obtenir le réseau trophique d'une espèce depuis GloBI (proies, prédateurs, parasites, pollinisation). Utilise-le quand l'utilisateur demande "qui mange qui", "que mange X", "quels sont les prédateurs de X", "parasites de X", "interactions de X". Si tu n'as pas le cdNom du taxon, fais d'abord un query_taxa pour le récupérer, puis appelle get_interactions.
+- "query_traits" : pour filtrer/trier des espèces par trait biologique (masse, longueur, longévité, ponte, envergure, régime, habitat, mode d'activité, etc.) issu de PanTHERIA (mammifères), AVONET (oiseaux) ou AmphiBIO (amphibiens). Utilise-le pour toute question quantitative ou comparative sur les traits : "le plus gros mammifère protégé", "rapaces triés par envergure", "amphibiens EN avec la ponte la plus faible", "carnivores avec longévité > 20 ans", "oiseaux nectarivores", etc. Tu peux combiner avec un statut (statutType) et un filtre taxonomique.
+- "get_traits" : pour obtenir les traits biologiques d'une espèce précise (ex: "combien pèse le loup", "longévité du sonneur", "envergure de l'aigle royal"). Si tu n'as pas le cdNom, fais d'abord query_taxa.
 
 Quand le résultat est revenu, formule une réponse synthétique en français qui :
 - Donne le compte total trouvé (en chiffres formatés)
 - Pour query_taxa : mentionne 2-4 exemples emblématiques s'il y a lieu
 - Pour status_breakdown : présente la ventilation (ex: "Sur 379 oiseaux évalués, 12 en danger critique, 25 en danger, 48 vulnérables...")
 - Pour get_interactions : résume les groupes (ex: "L'écureuil roux interagit avec 337 partenaires : il consomme 161 espèces (noisettes, faînes, champignons...), est consommé par 142 prédateurs (rapaces, mustélidés...), héberge 30 parasites et pollinise 4 plantes."). Mentionne quelques exemples par groupe.
-- N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa)
+- Pour query_traits : annonce le tri/filtre appliqué et cite 3-5 espèces en tête avec leur valeur (ex: "Top 5 par masse adulte (PanTHERIA) : Ours brun 167 kg, Loup gris 32 kg, Lynx boréal 21 kg, Sanglier 87 kg, Cerf élaphe 144 kg.")
+- Pour get_traits : présente les traits clés par source (ex: "Loup gris — PanTHERIA : masse 32 kg, longévité 16 ans, gestation 63 jours, taille de portée 5. Wikidata : longueur 1,4 m.")
+- N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa et query_traits)
 - Invite à cliquer sur les cartes pour voir le détail
 
 Indices pour traduire une question:
@@ -341,6 +397,82 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
                 type: "tool_result",
                 tool_use_id: tu.id,
                 content: JSON.stringify(summary),
+              });
+            }
+          }
+        } else if (tu.name === "query_traits") {
+          const filters = (tu.input ?? {}) as TraitFilters;
+          if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
+            filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
+          }
+          if (!filters.source) {
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "Le paramètre 'source' est obligatoire (pantheria, avonet ou amphibio).", is_error: true });
+          } else {
+            const result = await runTraitQuery(filters);
+            lastQueryResult = {
+              totalCount: result.totalCount,
+              items: result.items.map((it) => ({
+                cdNom: it.cdNom,
+                lbNom: it.lbNom,
+                nomVern: it.nomVern,
+                rang: "ES",
+                regne: null,
+                classe: it.classe,
+                ordre: null,
+                famille: it.famille,
+              })),
+            };
+            usedFilters = {
+              regne: filters.regne, classe: filters.classe, ordre: filters.ordre,
+              famille: filters.famille, groupe2Inpn: filters.groupe2Inpn,
+              statutType: filters.statutType, statutCode: filters.statutCode,
+              cdSig: filters.cdSig,
+            };
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: tu.id,
+              content: JSON.stringify({
+                source: result.sourceUsed,
+                traitKey: result.traitKeyUsed,
+                totalCount: result.totalCount,
+                sample: result.items.slice(0, 12).map((it) => ({
+                  cdNom: it.cdNom,
+                  lbNom: it.lbNom,
+                  nomVern: it.nomVern,
+                  classe: it.classe,
+                  famille: it.famille,
+                  trait: result.traitKeyUsed
+                    ? { label: it.traitLabel, value: it.traitValue, unit: it.traitUnit, raw: it.traitRaw }
+                    : null,
+                })),
+              }),
+            });
+          }
+        } else if (tu.name === "get_traits") {
+          const cdNom = Number((tu.input ?? {}).cdNom);
+          if (!cdNom || Number.isNaN(cdNom)) {
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "cdNom invalide", is_error: true });
+          } else {
+            const bundle = await getTraitsBundle(cdNom);
+            if (!bundle) {
+              toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: `Aucun taxon pour cdNom=${cdNom}`, is_error: true });
+            } else if (bundle.bySource.length === 0) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: JSON.stringify({
+                  cdNom: bundle.cdNom,
+                  lbNom: bundle.lbNom,
+                  nomVern: bundle.nomVern,
+                  bySource: [],
+                  note: "Aucun trait PanTHERIA / AVONET / AmphiBIO disponible pour ce taxon.",
+                }),
+              });
+            } else {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: JSON.stringify(bundle),
               });
             }
           }
