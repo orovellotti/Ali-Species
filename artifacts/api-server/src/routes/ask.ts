@@ -7,7 +7,53 @@ import { getInteractionsForCdNom, type InteractionGroup, type InteractionPartner
 import { runStatusBreakdown, type BreakdownFilters } from "../lib/breakdown.js";
 import { looksLikeSpeciesName } from "../lib/heuristics.js";
 import { runQuery, type Filters, type SpeciesItem } from "../lib/query.js";
-import { runTraitQuery, getTraitsBundle, TRAIT_KEYS, type TraitFilters, type TraitSource } from "../lib/traitsQuery.js";
+import { runTraitQuery, getTraitsBundle, TRAIT_KEYS, TRAIT_SOURCES, type TraitFilters } from "../lib/traitsQuery.js";
+
+const queryTraitsInputSchema = z
+  .object({
+    source: z.enum(TRAIT_SOURCES as unknown as [string, ...string[]]),
+    traitKey: z.string().optional(),
+    minValue: z.coerce.number().optional(),
+    maxValue: z.coerce.number().optional(),
+    valueContains: z.string().min(1).max(80).optional(),
+    sortBy: z.enum(["value_asc", "value_desc", "name"]).optional(),
+    regne: z.string().min(1).max(80).optional(),
+    classe: z.string().min(1).max(80).optional(),
+    ordre: z.string().min(1).max(80).optional(),
+    famille: z.string().min(1).max(80).optional(),
+    groupe2Inpn: z.string().min(1).max(80).optional(),
+    statutType: z.string().min(1).max(20).optional(),
+    statutCode: z.string().min(1).max(20).optional(),
+    cdSig: z.string().min(1).max(20).optional(),
+    limit: z.coerce.number().int().min(1).max(30).optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.traitKey && !TRAIT_KEYS[v.source as keyof typeof TRAIT_KEYS].includes(v.traitKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["traitKey"],
+        message: `traitKey '${v.traitKey}' invalide pour source '${v.source}'. Valeurs autorisées: ${TRAIT_KEYS[v.source as keyof typeof TRAIT_KEYS].join(", ")}`,
+      });
+    }
+    if ((v.sortBy === "value_asc" || v.sortBy === "value_desc") && !v.traitKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sortBy"],
+        message: "sortBy=value_asc/value_desc nécessite un traitKey numérique.",
+      });
+    }
+    if (v.minValue !== undefined && v.maxValue !== undefined && v.minValue > v.maxValue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["minValue"],
+        message: "minValue doit être <= maxValue.",
+      });
+    }
+  });
+
+const getTraitsInputSchema = z.object({
+  cdNom: z.coerce.number().int().positive(),
+});
 
 const router: IRouter = Router();
 
@@ -401,13 +447,15 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
             }
           }
         } else if (tu.name === "query_traits") {
-          const filters = (tu.input ?? {}) as TraitFilters;
-          if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
-            filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
-          }
-          if (!filters.source) {
-            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "Le paramètre 'source' est obligatoire (pantheria, avonet ou amphibio).", is_error: true });
+          const parsed = queryTraitsInputSchema.safeParse(tu.input ?? {});
+          if (!parsed.success) {
+            const msg = parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join(" | ");
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: `Paramètres invalides — ${msg}`, is_error: true });
           } else {
+            const filters = parsed.data as TraitFilters;
+            if (filters.regne && REGNE_HINTS[filters.regne.toLowerCase()]) {
+              filters.regne = REGNE_HINTS[filters.regne.toLowerCase()];
+            }
             const result = await runTraitQuery(filters);
             lastQueryResult = {
               totalCount: result.totalCount,
@@ -449,10 +497,11 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
             });
           }
         } else if (tu.name === "get_traits") {
-          const cdNom = Number((tu.input ?? {}).cdNom);
-          if (!cdNom || Number.isNaN(cdNom)) {
-            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "cdNom invalide", is_error: true });
+          const parsed = getTraitsInputSchema.safeParse(tu.input ?? {});
+          if (!parsed.success) {
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "cdNom invalide (entier positif requis).", is_error: true });
           } else {
+            const cdNom = parsed.data.cdNom;
             const bundle = await getTraitsBundle(cdNom);
             if (!bundle) {
               toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: `Aucun taxon pour cdNom=${cdNom}`, is_error: true });

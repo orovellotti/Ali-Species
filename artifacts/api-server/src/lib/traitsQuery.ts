@@ -114,13 +114,23 @@ export async function runTraitQuery(
     conds.push(sql`EXISTS (SELECT 1 FROM bdc_statuts bs WHERE ${sql.join(subConds, sql` AND `)})`);
   }
 
+  // Cast SQL sûr: ne tente la conversion en float que si la chaîne (après nettoyage) ressemble à un nombre.
+  // Évite les "invalid input syntax for type double precision" si la donnée 'raw' contient du texte parasite.
+  const rawNumericExpr = (key: string): SQL => sql`
+    CASE
+      WHEN NULLIF(regexp_replace(st.traits->${key}->>'raw', '[^0-9.\\-]', '', 'g'), '') ~ '^-?[0-9]+(\\.[0-9]+)?$'
+      THEN NULLIF(regexp_replace(st.traits->${key}->>'raw', '[^0-9.\\-]', '', 'g'), '')::float
+      ELSE NULL
+    END
+  `;
+
   if (traitKey) {
     conds.push(sql`st.traits ? ${traitKey}`);
     if (filters.minValue !== undefined) {
-      conds.push(sql`((st.traits->${traitKey}->>'raw')::float) >= ${filters.minValue}`);
+      conds.push(sql`${rawNumericExpr(traitKey)} >= ${filters.minValue}`);
     }
     if (filters.maxValue !== undefined) {
-      conds.push(sql`((st.traits->${traitKey}->>'raw')::float) <= ${filters.maxValue}`);
+      conds.push(sql`${rawNumericExpr(traitKey)} <= ${filters.maxValue}`);
     }
     if (filters.valueContains && filters.valueContains.length > 0) {
       const pat = `%${filters.valueContains}%`;
@@ -129,7 +139,10 @@ export async function runTraitQuery(
   }
 
   const whereSql = sql.join(conds, sql` AND `);
-  const limit = Math.min(Math.max(filters.limit ?? 12, 1), 30);
+  const rawLimit = typeof filters.limit === "number" && Number.isFinite(filters.limit)
+    ? Math.floor(filters.limit)
+    : 12;
+  const limit = Math.min(Math.max(rawLimit, 1), 30);
 
   const countRow = await db.execute(sql`
     SELECT COUNT(*)::int AS c
@@ -141,9 +154,9 @@ export async function runTraitQuery(
 
   let orderSql: SQL;
   if (traitKey && (filters.sortBy === "value_desc")) {
-    orderSql = sql`((st.traits->${traitKey}->>'raw')::float) DESC NULLS LAST`;
+    orderSql = sql`${rawNumericExpr(traitKey)} DESC NULLS LAST, t.lb_nom ASC`;
   } else if (traitKey && (filters.sortBy === "value_asc")) {
-    orderSql = sql`((st.traits->${traitKey}->>'raw')::float) ASC NULLS LAST`;
+    orderSql = sql`${rawNumericExpr(traitKey)} ASC NULLS LAST, t.lb_nom ASC`;
   } else {
     orderSql = sql`t.lb_nom ASC`;
   }

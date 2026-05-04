@@ -73,6 +73,16 @@ function parseCsvLine(line: string): string[] {
   return fields;
 }
 
+async function ensureTraitsIndex() {
+  try {
+    await pool.query(
+      "CREATE INDEX IF NOT EXISTS idx_species_traits_traits_gin ON species_traits USING GIN (traits jsonb_path_ops)",
+    );
+  } catch (err) {
+    logger.warn({ err }, "Failed to create GIN index on species_traits.traits");
+  }
+}
+
 export async function seedIfEmpty() {
   try {
     const countResult = await pool.query("SELECT COUNT(*)::int as count FROM taxons");
@@ -81,6 +91,7 @@ export async function seedIfEmpty() {
     if (count >= EXPECTED_COUNT) {
       logger.info({ count }, "Database has all data, skipping seed");
       await seedBdcStatuts();
+      await ensureTraitsIndex();
       return;
     }
 
@@ -188,6 +199,7 @@ export async function seedIfEmpty() {
   }
 
   await seedBdcStatuts();
+  await ensureTraitsIndex();
 }
 
 const BDC_HEADER_MAP: Record<string, number> = {};
