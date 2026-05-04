@@ -41,3 +41,9 @@ id = "oKAbhCUQJs4vB3NN86v26"
 uri = "file://docs/ARCHITECTURE.md"
 type = "text"
 title = "Architecture — ALI Species"
+
+[[outputs]]
+id = "nH1v5dRUi52htNku92xB8"
+uri = "file://exports/email-richard-ali-species.md"
+type = "text"
+title = "Email to Richard — ALi Species & Abu Dhabi adaptation"
