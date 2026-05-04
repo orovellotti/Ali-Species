@@ -857,35 +857,31 @@ function humanDuration(s: number): { value: string; unit: string } {
   return { value: fmtNumber(years), unit: "ans" };
 }
 
-router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
-  const cdNom = parseInt(raw, 10);
-  if (isNaN(cdNom)) {
-    res.status(400).json({ error: "Invalid cdNom" });
-    return;
-  }
+interface MinimalLogger {
+  warn: (...args: unknown[]) => void;
+}
 
+export async function getTraitsForCdNom(
+  cdNom: number,
+  log?: MinimalLogger,
+): Promise<TraitsPayload | null> {
   const now = Date.now();
   const cached = TRAITS_CACHE.get(cdNom);
   if (cached && now - cached.ts < TRAITS_TTL_MS) {
-    res.json(cached.data);
-    return;
+    return cached.data;
   }
 
   const [taxon] = await db
     .select({ lbNom: taxonsTable.lbNom })
     .from(taxonsTable)
     .where(eq(taxonsTable.cdNom, cdNom));
-  if (!taxon) {
-    res.status(404).json({ error: "Taxon not found" });
-    return;
-  }
+  if (!taxon) return null;
 
   const rawName = taxon.lbNom.trim();
   const scientificName = escapeSparqlLiteral(rawName);
   const staticSources = await fetchStaticTraits(cdNom);
   if (!rawName) {
-    res.json({
+    return {
       scientificName: "",
       wikidataQid: null,
       wikidataUrl: null,
@@ -897,8 +893,7 @@ router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
       attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
       staticSources,
       wikidataAvailable: true,
-    } satisfies TraitsPayload);
-    return;
+    };
   }
 
   const sparql = `
@@ -963,8 +958,8 @@ LIMIT 1`.trim();
     }).finally(() => clearTimeout(timer));
 
     if (!r.ok) {
-      req.log.warn({ status: r.status, scientificName }, "Wikidata SPARQL failed");
-      const fallback: TraitsPayload = {
+      log?.warn({ status: r.status, scientificName }, "Wikidata SPARQL failed");
+      return {
         scientificName: rawName,
         wikidataQid: null,
         wikidataUrl: null,
@@ -977,9 +972,6 @@ LIMIT 1`.trim();
         staticSources,
         wikidataAvailable: false,
       };
-      res.setHeader("Cache-Control", "public, max-age=300");
-      res.json(fallback);
-      return;
     }
 
     const json = await r.json() as {
@@ -1002,9 +994,7 @@ LIMIT 1`.trim();
         wikidataAvailable: true,
       };
       setTraitsCache(cdNom, empty);
-      res.setHeader("Cache-Control", "public, max-age=3600");
-      res.json(empty);
-      return;
+      return empty;
     }
 
     const get = (k: string): string | undefined => row[k]?.value;
@@ -1113,11 +1103,10 @@ LIMIT 1`.trim();
     };
 
     setTraitsCache(cdNom, payload);
-    res.setHeader("Cache-Control", "public, max-age=43200, stale-while-revalidate=86400");
-    res.json(payload);
+    return payload;
   } catch (err) {
-    req.log.warn({ err: err instanceof Error ? err.message : String(err), scientificName }, "Wikidata traits fetch failed");
-    const fallback: TraitsPayload = {
+    log?.warn({ err: err instanceof Error ? err.message : String(err), scientificName }, "Wikidata traits fetch failed");
+    return {
       scientificName: rawName,
       wikidataQid: null,
       wikidataUrl: null,
@@ -1130,9 +1119,30 @@ LIMIT 1`.trim();
       staticSources,
       wikidataAvailable: false,
     };
-    res.setHeader("Cache-Control", "public, max-age=300");
-    res.json(fallback);
   }
+}
+
+router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
+  const cdNom = parseInt(raw, 10);
+  if (isNaN(cdNom)) {
+    res.status(400).json({ error: "Invalid cdNom" });
+    return;
+  }
+
+  const payload = await getTraitsForCdNom(cdNom, req.log);
+  if (!payload) {
+    res.status(404).json({ error: "Taxon not found" });
+    return;
+  }
+
+  res.setHeader(
+    "Cache-Control",
+    payload.wikidataAvailable
+      ? "public, max-age=43200, stale-while-revalidate=86400"
+      : "public, max-age=300",
+  );
+  res.json(payload);
 });
 
 router.get("/taxons/:cdNom/wikipedia", async (req, res): Promise<void> => {

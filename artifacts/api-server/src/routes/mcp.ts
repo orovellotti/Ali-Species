@@ -5,6 +5,7 @@ import { z } from "zod";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 import { getInteractionsForCdNom } from "./interactions.js";
+import { getTraitsForCdNom } from "./taxons.js";
 import { runStatusBreakdown } from "../lib/breakdown.js";
 import { runQuery } from "../lib/query.js";
 
@@ -23,7 +24,7 @@ function notFound(message: string) {
 
 function buildServer(): McpServer {
   const server = new McpServer(
-    { name: "ali-species-mcp", version: "1.1.0" },
+    { name: "ali-species-mcp", version: "1.2.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -356,6 +357,21 @@ function buildServer(): McpServer {
       const summary = (await fetchSummary("fr")) ?? (await fetchSummary("en"));
       if (!summary) return toJson({ extract: null, url: null, title: null, lang: null });
       return toJson(summary);
+    },
+  );
+
+  server.registerTool(
+    "get_traits",
+    {
+      title: "Traits biologiques (Wikidata + datasets cachés)",
+      description:
+        "Retourne les traits biologiques d'un taxon : (a) traits agrégés depuis Wikidata (masse, longueur, longévité, gestation, incubation, taille de portée…) avec QID et identifiants externes (iNaturalist, GBIF, EOL, NCBI, ITIS, COL, WoRMS, MSW, POWO, IPNI, WFO, BHL), (b) blocs de traits issus de bases scientifiques cachées en DB selon la classe : PanTHERIA pour les mammifères (~18 traits : domaine vital, cycle d'activité, masse adulte, longévité, gestation, sevrage, régime alimentaire…), AVONET pour les oiseaux (~17 traits : morphométrie du bec, distance de Kipp, indice main-aile, mode de vie, niche trophique, comportement migratoire…), AmphiBIO pour les amphibiens (~14 traits : habitat, régime, mode de reproduction, taille de ponte, maturité…). Le champ `wikidataAvailable` indique si Wikidata a répondu ; en cas d'indisponibilité, `staticSources[]` reste peuplé. Chaque source statique fournit son éditeur, sa licence et sa citation formelle.",
+      inputSchema: { cdNom: z.number().int().describe("Identifiant TAXREF (cdNom)") },
+    },
+    async ({ cdNom }) => {
+      const payload = await getTraitsForCdNom(cdNom);
+      if (!payload) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
+      return toJson(payload);
     },
   );
 

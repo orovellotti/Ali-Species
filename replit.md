@@ -80,6 +80,8 @@ The `species_traits` table (PK = `cd_nom` + `source`) caches per-species traits 
 - **AmphiBIO** (Amphibia, ~193 species, 14-trait blocks) — Oliveira et al. 2017, Scientific Data 4:170123, CC-BY 4.0.
 - **SquamBase** — registered in source registry; data ingestion pending an open download URL for the Wiley supplementary materials.
 
+The merged trait payload is also exposed to MCP clients via the `get_traits` tool (alongside `get_taxon`, `get_statuts`, `get_interactions`, `get_wikipedia`, `get_gbif`, etc.) — 14 tools total on the MCP server (`/api/mcp`).
+
 ## Database Schema
 
 ### taxons table
