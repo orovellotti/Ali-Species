@@ -102,6 +102,45 @@ export default function About() {
             </div>
           </section>
 
+          <section className="space-y-4" id="traits">
+            <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.traitsHeading")}</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              <Trans i18nKey="about.traitsIntro" components={{ s: <strong className="text-foreground" /> }} />
+            </p>
+            <div className="space-y-2 pt-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("about.traitsSourcesLabel")}</div>
+              <ul className="space-y-2.5 text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1.5">•</span>
+                  <span><Trans i18nKey="about.traitsSources.wikidata" components={{ s: <strong className="text-foreground" /> }} /></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1.5">•</span>
+                  <span><Trans i18nKey="about.traitsSources.pantheria" components={{ s: <strong className="text-foreground" /> }} /></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1.5">•</span>
+                  <span><Trans i18nKey="about.traitsSources.avonet" components={{ s: <strong className="text-foreground" /> }} /></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1.5">•</span>
+                  <span><Trans i18nKey="about.traitsSources.amphibio" components={{ s: <strong className="text-foreground" /> }} /></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1.5">•</span>
+                  <span><Trans i18nKey="about.traitsSources.squambase" components={{ s: <strong className="text-foreground" /> }} /></span>
+                </li>
+              </ul>
+            </div>
+            <a
+              href={`${import.meta.env.BASE_URL}sources`}
+              className="inline-flex items-center gap-2 text-primary hover:underline font-medium pt-1"
+            >
+              {t("about.traitsCta")}
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </section>
+
           <section className="p-8 rounded-2xl bg-foreground/[0.03] border border-border space-y-4" id="mcp">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
