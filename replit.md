@@ -39,11 +39,24 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `GET /api/taxons/stats` — Get database statistics
 - `GET /api/taxons/taxonomy-tree` — Get 5-level taxonomy tree (règnes→phyla→classes→ordres→familles) for treemap visualization
 - `GET /api/taxons/random` — Get a random species taxon
+- `GET /api/taxons/:cdNom/traits` — Merged trait payload (DB-cached static sources + live Wikidata)
+- `GET /api/taxons/:cdNom/interactions` — GloBI biotic interactions (eats / eaten by / parasite of / etc.)
+- `POST /api/ask` — Natural-language agent (LLM-backed) that composes queries against `query_taxons`, `query_traits`, `get_taxon`, `get_statuts`, `get_interactions`, `get_traits`, `get_wikipedia`, `get_gbif` tools
+- `GET /api/mcp` — MCP server endpoint exposing 14 tools to AI assistants (Claude, etc.)
+- `GET /api/sparql` (and `POST`) — SPARQL 1.1 endpoint, proxied to Oxigraph; returns **503 with local-setup hint** when Oxigraph is unavailable (e.g. in autoscale prod)
+- `GET /api/sparql/ui` — YASGUI SPARQL client; auto-falls back to a static "run Oxigraph locally" instructions page when upstream is down
+- `GET /api/sparql/status` — Triplestore reachability + triple count
+- `GET /api/exports/info` — JSON metadata about the latest RDF dump (filename, size, mtime, parsed stats CSV)
+- `GET /api/exports/rdf.ttl.gz` — Streams the latest gzipped Turtle dump (~103 MB, 17.27M triples)
+- `GET /api/exports/stats.csv` — Streams the stats CSV coupled to the same dump (shared `<sha>` prefix)
 
 ### Frontend Pages
 - `/` — Home page with search bar, statistics, interactive taxonomy treemap (5-level drill-down: règnes→embranchements→classes→ordres→familles), and featured kingdoms (Animalia/183716, Plantae/187079, Fungi/187496)
+- `/taxonomie` — Conservation statuses browser
+- `/sources` — Data sources page with citations and links to RDF/SPARQL section
+- `/export` — **RDF/SPARQL documentation page** with TTL dump download button, live graph stats (taxa/statuses/triples counters from `/api/exports/info`), endpoint section that conditionally renders YASGUI link **or** local Oxigraph setup instructions based on `/api/sparql/status`, vocabulary list, sample SPARQL queries, and CC-BY 4.0 license
+- `/a-propos` — About page with PatriNat and Natural Solutions credits and MCP integration card
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
-- `/a-propos` — About page with PatriNat and Natural Solutions credits
 
 ### UX Features (Taxon Page)
 - **Species dashboard**: Sensitivity score + driver badges displayed prominently near title
@@ -82,7 +95,9 @@ The full graph (TAXREF v18 + BdC Statuts + traits + Wikidata mappings + GloBI in
      rm -rf exports/oxigraph-store.old
      ```
   3. Restart the `oxigraph-server` workflow.
-- **License**: CC-BY 4.0. The Sources page links to `/api/sparql/ui`.
+- **Public download endpoints** (`artifacts/api-server/src/routes/exports.ts`): autodiscover the latest `ali-species-<sha>.ttl.gz` in `exports/`, couple stats CSV by shared `<sha>` prefix, stream with proper `Content-Length` + error handling. No user-supplied filename → no path-traversal vector.
+- **Autoscale-aware degradation**: SPARQL routes (`/api/sparql`, `/api/sparql/ui`) detect Oxigraph reachability and return a clean 503 / instructions page when the triplestore isn't running (the case in the published autoscale deployment, since `oxigraph-server` is a separate dev-only workflow). The `/export` page mirrors this on the frontend.
+- **License**: CC-BY 4.0. The Sources and `/export` pages document the dataset and link to `/api/sparql/ui`.
 
 ## Key Commands
 
