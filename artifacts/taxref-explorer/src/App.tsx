@@ -9,6 +9,7 @@ import TaxonDetail from "@/pages/taxon";
 import About from "@/pages/about";
 import Taxonomie from "@/pages/taxonomie";
 import Sources from "@/pages/sources";
+import ExportPage from "@/pages/export";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/taxonomie" component={Taxonomie} />
       <Route path="/sources" component={Sources} />
+      <Route path="/export" component={ExportPage} />
       <Route path="/a-propos" component={About} />
       <Route path="/taxon/:slug" component={TaxonDetail} />
       <Route component={NotFound} />

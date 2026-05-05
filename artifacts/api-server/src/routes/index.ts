@@ -5,6 +5,7 @@ import mcpRouter from "./mcp";
 import askRouter from "./ask";
 import interactionsRouter from "./interactions";
 import sparqlRouter from "./sparql";
+import exportsRouter from "./exports";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,7 @@ router.use(interactionsRouter);
 router.use("/sparql", express.urlencoded({ extended: false, limit: "1mb" }));
 router.use("/sparql", express.text({ type: "application/sparql-query", limit: "1mb" }));
 router.use(sparqlRouter);
+router.use(exportsRouter);
 router.use(taxonsRouter);
 
 export default router;

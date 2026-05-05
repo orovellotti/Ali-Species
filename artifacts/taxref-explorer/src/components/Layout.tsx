@@ -35,6 +35,7 @@ export function Layout({ children }: LayoutProps) {
             <Link href="/" className="hidden sm:inline-flex hover:text-foreground transition-colors">{t("nav.home")}</Link>
             <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">{t("nav.statuses")}</Link>
             <Link href="/sources" className="hover:text-foreground transition-colors" data-testid="link-sources">{t("nav.sources")}</Link>
+            <Link href="/export" className="hover:text-foreground transition-colors" data-testid="link-export">{t("nav.export")}</Link>
             <Link href="/a-propos" className="hover:text-foreground transition-colors">{t("nav.about")}</Link>
             <Link
               href="/a-propos#mcp"
