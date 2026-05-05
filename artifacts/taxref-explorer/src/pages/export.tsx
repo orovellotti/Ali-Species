@@ -141,7 +141,7 @@ export default function ExportPage() {
             <a
               href="/api/exports/rdf.ttl.gz"
               download={info?.ttl?.filename ?? "ali-species.ttl.gz"}
-              target="_blank"
+              target="_top"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
             >
@@ -152,7 +152,7 @@ export default function ExportPage() {
             <a
               href="/api/exports/stats.csv"
               download
-              target="_blank"
+              target="_top"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors text-sm"
             >
