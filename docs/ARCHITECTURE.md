@@ -67,8 +67,10 @@ rapidement pour les afficher.
 | Page | Ce qu'on y trouve |
 |---|---|
 | **Accueil** | Une barre de recherche, l'assistant en français, et une visualisation interactive de l'arbre du vivant |
-| **Fiche d'une espèce** | Tout ce qu'on sait sur cette espèce : photos, description Wikipedia, statuts de protection, espèces avec lesquelles elle interagit, liens vers GBIF et l'INPN |
+| **Fiche d'une espèce** | Tout ce qu'on sait sur cette espèce : photos, description Wikipedia, statuts de protection, traits biologiques, espèces avec lesquelles elle interagit, liens vers GBIF et l'INPN |
 | **Taxonomie** | Exploration par grandes catégories (animaux, plantes, champignons…) |
+| **Sources** | Liste des bases de données utilisées avec leurs citations |
+| **Export (Open Data)** | Téléchargement du graphe complet au format RDF (Turtle) et endpoint SPARQL pour les chercheurs et les outils de données liées |
 | **À propos** | Crédits et remerciements (PatriNat, Natural Solutions, GloBI) |
 
 ---
@@ -124,6 +126,8 @@ rapide et ça coûte moins cher.
 | **Wikimedia Commons** | Les photos des espèces |
 | **GBIF** | Le nombre d'observations dans le monde et le statut UICN mondial |
 | **GloBI** | Les interactions entre espèces (qui mange qui, qui pollinise quoi, qui parasite qui) |
+| **Wikidata** | Les identifiants croisés et les liens vers d'autres bases scientifiques |
+| **PanTHERIA, AVONET, AmphiBIO** | Les traits biologiques (taille, poids, régime alimentaire…) pour les mammifères, oiseaux et amphibiens |
 | **Claude** (via Replit) | Le moteur de l'assistant en langage naturel |
 
 Toutes ces sources sont appelées **côté serveur**. Votre navigateur ne
@@ -164,11 +168,17 @@ workspace/
 │   └── taxref-explorer/        ← le site web (ce que vous voyez)
 ├── lib/                        ← briques partagées entre les apps
 │   ├── db/                     ← l'accès à la base de données
+│   ├── rdf-vocab/              ← les vocabulaires standards (DwC,
+│   │                              SKOS, OWL…) pour la publication
+│   │                              des données ouvertes
 │   ├── api-zod/ + api-client-react/  ← les outils générés
 │   │                              automatiquement pour relier
 │   │                              le serveur et le site
 │   └── integrations-anthropic-ai/  ← le pont vers Claude
-├── scripts/                    ← le script d'import des données
+├── scripts/                    ← imports de données + génération
+│                                  du dump RDF
+├── exports/                    ← les fichiers RDF publiés et la
+│                                  base Oxigraph locale
 └── docs/                       ← cette documentation
 ```
 
@@ -200,6 +210,58 @@ une seule fois et utilisé partout).
 - **Compatibilité avec les outils IA externes.** Le serveur expose
   aussi un point d'entrée « MCP » qui permet à des applications comme
   Claude Desktop d'interroger directement notre base d'espèces.
+- **Données ouvertes (Open Data, licence CC-BY 4.0).** Tout le graphe
+  (taxonomie + statuts + traits + interactions + liens Wikidata) est
+  publié au format RDF (Turtle). Voir la section ci-dessous.
+
+---
+
+## 8 bis. Open Data — RDF et SPARQL
+
+Le site propose une page **/export** dédiée à la communauté
+scientifique et aux outils du web sémantique. On y trouve :
+
+- un **fichier de téléchargement unique** (~103 Mo compressé) qui
+  contient les **17 millions de faits** du graphe au format Turtle —
+  un format standard que tous les outils de données liées savent lire ;
+- un **endpoint SPARQL** (un langage d'interrogation pour les graphes
+  de connaissances) avec une interface visuelle (YASGUI) pour tester
+  des requêtes ;
+- les statistiques de production du dump (nombre de taxons, statuts,
+  triplets, etc.) au format CSV.
+
+```
+   ┌─────────────────────┐    publication    ┌──────────────────────┐
+   │ Notre base PostgreSQL│ ─────────────────▶│ ali-species-<id>.    │
+   │ + caches GloBI/Wiki  │   (script RDF)    │ ttl.gz   (~103 Mo)   │
+   └─────────────────────┘                    └──────────┬───────────┘
+                                                         │
+                              ┌──────────────────────────┴──────────────┐
+                              ▼                                         ▼
+                     ┌────────────────┐                         ┌─────────────┐
+                     │  Téléchargement │                         │  Oxigraph    │
+                     │  direct (page  │                         │ (triplestore │
+                     │   /export)     │                         │  local)      │
+                     └────────────────┘                         └──────┬──────┘
+                                                                       │
+                                                                       ▼
+                                                                 SPARQL queries
+```
+
+**Dégradation gracieuse en production.** L'endpoint SPARQL public
+nécessite un serveur dédié (Oxigraph) qui n'est pas démarré sur le
+déploiement « autoscale » par défaut. Dans ce cas, la page /export
+détecte l'absence du service et affiche à la place un encart
+expliquant comment **lancer Oxigraph en local en 30 secondes** à
+partir du fichier téléchargé. Le téléchargement, lui, reste toujours
+disponible.
+
+**Astuce technique sur le bouton de téléchargement.** Quand l'app est
+visualisée dans la prévisualisation Replit (qui l'embarque dans une
+iframe), un simple lien `<a href>` vers un gros fichier est intercepté
+par le wrapper et donne un fichier de 0 octet. Le bouton utilise donc
+`window.open()` programmatique pour ouvrir une vraie fenêtre top-level,
+ce qui contourne ce souci.
 
 ---
 
