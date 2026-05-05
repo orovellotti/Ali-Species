@@ -76,6 +76,12 @@ async function proxyQuery(query: string, accept: string): Promise<{ status: numb
   };
 }
 
+const UNAVAILABLE_MSG =
+  "L'endpoint SPARQL public n'est pas disponible dans cet environnement. " +
+  "Téléchargez le dump RDF depuis /api/exports/rdf.ttl.gz et lancez Oxigraph en local : " +
+  "`oxigraph_server load -l ./store --file ali-species.ttl.gz --format ttl` puis " +
+  "`oxigraph_server serve -l ./store --bind 127.0.0.1:7878`. Voir /export pour les détails.";
+
 router.get("/sparql", async (req, res): Promise<void> => {
   const query = (req.query.query ?? req.query.q) as string | undefined;
   if (!query) {
@@ -88,8 +94,8 @@ router.get("/sparql", async (req, res): Promise<void> => {
   try {
     const out = await proxyQuery(query, req.get("accept") || "");
     res.status(out.status).setHeader("Content-Type", out.contentType).send(out.body);
-  } catch (err) {
-    res.status(502).json({ error: `Upstream SPARQL server unreachable: ${(err as Error).message}` });
+  } catch {
+    res.status(503).json({ error: "SPARQL endpoint unavailable", hint: UNAVAILABLE_MSG });
   }
 });
 
@@ -108,8 +114,8 @@ router.post("/sparql", async (req, res): Promise<void> => {
   try {
     const out = await proxyQuery(query, req.get("accept") || "");
     res.status(out.status).setHeader("Content-Type", out.contentType).send(out.body);
-  } catch (err) {
-    res.status(502).json({ error: `Upstream SPARQL server unreachable: ${(err as Error).message}` });
+  } catch {
+    res.status(503).json({ error: "SPARQL endpoint unavailable", hint: UNAVAILABLE_MSG });
   }
 });
 
@@ -135,8 +141,46 @@ router.get("/sparql/status", async (_req, res): Promise<void> => {
   });
 });
 
-router.get("/sparql/ui", (_req, res): void => {
+router.get("/sparql/ui", async (_req, res): Promise<void> => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  const h = await upstreamHealth();
+  if (!h.ok) {
+    res.send(`<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>ALi species — SPARQL endpoint indisponible</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f7f6f1; color: #2c3e50; }
+    .wrap { max-width: 720px; margin: 60px auto; padding: 32px; background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    h1 { margin-top: 0; font-size: 22px; }
+    code, pre { background: #f1efe7; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    pre { padding: 12px; overflow-x: auto; line-height: 1.5; }
+    a { color: #2c5530; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>SPARQL endpoint non disponible publiquement</h1>
+    <p>L'instance Oxigraph n'est pas exposée dans cet environnement (déploiement autoscale sans triplestore).</p>
+    <p>L'intégralité du graphe reste téléchargeable au format Turtle : <a href="/api/exports/rdf.ttl.gz">/api/exports/rdf.ttl.gz</a> (~103 Mo, 17M+ triplets).</p>
+    <h2 style="font-size:16px">Lancer un endpoint SPARQL local en 30 secondes</h2>
+    <pre># 1. Installer Oxigraph (https://github.com/oxigraph/oxigraph)
+brew install oxigraph    # ou: cargo install oxigraph_server
+
+# 2. Charger le dump
+curl -O https://${"$"}{HOST}/api/exports/rdf.ttl.gz
+oxigraph_server load -l ./store --file ali-species-*.ttl.gz --format ttl
+
+# 3. Servir l'endpoint
+oxigraph_server serve -l ./store --bind 127.0.0.1:7878
+# → SPARQL dispo sur http://127.0.0.1:7878/query</pre>
+    <p>Voir <a href="/export">/export</a> pour la documentation complète.</p>
+  </div>
+</body>
+</html>`);
+    return;
+  }
   res.send(`<!doctype html>
 <html lang="fr">
 <head>
@@ -168,13 +212,11 @@ router.get("/sparql/ui", (_req, res): void => {
       requestConfig: { endpoint: "/api/sparql", method: "POST" },
       copyEndpointOnNewTab: true,
     });
-    // Seed an example query for first-time visitors
     if (yasgui.getTab()) {
       yasgui.getTab().setQuery(\`PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dwc: <http://rs.tdwg.org/dwc/terms/>
 
 # Le loup gris (cd_nom 60577) : libellé + rang
-# (les URI taxon utilisent un slash, donc on les écrit en IRI complet)
 SELECT ?label ?rank WHERE {
   <https://ali-species.app/id/taxon/60577> rdfs:label ?label ;
                                            dwc:taxonRank ?rank .

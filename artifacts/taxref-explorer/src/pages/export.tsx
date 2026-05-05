@@ -10,6 +10,12 @@ interface ExportInfo {
   stats?: Record<string, string>;
 }
 
+interface SparqlStatus {
+  loaded: boolean;
+  triples?: number;
+  error?: string;
+}
+
 function fmtInt(n: string | number | undefined): string {
   if (n === undefined || n === null || n === "") return "—";
   const v = typeof n === "string" ? Number(n) : n;
@@ -86,6 +92,17 @@ export default function ExportPage() {
       return r.json();
     },
   });
+
+  const { data: sparqlStatus } = useQuery<SparqlStatus>({
+    queryKey: ["sparql-status"],
+    queryFn: async () => {
+      const r = await fetch("/api/sparql/status");
+      const j = await r.json();
+      return { ...j, loaded: r.ok && j.loaded === true };
+    },
+    retry: false,
+  });
+  const sparqlAvailable = sparqlStatus?.loaded === true;
 
   const ttlSize = info?.ttl?.sizeMb;
   const stats = info?.stats ?? {};
@@ -174,43 +191,72 @@ export default function ExportPage() {
             <Code2 className="w-5 h-5 text-primary" />
             {t("exportPage.sparqlHeading")}
           </h2>
-          <p className="text-sm text-muted-foreground mb-4">{t("exportPage.sparqlDesc")}</p>
 
-          <ul className="text-sm space-y-1.5 mb-4">
-            <li>
-              <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql</code>{" "}
-              — {t("exportPage.sparqlEndpoint")}
-            </li>
-            <li>
-              <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql/ui</code>{" "}
-              —{" "}
-              <a
-                href="/api/sparql/ui"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-dotted hover:text-foreground inline-flex items-center gap-1"
-              >
-                {t("exportPage.sparqlYasgui")}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </li>
-            <li>
-              <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql/status</code>{" "}
-              — {t("exportPage.sparqlStatus")}
-            </li>
-          </ul>
-
-          <details className="text-sm">
-            <summary className="cursor-pointer font-medium text-foreground hover:text-primary">
-              {t("exportPage.sparqlCurl")}
-            </summary>
-            <pre className="mt-2 bg-background border border-border rounded p-3 text-[11px] overflow-x-auto">
-{`curl -X POST https://ali-species.replit.app/api/sparql \\
+          {sparqlAvailable ? (
+            <>
+              <p className="text-sm text-muted-foreground mb-4">{t("exportPage.sparqlDesc")}</p>
+              <ul className="text-sm space-y-1.5 mb-4">
+                <li>
+                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql</code>{" "}
+                  — {t("exportPage.sparqlEndpoint")}
+                </li>
+                <li>
+                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql/ui</code>{" "}
+                  —{" "}
+                  <a
+                    href="/api/sparql/ui"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-dotted hover:text-foreground inline-flex items-center gap-1"
+                  >
+                    {t("exportPage.sparqlYasgui")}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </li>
+                <li>
+                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">/api/sparql/status</code>{" "}
+                  — {t("exportPage.sparqlStatus")}
+                </li>
+              </ul>
+              <details className="text-sm">
+                <summary className="cursor-pointer font-medium text-foreground hover:text-primary">
+                  {t("exportPage.sparqlCurl")}
+                </summary>
+                <pre className="mt-2 bg-background border border-border rounded p-3 text-[11px] overflow-x-auto">
+{`curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://ali-species.replit.app"}/api/sparql \\
   -H "Content-Type: application/sparql-query" \\
   -H "Accept: application/sparql-results+json" \\
   --data-binary 'SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10'`}
-            </pre>
-          </details>
+                </pre>
+              </details>
+            </>
+          ) : (
+            <>
+              <div className="mb-4 p-3 rounded-lg border border-amber-500/40 bg-amber-50/60 text-amber-900 text-sm">
+                <strong className="font-semibold">{t("exportPage.sparqlOfflineTitle")}</strong>{" "}
+                {t("exportPage.sparqlOfflineBody")}
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">{t("exportPage.sparqlLocalIntro")}</p>
+              <pre className="bg-background border border-border rounded-lg p-4 text-[11px] overflow-x-auto leading-relaxed">
+{`# 1. Installer Oxigraph
+brew install oxigraph
+# ou: cargo install oxigraph_server
+
+# 2. Télécharger le dump
+curl -LO ${typeof window !== "undefined" ? window.location.origin : "https://ali-species.replit.app"}/api/exports/rdf.ttl.gz
+
+# 3. Charger dans un store RocksDB local
+oxigraph_server load -l ./store --file ali-species-*.ttl.gz --format ttl
+
+# 4. Lancer l'endpoint SPARQL
+oxigraph_server serve -l ./store --bind 127.0.0.1:7878
+# → http://127.0.0.1:7878/query`}
+              </pre>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {t("exportPage.sparqlLocalAlts")}
+              </p>
+            </>
+          )}
         </section>
 
         {/* Schéma & vocabulaires */}
