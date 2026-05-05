@@ -334,6 +334,7 @@ export const fr = {
     dlButton: "Télécharger le dump RDF (Turtle gzippé)",
     dlStats: "Statistiques (CSV)",
     dlGenerated: "Dernière génération :",
+    loadError: "Impossible de charger les informations du dump.",
     statsHeading: "Contenu du graphe",
     statTaxons: "Taxons",
     statStatuses: "Statuts (BdC)",

@@ -78,7 +78,7 @@ export default function ExportPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.resolvedLanguage || "fr";
 
-  const { data: info } = useQuery<ExportInfo>({
+  const { data: info, isLoading, isError } = useQuery<ExportInfo>({
     queryKey: ["exports-info"],
     queryFn: async () => {
       const r = await fetch("/api/exports/info");
@@ -138,6 +138,12 @@ export default function ExportPage() {
             </a>
           </div>
 
+          {isLoading && (
+            <p className="mt-4 text-xs text-muted-foreground">{t("common.loading")}</p>
+          )}
+          {isError && (
+            <p className="mt-4 text-xs text-destructive">{t("exportPage.loadError")}</p>
+          )}
           {info?.ttl && (
             <p className="mt-4 text-xs text-muted-foreground">
               {t("exportPage.dlGenerated")} {fmtDate(info.ttl.mtime, lang)} ·{" "}

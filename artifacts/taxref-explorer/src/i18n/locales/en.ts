@@ -334,6 +334,7 @@ export const en = {
     dlButton: "Download RDF dump (gzipped Turtle)",
     dlStats: "Statistics (CSV)",
     dlGenerated: "Last generated:",
+    loadError: "Could not load dump information.",
     statsHeading: "Graph contents",
     statTaxons: "Taxa",
     statStatuses: "Statuses (BdC)",

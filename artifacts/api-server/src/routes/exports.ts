@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { createReadStream, statSync, existsSync, readFileSync } from "node:fs";
+import { createReadStream, statSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const router: IRouter = Router();
@@ -17,78 +17,108 @@ function findExportDir(): string | null {
   return null;
 }
 
-function findFile(name: string): string | null {
-  const dir = findExportDir();
-  if (!dir) return null;
-  const full = resolve(dir, name);
-  return existsSync(full) ? full : null;
+interface LatestDump {
+  dir: string;
+  ttlPath: string;
+  ttlName: string;
+  statsPath: string | null;
 }
 
-function findLatestTtlGz(): string | null {
+function findLatestDump(): LatestDump | null {
   const dir = findExportDir();
   if (!dir) return null;
+  let entries: string[];
   try {
-    const fs = require("node:fs") as typeof import("node:fs");
-    const entries = fs.readdirSync(dir).filter((n) => n.endsWith(".ttl.gz"));
-    if (entries.length === 0) return null;
-    entries.sort();
-    return resolve(dir, entries[entries.length - 1]);
+    entries = readdirSync(dir).filter((n) => n.endsWith(".ttl.gz"));
   } catch {
     return null;
   }
+  if (entries.length === 0) return null;
+  entries.sort();
+  const ttlName = entries[entries.length - 1];
+  const ttlPath = resolve(dir, ttlName);
+  // Couple stats by shared prefix: ali-species-<id>.ttl.gz ↔ ali-species-<id>.stats.csv
+  const statsName = ttlName.replace(/\.ttl\.gz$/, ".stats.csv");
+  const statsPath = resolve(dir, statsName);
+  return {
+    dir,
+    ttlPath,
+    ttlName,
+    statsPath: existsSync(statsPath) ? statsPath : null,
+  };
 }
 
 router.get("/exports/info", (_req, res) => {
-  const ttl = findLatestTtlGz();
-  const stats = findFile("ali-species-bdddeab.stats.csv");
-  const out: Record<string, unknown> = { available: !!ttl };
-  if (ttl) {
-    const s = statSync(ttl);
+  const latest = findLatestDump();
+  const out: Record<string, unknown> = { available: !!latest };
+  if (latest) {
+    const s = statSync(latest.ttlPath);
     out.ttl = {
-      filename: ttl.split("/").pop(),
+      filename: latest.ttlName,
       sizeBytes: s.size,
       sizeMb: Math.round((s.size / (1024 * 1024)) * 10) / 10,
       mtime: s.mtime.toISOString(),
       url: "/api/exports/rdf.ttl.gz",
     };
-  }
-  if (stats) {
-    const lines = readFileSync(stats, "utf8").trim().split("\n").slice(1);
-    const parsed: Record<string, string> = {};
-    for (const ln of lines) {
-      const [k, v] = ln.split(",");
-      if (k && v !== undefined) parsed[k] = v;
+    if (latest.statsPath) {
+      try {
+        const lines = readFileSync(latest.statsPath, "utf8").trim().split("\n").slice(1);
+        const parsed: Record<string, string> = {};
+        for (const ln of lines) {
+          const [k, v] = ln.split(",");
+          if (k && v !== undefined) parsed[k] = v;
+        }
+        out.stats = parsed;
+      } catch {
+        // stats unreadable — leave undefined
+      }
     }
-    out.stats = parsed;
   }
   res.json(out);
 });
 
-router.get("/exports/rdf.ttl.gz", (_req, res) => {
-  const file = findLatestTtlGz();
-  if (!file) {
+router.get("/exports/rdf.ttl.gz", (req, res) => {
+  const latest = findLatestDump();
+  if (!latest) {
     res.status(404).json({ error: "Dump RDF non disponible." });
     return;
   }
-  const s = statSync(file);
-  const filename = file.split("/").pop() ?? "ali-species.ttl.gz";
+  const s = statSync(latest.ttlPath);
   res.setHeader("Content-Type", "application/gzip");
   res.setHeader("Content-Length", s.size);
-  res.setHeader("Content-Encoding", "identity");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Disposition", `attachment; filename="${latest.ttlName}"`);
   res.setHeader("Cache-Control", "public, max-age=3600");
-  createReadStream(file).pipe(res);
+  const stream = createReadStream(latest.ttlPath);
+  stream.on("error", (err) => {
+    req.log?.error({ err }, "rdf dump stream error");
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erreur de lecture du dump." });
+    } else {
+      res.destroy(err);
+    }
+  });
+  stream.pipe(res);
 });
 
-router.get("/exports/stats.csv", (_req, res) => {
-  const file = findFile("ali-species-bdddeab.stats.csv");
-  if (!file) {
+router.get("/exports/stats.csv", (req, res) => {
+  const latest = findLatestDump();
+  if (!latest || !latest.statsPath) {
     res.status(404).json({ error: "Stats non disponibles." });
     return;
   }
+  const statsName = latest.statsPath.split("/").pop() ?? "ali-species-stats.csv";
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="ali-species-stats.csv"`);
-  createReadStream(file).pipe(res);
+  res.setHeader("Content-Disposition", `attachment; filename="${statsName}"`);
+  const stream = createReadStream(latest.statsPath);
+  stream.on("error", (err) => {
+    req.log?.error({ err }, "stats csv stream error");
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erreur de lecture des stats." });
+    } else {
+      res.destroy(err);
+    }
+  });
+  stream.pipe(res);
 });
 
 export default router;
