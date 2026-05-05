@@ -38,7 +38,7 @@ export function Layout({ children }: LayoutProps) {
             <Link href="/export" className="hover:text-foreground transition-colors" data-testid="link-export">{t("nav.export")}</Link>
             <Link href="/a-propos" className="hover:text-foreground transition-colors">{t("nav.about")}</Link>
             <Link
-              href="/a-propos#mcp"
+              href="/export#mcp"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
               data-testid="link-mcp-header"
             >

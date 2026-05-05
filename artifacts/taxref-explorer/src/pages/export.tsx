@@ -2,7 +2,8 @@ import { Layout } from "@/components/Layout";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Database, Download, ExternalLink, FileText, Network, Code2 } from "lucide-react";
+import { useState } from "react";
+import { Database, Download, ExternalLink, FileText, Network, Code2, Server, Sparkles, Copy, Check } from "lucide-react";
 
 interface ExportInfo {
   available: boolean;
@@ -83,6 +84,30 @@ LIMIT 30`,
 export default function ExportPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.resolvedLanguage || "fr";
+  const [mcpCopied, setMcpCopied] = useState(false);
+  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://ali-species.replit.app/api/mcp";
+  const handleCopyMcp = async () => {
+    try {
+      await navigator.clipboard.writeText(mcpUrl);
+      setMcpCopied(true);
+      setTimeout(() => setMcpCopied(false), 1800);
+    } catch {/* ignore */}
+  };
+
+  const REST_ENDPOINTS: ReadonlyArray<{ method: string; path: string; key: string }> = [
+    { method: "GET", path: "/api/taxons/search?q={query}", key: "search" },
+    { method: "GET", path: "/api/taxons/{cdNom}", key: "detail" },
+    { method: "GET", path: "/api/taxons/{cdNom}/classification", key: "classification" },
+    { method: "GET", path: "/api/taxons/{cdNom}/statuts", key: "statuts" },
+    { method: "GET", path: "/api/taxons/{cdNom}/interactions", key: "interactions" },
+    { method: "GET", path: "/api/taxons/{cdNom}/traits", key: "traits" },
+    { method: "GET", path: "/api/stats", key: "stats" },
+    { method: "POST", path: "/api/ask", key: "ask" },
+  ];
+
+  const MCP_TOOLS: ReadonlyArray<string> = [
+    "search_taxons", "get_taxon", "get_classification", "get_statuts", "get_breakdown", "get_interactions",
+  ];
 
   const { data: info, isLoading, isError } = useQuery<ExportInfo>({
     queryKey: ["exports-info"],
@@ -265,6 +290,93 @@ oxigraph_server serve -l ./store --bind 127.0.0.1:7878
               </p>
             </>
           )}
+        </section>
+
+        {/* API REST */}
+        <section className="mb-10">
+          <h2 className="text-xl font-serif font-semibold mb-2 flex items-center gap-2">
+            <Code2 className="w-5 h-5 text-primary" />
+            {t("exportPage.restHeading")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">{t("exportPage.restDesc")}</p>
+          <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+            {REST_ENDPOINTS.map((e) => (
+              <div key={e.path} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-4 py-2.5 text-sm hover:bg-muted/30">
+                <div className="flex items-center gap-2 sm:w-auto">
+                  <span className={`inline-block w-12 text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-center ${
+                    e.method === "GET" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
+                  }`}>
+                    {e.method}
+                  </span>
+                  <code className="font-mono text-xs text-foreground">{e.path}</code>
+                </div>
+                <span className="text-xs text-muted-foreground sm:ml-auto sm:text-right">
+                  {t(`exportPage.restEndpoints.${e.key}`)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Serveur MCP */}
+        <section id="mcp" className="mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5 scroll-mt-24">
+          <div className="flex items-center gap-3 mb-2">
+            <Server className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-serif font-semibold">{t("exportPage.mcpHeading")}</h2>
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+              <Sparkles className="w-3 h-3" />
+              {t("exportPage.mcpBadge")}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">{t("exportPage.mcpDesc")}</p>
+
+          <div className="mb-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+              {t("exportPage.mcpUrlLabel")}
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 font-mono text-xs sm:text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground overflow-x-auto whitespace-nowrap">
+                {mcpUrl}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopyMcp}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-muted/50 transition-colors text-xs font-medium shrink-0"
+              >
+                {mcpCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {mcpCopied ? t("exportPage.mcpCopied") : t("exportPage.mcpCopy")}
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              {t("exportPage.mcpToolsLabel")}
+            </div>
+            <ul className="space-y-1">
+              {MCP_TOOLS.map((tool) => {
+                const descKey =
+                  tool === "search_taxons" ? "search" :
+                  tool === "get_taxon" ? "get" :
+                  tool === "get_classification" ? "classification" :
+                  tool === "get_statuts" ? "statuts" :
+                  tool === "get_breakdown" ? "breakdown" :
+                  "interactions";
+                return (
+                  <li key={tool} className="text-sm flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                    <code className="font-mono text-xs text-primary bg-background border border-border rounded px-1.5 py-0.5 sm:w-44 shrink-0">
+                      {tool}
+                    </code>
+                    <span className="text-xs text-muted-foreground">
+                      {t(`exportPage.mcpTools.${descKey}`)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <p className="text-xs text-muted-foreground italic">{t("exportPage.mcpTransport")}</p>
         </section>
 
         {/* Schéma & vocabulaires */}
