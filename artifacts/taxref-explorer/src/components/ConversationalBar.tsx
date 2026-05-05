@@ -31,7 +31,11 @@ export function ConversationalBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { t, i18n } = useTranslation();
   const lang = i18n.resolvedLanguage || "fr";
-  const suggestions = (t("conversational.suggestions", { returnObjects: true }) as unknown as string[]) ?? [];
+  const suggestionGroups = (t("conversational.suggestions", { returnObjects: true }) as unknown as Record<string, string[]>) ?? {};
+  const levelLabels = (t("conversational.suggestionLevels", { returnObjects: true }) as unknown as Record<string, string>) ?? {};
+  const levelOrder: Array<"simple" | "complex" | "advanced"> = ["simple", "complex", "advanced"];
+  const [activeLevel, setActiveLevel] = useState<"simple" | "complex" | "advanced">("simple");
+  const activeSuggestions = suggestionGroups[activeLevel] ?? [];
 
   function pickSuggestion(s: string) {
     setInput(s);
@@ -117,18 +121,42 @@ export function ConversationalBar() {
       </form>
 
       {turns.length === 0 && !loading && (
-        <div className="mt-4 flex flex-wrap justify-center gap-2 px-2">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => pickSuggestion(s)}
-              className="text-xs px-3 py-1.5 rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
-              data-testid="button-suggestion"
-            >
-              {s}
-            </button>
-          ))}
+        <div className="mt-5 px-2">
+          <div className="flex justify-center gap-1 mb-3">
+            {levelOrder.map((lvl) => {
+              const isActive = activeLevel === lvl;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setActiveLevel(lvl)}
+                  className={
+                    "text-xs px-3 py-1 rounded-full border transition-colors " +
+                    (isActive
+                      ? "border-primary/60 bg-primary/10 text-foreground"
+                      : "border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40")
+                  }
+                  data-testid={`tab-suggestion-${lvl}`}
+                  aria-pressed={isActive}
+                >
+                  {levelLabels[lvl] ?? lvl}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {activeSuggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => pickSuggestion(s)}
+                className="text-xs px-3 py-1.5 rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                data-testid="button-suggestion"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
