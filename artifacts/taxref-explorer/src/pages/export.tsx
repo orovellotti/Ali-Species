@@ -140,6 +140,9 @@ export default function ExportPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <a
               href="/api/exports/rdf.ttl.gz"
+              download={info?.ttl?.filename ?? "ali-species.ttl.gz"}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
             >
               <Download className="w-4 h-4" />
@@ -148,6 +151,9 @@ export default function ExportPage() {
             </a>
             <a
               href="/api/exports/stats.csv"
+              download
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors text-sm"
             >
               <FileText className="w-4 h-4" />
