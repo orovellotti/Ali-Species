@@ -97,6 +97,7 @@ The full graph (TAXREF v18 + BdC Statuts + traits + Wikidata mappings + GloBI in
   3. Restart the `oxigraph-server` workflow.
 - **Public download endpoints** (`artifacts/api-server/src/routes/exports.ts`): autodiscover the latest `ali-species-<sha>.ttl.gz` in `exports/`, couple stats CSV by shared `<sha>` prefix, stream with proper `Content-Length` + error handling. No user-supplied filename → no path-traversal vector.
 - **Autoscale-aware degradation**: SPARQL routes (`/api/sparql`, `/api/sparql/ui`) detect Oxigraph reachability and return a clean 503 / instructions page when the triplestore isn't running (the case in the published autoscale deployment, since `oxigraph-server` is a separate dev-only workflow). The `/export` page mirrors this on the frontend.
+- **Iframe-safe download trigger**: the `/export` download buttons use a programmatic `window.open(absoluteUrl, "_blank", "noopener")` from a click handler instead of an `<a href download target=_top>`. Reason: when the app is viewed inside the Replit canvas wrapper iframe (`__replco/workspace_iframe.html`), `<a>` link navigation toward a binary gets intercepted/aborted by the wrapper after ~200 ms, producing 0-byte files. `window.open` creates a fresh top-level browsing context that bypasses the wrapper entirely. Server still sets `Content-Disposition: attachment` so the new tab triggers a download and closes itself.
 - **License**: CC-BY 4.0. The Sources and `/export` pages document the dataset and link to `/api/sparql/ui`.
 
 ## Key Commands
