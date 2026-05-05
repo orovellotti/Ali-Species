@@ -256,6 +256,58 @@ expliquant comment **lancer Oxigraph en local en 30 secondes** à
 partir du fichier téléchargé. Le téléchargement, lui, reste toujours
 disponible.
 
+**Téléchargement du dump en production : redirect vers Object Storage.**
+Le déploiement « autoscale » de Replit (Google Cloud Run) plafonne
+les réponses HTTP à **32 Mo**, alors que le dump RDF fait ~103 Mo.
+On contourne en hébergeant le dump dans **Replit Object Storage**
+(bucket GCS managé, gratuit). En prod, la route
+`GET /api/exports/rdf.ttl.gz` ne streame pas le fichier : elle
+**génère une URL signée GCS valide 15 min** et renvoie un
+**302 redirect** vers cette URL. Le navigateur télécharge alors le
+fichier directement depuis Google Storage, sans passer par notre
+serveur — donc plus de limite 32 Mo. En dev (NODE_ENV !==
+production), on continue à streamer le fichier local depuis
+`exports/`. Idem pour `stats.csv`.
+
+Pour **re-uploader le dump** après un rebuild :
+
+```javascript
+// dans le sandbox code_execution
+const { Storage } = await import(
+  '/home/runner/workspace/artifacts/api-server/node_modules/@google-cloud/storage/build/cjs/src/index.js'
+);
+const SIDECAR = "http://127.0.0.1:1106";
+const storage = new Storage({
+  credentials: {
+    audience: "replit", subject_token_type: "access_token",
+    token_url: `${SIDECAR}/token`, type: "external_account",
+    credential_source: { url: `${SIDECAR}/credential`,
+      format: { type: "json", subject_token_field_name: "access_token" } },
+    universe_domain: "googleapis.com",
+  }, projectId: "",
+});
+const bucket = storage.bucket("replit-objstore-1443f6c5-9b32-4e56-ab45-7ffc7b63ff31");
+await bucket.upload('/home/runner/workspace/exports/ali-species-<sha>.ttl.gz', {
+  destination: 'public/exports/ali-species-<sha>.ttl.gz',
+  metadata: {
+    contentType: 'application/gzip',
+    contentDisposition: 'attachment; filename="ali-species-<sha>.ttl.gz"',
+    cacheControl: 'public, max-age=86400',
+  }, resumable: true,
+});
+await bucket.upload('/home/runner/workspace/exports/ali-species-<sha>.stats.csv', {
+  destination: 'public/exports/ali-species-<sha>.stats.csv',
+  metadata: {
+    contentType: 'text/csv; charset=utf-8',
+    contentDisposition: 'attachment; filename="ali-species-<sha>.stats.csv"',
+    cacheControl: 'public, max-age=86400',
+  },
+});
+```
+
+Le nom d'objet GCS doit correspondre exactement au nom du dump
+local trouvé par `findLatestDump()` dans `exports.ts`.
+
 **Astuce technique sur le bouton de téléchargement.** Quand l'app est
 visualisée dans la prévisualisation Replit (qui l'embarque dans une
 iframe), un simple lien `<a href>` vers un gros fichier est intercepté

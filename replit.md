@@ -47,7 +47,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `GET /api/sparql/ui` — YASGUI SPARQL client; auto-falls back to a static "run Oxigraph locally" instructions page when upstream is down
 - `GET /api/sparql/status` — Triplestore reachability + triple count
 - `GET /api/exports/info` — JSON metadata about the latest RDF dump (filename, size, mtime, parsed stats CSV)
-- `GET /api/exports/rdf.ttl.gz` — Streams the latest gzipped Turtle dump (~103 MB, 17.27M triples)
+- `GET /api/exports/rdf.ttl.gz` — Latest gzipped Turtle dump (~103 MB, 17.27M triples). En **dev** : streamé localement depuis `exports/`. En **prod** (NODE_ENV=production) : **302 redirect vers une URL signée GCS** (15 min) — bypass de la limite Cloud Run de 32 MB. Fichier hébergé dans le bucket Replit Object Storage sous `public/exports/`. Re-upload via le snippet `code_execution` dans `docs/ARCHITECTURE.md` après chaque rebuild du dump.
 - `GET /api/exports/stats.csv` — Streams the stats CSV coupled to the same dump (shared `<sha>` prefix)
 
 ### Frontend Pages

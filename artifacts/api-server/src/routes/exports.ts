@@ -1,8 +1,38 @@
 import { Router, type IRouter } from "express";
 import { createReadStream, statSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { signObjectURL, getDefaultBucket } from "../lib/objectStorageClient.js";
 
 const router: IRouter = Router();
+
+// In production (Cloud Run / autoscale), responses are capped at 32 MB by GFE
+// so we cannot stream the 103 MB dump directly. Instead we redirect to a
+// freshly-signed GCS URL — the browser downloads straight from Google Storage.
+const USE_GCS_REDIRECT = process.env.NODE_ENV === "production";
+const GCS_OBJECT_PREFIX = "public/exports";
+
+async function tryRedirectToGcs(
+  objectName: string,
+  res: Parameters<Parameters<IRouter["get"]>[1]>[1],
+  log?: { error: (obj: unknown, msg?: string) => void },
+): Promise<boolean> {
+  if (!USE_GCS_REDIRECT) return false;
+  const bucket = getDefaultBucket();
+  if (!bucket) return false;
+  try {
+    const url = await signObjectURL({
+      bucketName: bucket,
+      objectName: `${GCS_OBJECT_PREFIX}/${objectName}`,
+      method: "GET",
+      ttlSec: 900,
+    });
+    res.redirect(302, url);
+    return true;
+  } catch (err) {
+    log?.error({ err }, "GCS sign URL failed, falling back to local stream");
+    return false;
+  }
+}
 
 function findExportDir(): string | null {
   const candidates = [
@@ -77,8 +107,10 @@ router.get("/exports/info", (_req, res) => {
   res.json(out);
 });
 
-router.get("/exports/rdf.ttl.gz", (req, res) => {
+router.get("/exports/rdf.ttl.gz", async (req, res) => {
   const latest = findLatestDump();
+  const objectName = latest?.ttlName ?? "ali-species-bdddeab.ttl.gz";
+  if (await tryRedirectToGcs(objectName, res, req.log)) return;
   if (!latest) {
     res.status(404).json({ error: "Dump RDF non disponible." });
     return;
@@ -100,12 +132,14 @@ router.get("/exports/rdf.ttl.gz", (req, res) => {
   stream.pipe(res);
 });
 
-router.get("/exports/stats.csv", (req, res) => {
+router.get("/exports/stats.csv", async (req, res) => {
   const latest = findLatestDump();
   if (!latest || !latest.statsPath) {
     res.status(404).json({ error: "Stats non disponibles." });
     return;
   }
+  const objectName = latest.statsPath.split("/").pop() ?? "stats.csv";
+  if (await tryRedirectToGcs(objectName, res, req.log)) return;
   const statsName = latest.statsPath.split("/").pop() ?? "ali-species-stats.csv";
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${statsName}"`);
