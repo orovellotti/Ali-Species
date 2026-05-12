@@ -2,12 +2,22 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
+import { sql, eq, and, ilike, or, desc, asc, ne, type SQL } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 import { getInteractionsForCdNom } from "./interactions.js";
 import { getTraitsForCdNom } from "./taxons.js";
 import { runStatusBreakdown } from "../lib/breakdown.js";
 import { runQuery } from "../lib/query.js";
+import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
+
+const SPARQL_UPSTREAM = process.env.OXIGRAPH_HTTP ?? "http://127.0.0.1:9000";
+
+interface DbRows<T> { rows?: T[] }
+function rowsOf<T>(res: unknown): T[] {
+  const r = res as DbRows<T> | T[];
+  if (Array.isArray(r)) return r;
+  return r.rows ?? [];
+}
 
 const REGNE_ENUM = z.enum([
   "Animalia", "Plantae", "Fungi", "Chromista",
@@ -24,7 +34,7 @@ function notFound(message: string) {
 
 function buildServer(): McpServer {
   const server = new McpServer(
-    { name: "ali-species-mcp", version: "1.2.0" },
+    { name: "ali-species-mcp", version: "1.3.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -420,6 +430,267 @@ function buildServer(): McpServer {
         });
       } catch {
         return toJson({ gbifKey: null, error: "GBIF unreachable" });
+      }
+    },
+  );
+
+  // ─────────────────────────────────────────────────────────────────
+  // Navigation taxonomique additionnelle
+  // ─────────────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "get_parent",
+    {
+      title: "Taxon parent direct",
+      description:
+        "Retourne le taxon parent direct (cdSup) d'un taxon donné. Utile pour remonter d'une espèce vers son genre, d'un genre vers sa famille, etc.",
+      inputSchema: { cdNom: z.number().int().describe("cdNom du taxon enfant") },
+    },
+    async ({ cdNom }) => {
+      const [child] = await db
+        .select({ cdSup: taxonsTable.cdSup, lbNom: taxonsTable.lbNom })
+        .from(taxonsTable)
+        .where(eq(taxonsTable.cdNom, cdNom));
+      if (!child) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
+      if (!child.cdSup) return toJson({ parent: null, note: `${child.lbNom} n'a pas de parent (taxon racine).` });
+      const [parent] = await db
+        .select({
+          cdNom: taxonsTable.cdNom,
+          lbNom: taxonsTable.lbNom,
+          nomVern: taxonsTable.nomVern,
+          rang: taxonsTable.rang,
+          regne: taxonsTable.regne,
+          classe: taxonsTable.classe,
+          famille: taxonsTable.famille,
+        })
+        .from(taxonsTable)
+        .where(eq(taxonsTable.cdNom, child.cdSup));
+      return toJson({ parent: parent ?? null });
+    },
+  );
+
+  server.registerTool(
+    "get_synonyms",
+    {
+      title: "Synonymes d'un taxon",
+      description:
+        "Retourne tous les synonymes (autres dénominations TAXREF) du taxon valide associé à ce cdNom. Très utile pour comprendre l'historique nomenclatural d'une espèce. Le taxon de référence (cdRef) est exclu de la liste.",
+      inputSchema: { cdNom: z.number().int() },
+    },
+    async ({ cdNom }) => {
+      const [t] = await db
+        .select({ cdRef: taxonsTable.cdRef, lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide })
+        .from(taxonsTable)
+        .where(eq(taxonsTable.cdNom, cdNom));
+      if (!t) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
+      const synonyms = await db
+        .select({
+          cdNom: taxonsTable.cdNom,
+          lbNom: taxonsTable.lbNom,
+          lbAuteur: taxonsTable.lbAuteur,
+          nomComplet: taxonsTable.nomComplet,
+          rang: taxonsTable.rang,
+        })
+        .from(taxonsTable)
+        .where(and(eq(taxonsTable.cdRef, t.cdRef), ne(taxonsTable.cdNom, t.cdRef)))
+        .orderBy(asc(taxonsTable.lbNom));
+      return toJson({
+        cdRef: t.cdRef,
+        nomValide: t.nomValide,
+        synonymsCount: synonyms.length,
+        synonyms,
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_taxonomic_facets",
+    {
+      title: "Lister les valeurs distinctes d'un rang taxonomique",
+      description:
+        "Liste les valeurs possibles d'un rang taxonomique (regne, phylum, classe, ordre, famille, groupe2Inpn) avec le nombre d'espèces associées. Filtres parents optionnels (par exemple : famille=Felidae,classe=Mammalia donne uniquement les genres de cette famille). Idéal pour proposer un autocomplete avant d'appeler query_taxa.",
+      inputSchema: {
+        facet: z.enum(["regne", "phylum", "classe", "ordre", "famille", "groupe2Inpn"])
+          .describe("Rang/colonne dont on veut lister les valeurs distinctes"),
+        regne: z.string().optional(),
+        classe: z.string().optional(),
+        ordre: z.string().optional(),
+        famille: z.string().optional(),
+        rang: z.string().optional().describe("Restreindre le décompte à un rang (par défaut ES = espèces)"),
+        limit: z.number().int().min(1).max(500).optional(),
+      },
+    },
+    async ({ facet, regne, classe, ordre, famille, rang, limit }) => {
+      const colMap: Record<string, string> = {
+        regne: "regne", phylum: "phylum", classe: "classe", ordre: "ordre",
+        famille: "famille", groupe2Inpn: "group2_inpn",
+      };
+      const col = colMap[facet];
+      const rangValue = rang ?? "ES";
+      const conds: SQL[] = [
+        sql`${sql.raw(col)} IS NOT NULL`,
+        sql`${sql.raw(col)} != ''`,
+        sql`rang = ${rangValue}`,
+        sql`cd_nom = cd_ref`,
+      ];
+      if (regne) conds.push(sql`regne = ${regne}`);
+      if (classe) conds.push(sql`classe = ${classe}`);
+      if (ordre) conds.push(sql`ordre = ${ordre}`);
+      if (famille) conds.push(sql`famille = ${famille}`);
+      const lim = Math.min(Math.max(limit ?? 200, 1), 500);
+      const rows = await db.execute(sql`
+        SELECT ${sql.raw(col)} AS value, COUNT(*)::int AS taxa
+        FROM taxons
+        WHERE ${sql.join(conds, sql` AND `)}
+        GROUP BY 1
+        ORDER BY 2 DESC, 1 ASC
+        LIMIT ${lim}
+      `);
+      return toJson({ facet, rang: rangValue, items: rowsOf<{ value: string; taxa: number }>(rows) });
+    },
+  );
+
+  // ─────────────────────────────────────────────────────────────────
+  // Statistiques & traits
+  // ─────────────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "get_global_stats",
+    {
+      title: "Statistiques globales du graphe",
+      description:
+        "Vue d'ensemble du graphe ALI Species : nombre total de fiches TAXREF, espèces / genres / familles distincts, répartition par règne, et nombre total de lignes BdC Statuts. Utile pour planter le décor avant un échange.",
+      inputSchema: {},
+    },
+    async () => {
+      const overviewRes = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_records,
+          COUNT(DISTINCT cd_ref)::int AS distinct_taxa,
+          COUNT(*) FILTER (WHERE rang = 'ES' AND cd_nom = cd_ref)::int AS species,
+          COUNT(*) FILTER (WHERE rang = 'GN' AND cd_nom = cd_ref)::int AS genera,
+          COUNT(*) FILTER (WHERE rang = 'FM' AND cd_nom = cd_ref)::int AS families
+        FROM taxons
+      `);
+      const byRegneRes = await db.execute(sql`
+        SELECT regne, COUNT(*) FILTER (WHERE rang = 'ES' AND cd_nom = cd_ref)::int AS species
+        FROM taxons
+        WHERE regne IS NOT NULL AND regne != ''
+        GROUP BY regne
+        ORDER BY species DESC
+      `);
+      const statutsRes = await db.execute(sql`SELECT COUNT(*)::int AS rows FROM bdc_statuts`);
+      return toJson({
+        overview: rowsOf<Record<string, number>>(overviewRes)[0] ?? null,
+        speciesByRegne: rowsOf<{ regne: string; species: number }>(byRegneRes),
+        bdcStatuts: rowsOf<{ rows: number }>(statutsRes)[0] ?? null,
+      });
+    },
+  );
+
+  server.registerTool(
+    "query_traits",
+    {
+      title: "Recherche d'espèces par traits biologiques",
+      description:
+        "Recherche d'espèces dans les bases de traits scientifiques (PanTHERIA mammifères, AVONET oiseaux, AmphiBIO amphibiens). Permet de filtrer par valeur numérique (min/max), texte, et de croiser avec des filtres taxonomiques + statuts + territoire. Exemple : mammifères pesant plus de 100 kg → source=pantheria, traitKey=adultBodyMass, minValue=100000 (en grammes). Utiliser get_trait_keys pour découvrir les clés disponibles par source.",
+      inputSchema: {
+        source: z.enum(["pantheria", "avonet", "amphibio"])
+          .describe("Base de traits : pantheria (mammifères), avonet (oiseaux), amphibio (amphibiens)"),
+        traitKey: z.string().optional()
+          .describe("Identifiant du trait (ex: adultBodyMass, mass, longevity). Voir get_trait_keys."),
+        minValue: z.number().optional()
+          .describe("Valeur numérique minimale (unité native du trait, voir get_trait_keys)"),
+        maxValue: z.number().optional()
+          .describe("Valeur numérique maximale"),
+        valueContains: z.string().optional()
+          .describe("Filtre texte sur la valeur formatée (utile pour les traits catégoriels)"),
+        sortBy: z.enum(["value_asc", "value_desc", "name"]).optional()
+          .describe("Tri : par valeur croissante/décroissante (nécessite traitKey numérique) ou par nom"),
+        regne: z.string().optional(),
+        classe: z.string().optional(),
+        ordre: z.string().optional(),
+        famille: z.string().optional(),
+        groupe2Inpn: z.string().optional(),
+        statutType: z.string().optional().describe("Croiser avec un statut (ex: PN, LRN)"),
+        statutCode: z.string().optional().describe("Code du statut (ex: VU, EN, CR)"),
+        cdSig: z.string().optional().describe("Code SIG d'un territoire"),
+        limit: z.number().int().min(1).max(30).optional(),
+      },
+    },
+    async (input) => {
+      const result = await runTraitQuery(input);
+      return toJson(result);
+    },
+  );
+
+  server.registerTool(
+    "get_trait_keys",
+    {
+      title: "Liste des clés de traits disponibles par source",
+      description:
+        "Retourne, pour chaque base de traits (PanTHERIA, AVONET, AmphiBIO), la liste des clés de traits disponibles (adultBodyMass, wingLen, longevity…). À appeler avant query_traits pour découvrir les filtres possibles.",
+      inputSchema: {
+        source: z.enum(["pantheria", "avonet", "amphibio"]).optional()
+          .describe("Si fourni, ne retourne que les clés de cette source"),
+      },
+    },
+    async ({ source }) => {
+      if (source) return toJson({ source, keys: TRAIT_KEYS[source] });
+      return toJson({
+        pantheria: TRAIT_KEYS.pantheria,
+        avonet: TRAIT_KEYS.avonet,
+        amphibio: TRAIT_KEYS.amphibio,
+      });
+    },
+  );
+
+  // ─────────────────────────────────────────────────────────────────
+  // SPARQL (graphe RDF complet)
+  // ─────────────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "run_sparql",
+    {
+      title: "Exécuter une requête SPARQL sur le graphe ALI Species",
+      description:
+        "Exécute une requête SPARQL 1.1 (SELECT, ASK, CONSTRUCT, DESCRIBE) contre le triplestore Oxigraph qui héberge l'intégralité du graphe RDF (TAXREF v18, BdC Statuts, traits, mappings Wikidata, interactions GloBI). Vocabulaires : Darwin Core, SKOS, OWL, Relations Ontology, DCTERMS. Préfixes URI : `https://ali-species.app/id/` (instances) et `https://ali-species.app/vocab/` (propriétés). Note : si le serveur Oxigraph n'est pas disponible (déploiement autoscale sans triplestore), un message clair est retourné — le dump RDF reste téléchargeable pour exécution locale.",
+      inputSchema: {
+        query: z.string().min(10).describe("Requête SPARQL complète (incluant les PREFIX nécessaires)"),
+        format: z.enum(["json", "xml", "csv"]).optional().default("json")
+          .describe("Format de réponse pour les SELECT/ASK (par défaut json)"),
+      },
+    },
+    async ({ query, format }) => {
+      const acceptMap: Record<string, string> = {
+        json: "application/sparql-results+json",
+        xml: "application/sparql-results+xml",
+        csv: "text/csv",
+      };
+      const accept = acceptMap[format ?? "json"];
+      try {
+        const r = await fetch(`${SPARQL_UPSTREAM}/query`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sparql-query",
+            Accept: accept,
+          },
+          body: query,
+        });
+        if (!r.ok) {
+          const txt = await r.text();
+          return notFound(`SPARQL upstream ${r.status}: ${txt.slice(0, 800)}`);
+        }
+        if (format === "json" || !format) {
+          const json = await r.json();
+          return toJson(json);
+        }
+        const text = await r.text();
+        return { content: [{ type: "text" as const, text }] };
+      } catch (err) {
+        return notFound(
+          `Endpoint SPARQL indisponible (${(err as Error).message}). Le triplestore Oxigraph n'est pas démarré dans cet environnement (typique d'un déploiement autoscale). Le dump RDF complet reste téléchargeable depuis /api/exports/rdf.ttl.gz pour exécution SPARQL locale.`,
+        );
       }
     },
   );

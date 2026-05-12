@@ -105,8 +105,24 @@ export default function ExportPage() {
     { method: "POST", path: "/api/ask", key: "ask" },
   ];
 
-  const MCP_TOOLS: ReadonlyArray<string> = [
-    "search_taxons", "get_taxon", "get_classification", "get_statuts", "get_breakdown", "get_interactions",
+  const MCP_GROUPS: ReadonlyArray<{ titleKey: string; tools: ReadonlyArray<string> }> = [
+    { titleKey: "exportPage.mcpGroupSearch", tools: [
+      "search_taxons", "query_taxa", "get_taxon", "get_classification",
+      "get_children", "get_parent", "get_synonyms", "get_random_species",
+      "list_taxonomic_facets",
+    ] },
+    { titleKey: "exportPage.mcpGroupStatuts", tools: [
+      "get_statuts", "status_breakdown", "list_status_types", "list_territoires",
+    ] },
+    { titleKey: "exportPage.mcpGroupTraits", tools: [
+      "get_global_stats", "query_traits", "get_trait_keys", "get_traits",
+    ] },
+    { titleKey: "exportPage.mcpGroupEnrich", tools: [
+      "get_interactions", "get_wikipedia", "get_gbif",
+    ] },
+    { titleKey: "exportPage.mcpGroupSparql", tools: [
+      "run_sparql",
+    ] },
   ];
 
   const { data: info, isLoading, isError } = useQuery<ExportInfo>({
@@ -351,29 +367,32 @@ oxigraph_server serve -l ./store --bind 127.0.0.1:7878
 
           <div className="mb-4">
             <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-              {t("exportPage.mcpToolsLabel")}
+              {t("exportPage.mcpToolsLabel")}{" "}
+              <span className="text-muted-foreground/70 normal-case tracking-normal">
+                ({MCP_GROUPS.reduce((n, g) => n + g.tools.length, 0)})
+              </span>
             </div>
-            <ul className="space-y-1">
-              {MCP_TOOLS.map((tool) => {
-                const descKey =
-                  tool === "search_taxons" ? "search" :
-                  tool === "get_taxon" ? "get" :
-                  tool === "get_classification" ? "classification" :
-                  tool === "get_statuts" ? "statuts" :
-                  tool === "get_breakdown" ? "breakdown" :
-                  "interactions";
-                return (
-                  <li key={tool} className="text-sm flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-                    <code className="font-mono text-xs text-primary bg-background border border-border rounded px-1.5 py-0.5 sm:w-44 shrink-0">
-                      {tool}
-                    </code>
-                    <span className="text-xs text-muted-foreground">
-                      {t(`exportPage.mcpTools.${descKey}`)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-4">
+              {MCP_GROUPS.map((group) => (
+                <div key={group.titleKey}>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                    {t(group.titleKey)}
+                  </div>
+                  <ul className="space-y-1">
+                    {group.tools.map((tool) => (
+                      <li key={tool} className="text-sm flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                        <code className="font-mono text-xs text-primary bg-background border border-border rounded px-1.5 py-0.5 sm:w-44 shrink-0">
+                          {tool}
+                        </code>
+                        <span className="text-xs text-muted-foreground">
+                          {t(`exportPage.mcpTools.${tool}`)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground italic">{t("exportPage.mcpTransport")}</p>

@@ -42,7 +42,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `GET /api/taxons/:cdNom/traits` — Merged trait payload (DB-cached static sources + live Wikidata)
 - `GET /api/taxons/:cdNom/interactions` — GloBI biotic interactions (eats / eaten by / parasite of / etc.)
 - `POST /api/ask` — Natural-language agent (LLM-backed) that composes queries against `query_taxons`, `query_traits`, `get_taxon`, `get_statuts`, `get_interactions`, `get_traits`, `get_wikipedia`, `get_gbif` tools
-- `GET /api/mcp` — MCP server endpoint exposing 14 tools to AI assistants (Claude, etc.)
+- `GET /api/mcp` — MCP server endpoint (v1.3.0) exposing **21 tools** to AI assistants (Claude, Cursor, ChatGPT…), grouped in 5 families: search/navigation (search_taxons, query_taxa, get_taxon, get_classification, get_children, get_parent, get_synonyms, get_random_species, list_taxonomic_facets), statuses (get_statuts, status_breakdown, list_status_types, list_territoires), stats & traits (get_global_stats, query_traits, get_trait_keys, get_traits), external enrichments (get_interactions, get_wikipedia, get_gbif), and SPARQL (run_sparql proxied to Oxigraph upstream with clear degradation message when the triplestore is unavailable in autoscale prod).
 - `GET /api/sparql` (and `POST`) — SPARQL 1.1 endpoint, proxied to Oxigraph; returns **503 with local-setup hint** when Oxigraph is unavailable (e.g. in autoscale prod)
 - `GET /api/sparql/ui` — YASGUI SPARQL client; auto-falls back to a static "run Oxigraph locally" instructions page when upstream is down
 - `GET /api/sparql/status` — Triplestore reachability + triple count
@@ -124,7 +124,7 @@ The `species_traits` table (PK = `cd_nom` + `source`) caches per-species traits 
 - **AmphiBIO** (Amphibia, ~193 species, 14-trait blocks) — Oliveira et al. 2017, Scientific Data 4:170123, CC-BY 4.0.
 - **SquamBase** — registered in source registry; data ingestion pending an open download URL for the Wiley supplementary materials.
 
-The merged trait payload is also exposed to MCP clients via the `get_traits` tool (alongside `get_taxon`, `get_statuts`, `get_interactions`, `get_wikipedia`, `get_gbif`, etc.) — 14 tools total on the MCP server (`/api/mcp`).
+The merged trait payload is also exposed to MCP clients via the `get_traits` tool (alongside `get_taxon`, `get_statuts`, `get_interactions`, `get_wikipedia`, `get_gbif`, etc.) — **21 tools total** on the MCP server (`/api/mcp`, v1.3.0). For trait-based discovery, MCP clients can also call `query_traits` (e.g. mammals heavier than 100 kg → source=pantheria, traitKey=adultBodyMass, minValue=100000) after listing available trait keys with `get_trait_keys`.
 
 ## Database Schema
 
