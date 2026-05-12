@@ -80,10 +80,11 @@ export async function runQuery(
     // substring (vernacular names are often multi-word).
     if (/^[\p{L}\-]+$/u.test(raw)) {
       const escaped = raw.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-      conds.push(sql`(t.lb_nom ~* ${'\\m' + escaped + '\\M'} OR t.nom_vern ~* ${'\\m' + escaped + '\\M'})`);
+      const re = '\\m' + escaped + '\\M';
+      conds.push(sql`(unaccent(t.lb_nom) ~* unaccent(${re}) OR unaccent(t.nom_vern) ~* unaccent(${re}))`);
     } else {
       const pat = `%${raw}%`;
-      conds.push(sql`(t.lb_nom ILIKE ${pat} OR t.nom_vern ILIKE ${pat})`);
+      conds.push(sql`(unaccent(t.lb_nom) ILIKE unaccent(${pat}) OR unaccent(t.nom_vern) ILIKE unaccent(${pat}))`);
     }
   }
   // The taxons table has no `genre` column — derive it from lb_nom prefix.

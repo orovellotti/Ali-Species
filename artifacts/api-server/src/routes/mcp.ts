@@ -59,7 +59,12 @@ function buildServer(): McpServer {
     async ({ query, regne, limit }) => {
       const pattern = `%${query}%`;
       const lim = Math.min(Math.max(limit ?? 20, 1), 50);
-      const filters = [or(ilike(taxonsTable.lbNom, pattern), ilike(taxonsTable.nomVern, pattern))];
+      const filters = [
+        or(
+          sql`unaccent(${taxonsTable.lbNom}) ILIKE unaccent(${pattern})`,
+          sql`unaccent(${taxonsTable.nomVern}) ILIKE unaccent(${pattern})`,
+        ),
+      ];
       if (regne) filters.push(eq(taxonsTable.regne, regne));
       const rows = await db
         .select({
@@ -73,7 +78,7 @@ function buildServer(): McpServer {
         })
         .from(taxonsTable)
         .where(and(...filters))
-        .orderBy(desc(sql`CASE WHEN ${taxonsTable.lbNom} ILIKE ${query + "%"} THEN 1 ELSE 0 END`))
+        .orderBy(desc(sql`CASE WHEN unaccent(${taxonsTable.lbNom}) ILIKE unaccent(${query + "%"}) THEN 1 ELSE 0 END`))
         .limit(lim);
       return toJson(rows);
     },

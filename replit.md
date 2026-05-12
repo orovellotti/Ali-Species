@@ -26,6 +26,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - Import script: `scripts/src/import-taxref.ts`
 - Source data: `data/TAXREFv18.txt`, `data/bdc_18_01.csv`
 - Trigram indexes (pg_trgm) for fast ILIKE search
+- `unaccent` extension : la recherche normalise les accents des deux côtés (`unaccent(col) ILIKE unaccent(pat)`) pour que "mesange" matche "Mésange". Appliqué dans `/api/taxons/search`, MCP `search_taxons` et `lib/query.ts` (agent conversationnel).
 
 ### API Endpoints
 - `GET /api/taxons/search?q=...&regne=...&limit=...` — Autocomplete search by scientific or vernacular name

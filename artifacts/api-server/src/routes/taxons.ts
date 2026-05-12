@@ -82,8 +82,12 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
 
   const pattern = `%${q}%`;
 
+  // Unaccent on both sides so "mesange" matches "Mésange", "ile" matches "Île", etc.
   const conds: any[] = [
-    or(ilike(taxonsTable.lbNom, pattern), ilike(taxonsTable.nomVern, pattern)),
+    or(
+      sql`unaccent(${taxonsTable.lbNom}) ILIKE unaccent(${pattern})`,
+      sql`unaccent(${taxonsTable.nomVern}) ILIKE unaccent(${pattern})`,
+    ),
   ];
   if (regne) conds.push(sql`${taxonsTable.regne} = ${regne}`);
   if (territoire) {
