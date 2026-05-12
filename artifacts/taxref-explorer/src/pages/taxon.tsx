@@ -704,8 +704,12 @@ export default function TaxonDetail() {
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-semibold ${sensitivity.color}`}>{sensitivity.label}</div>
                   <div className="flex flex-wrap gap-1.5 mt-1">
-                    {sensitivity.drivers.slice(0, 4).map((d, i) => (
-                      <span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${d.badgeClass}`}>
+                    {sensitivity.drivers.slice(0, 6).map((d, i) => (
+                      <span
+                        key={i}
+                        title={d.title || d.label}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${d.badgeClass}`}
+                      >
                         {d.label}
                       </span>
                     ))}
@@ -1165,7 +1169,7 @@ interface SensitivityResult {
   bgColor: string;
   borderColor: string;
   ringColor: string;
-  drivers: { label: string; badgeClass: string; code?: string }[];
+  drivers: { label: string; badgeClass: string; code?: string; title?: string }[];
   explanations: string[];
   inconsistencies: string[];
   missingData: string[];
@@ -1192,10 +1196,18 @@ function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
   const inconsistencies: string[] = [];
   const missingData: string[] = [];
 
+  // Per-statut accumulators so badges reflect each actual entry (type + territory)
+  const redListEntries: { type: string; code: string; territory: string; score: number }[] = [];
+  const protectionEntries: { type: string; territory: string }[] = [];
+  const directiveEntries: { type: string }[] = [];
+  const znieffTerritories: string[] = [];
+  const pnaEntries: { type: string }[] = [];
+
   for (const s of statuts) {
     const group = s.regroupementType || "";
     const code = s.codeStatut || "";
     const type = s.cdTypeStatut || "";
+    const territory = s.lbAdmTr || "";
 
     if (group === "Liste rouge") {
       hasRedList = true;
@@ -1204,6 +1216,10 @@ function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
         bestRedList = score;
         bestRedListCode = code;
       }
+      if (score >= 0.6) {
+        const dup = redListEntries.some(e => e.type === type && e.code === code && e.territory === territory);
+        if (!dup) redListEntries.push({ type, code, territory, score });
+      }
     } else if (group === "Protection") {
       hasProtection = true;
       if (type === "PN") protectionScore = Math.max(protectionScore, 1.0);
@@ -1211,19 +1227,23 @@ function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       else if (type === "PD") protectionScore = Math.max(protectionScore, 0.7);
       else if (type === "POM") protectionScore = Math.max(protectionScore, 0.9);
       else protectionScore = Math.max(protectionScore, 0.5);
+      protectionEntries.push({ type, territory });
     } else if (group === "Directives européennes") {
       hasDirective = true;
       directiveScore = Math.max(directiveScore, 0.8);
+      directiveEntries.push({ type });
     } else if (group === "Conventions internationales") {
       hasConvention = true;
       conventionScore = Math.max(conventionScore, 0.7);
     } else if (group === "ZNIEFF") {
       hasZnieff = true;
       znieffScore = 0.6;
+      if (territory) znieffTerritories.push(territory);
     } else if (group === "Plan national") {
       hasPna = true;
       if (type === "PNA") pnaScore = Math.max(pnaScore, 0.8);
       else if (type === "exPNA") pnaScore = Math.max(pnaScore, 0.4);
+      pnaEntries.push({ type });
     } else if (group === "Réglementation") {
       if (type === "REGLII" || type === "REGLLUTTE") {
         invasiveScore = Math.max(invasiveScore, 0.7);
@@ -1239,40 +1259,116 @@ function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
   const global = 0.4 * ecological + 0.3 * regulatory + 0.2 * territorial + 0.1 * management;
   const score = Math.round(global * 100);
 
+  // Liste rouge — one badge per (type × territoire) above the VU threshold.
+  // Order: by severity then national-before-regional.
+  const lrTypeShort: Record<string, string> = {
+    LRN: "LRN", LRR: "LRR", LRE: "LRE", LRM: "LRM", LRSE: "LRSE",
+  };
+  const lrTypeLong: Record<string, string> = {
+    LRN: "Liste rouge nationale",
+    LRR: "Liste rouge régionale",
+    LRE: "Liste rouge européenne",
+    LRM: "Liste rouge mondiale",
+    LRSE: "Liste rouge sous-espèce",
+  };
+  redListEntries.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.type === "LRM" && b.type !== "LRM") return -1;
+    if (b.type === "LRM" && a.type !== "LRM") return 1;
+    if (a.type === "LRE" && b.type !== "LRE") return -1;
+    if (b.type === "LRE" && a.type !== "LRE") return 1;
+    if (a.type === "LRN" && b.type !== "LRN") return -1;
+    if (b.type === "LRN" && a.type !== "LRN") return 1;
+    return 0;
+  });
+  for (const lr of redListEntries) {
+    const typeShort = lrTypeShort[lr.type] || lr.type;
+    const typeLong = lrTypeLong[lr.type] || lr.type;
+    drivers.push({
+      label: `${typeShort} ${lr.code}`,
+      badgeClass: LR_CODE_COLORS[lr.code] || "bg-gray-200 text-gray-700",
+      code: lr.code,
+      title: `${typeLong} (${lr.territory || "—"}) : ${lr.code}`,
+    });
+  }
   if (bestRedListCode && bestRedList >= 0.6) {
-    const codeLabel: Record<string, string> = { CR: "En danger critique", EN: "En danger", VU: "Vulnerable" };
-    drivers.push({ label: codeLabel[bestRedListCode] || bestRedListCode, badgeClass: LR_CODE_COLORS[bestRedListCode] || "bg-gray-200 text-gray-700", code: bestRedListCode });
     explanations.push(`Statut Liste rouge ${bestRedListCode} : augmente la sensibilite ecologique`);
   } else if (bestRedListCode && bestRedList >= 0.3) {
     explanations.push(`Statut Liste rouge ${bestRedListCode} : sensibilite ecologique moderee`);
   }
 
   if (hasProtection) {
-    drivers.push({ label: "Protege", badgeClass: "bg-blue-100 text-blue-800" });
+    // One badge per protection type seen (deduped)
+    const seen = new Set<string>();
+    const protTypeLong: Record<string, string> = {
+      PN: "Protection nationale",
+      PR: "Protection régionale",
+      PD: "Protection départementale",
+      POM: "Protection outre-mer",
+    };
+    for (const p of protectionEntries) {
+      if (seen.has(p.type)) continue;
+      seen.add(p.type);
+      drivers.push({
+        label: p.type,
+        badgeClass: "bg-blue-100 text-blue-800",
+        title: `${protTypeLong[p.type] || "Protection"}${p.territory ? ` (${p.territory})` : ""}`,
+      });
+    }
     const level = protectionScore >= 1.0 ? "nationale" : protectionScore >= 0.8 ? "regionale" : "departementale";
     explanations.push(`Protection ${level} : augmente la sensibilite reglementaire`);
   }
 
   if (hasDirective) {
-    drivers.push({ label: "Directive UE", badgeClass: "bg-indigo-100 text-indigo-800" });
+    const seen = new Set<string>();
+    const dirLabel: Record<string, string> = { DH: "Directive Habitats", DO: "Directive Oiseaux" };
+    for (const d of directiveEntries) {
+      if (seen.has(d.type)) continue;
+      seen.add(d.type);
+      drivers.push({
+        label: dirLabel[d.type] || `Directive ${d.type}`,
+        badgeClass: "bg-indigo-100 text-indigo-800",
+        title: dirLabel[d.type] || `Directive européenne ${d.type}`,
+      });
+    }
     explanations.push("Directive europeenne Habitat/Oiseaux : augmente la sensibilite reglementaire");
   }
 
   if (hasConvention) {
+    drivers.push({
+      label: "Convention",
+      badgeClass: "bg-violet-100 text-violet-800",
+      title: "Convention internationale (Berne, Bonn, Barcelone, OSPAR, CITES…)",
+    });
     explanations.push("Convention internationale : renforce le cadre reglementaire");
   }
 
   if (hasZnieff) {
-    drivers.push({ label: "ZNIEFF", badgeClass: "bg-emerald-100 text-emerald-800" });
+    const uniq = Array.from(new Set(znieffTerritories));
+    drivers.push({
+      label: uniq.length === 1 ? `ZNIEFF (${uniq[0]})` : "ZNIEFF",
+      badgeClass: "bg-emerald-100 text-emerald-800",
+      title: uniq.length > 0 ? `Déterminante ZNIEFF — ${uniq.join(", ")}` : "Déterminante ZNIEFF",
+    });
     explanations.push("Determinante ZNIEFF : augmente la sensibilite territoriale");
   }
 
   if (hasPna) {
-    drivers.push({ label: "PNA", badgeClass: "bg-teal-100 text-teal-800" });
+    const isActive = pnaEntries.some(p => p.type === "PNA");
+    drivers.push({
+      label: isActive ? "PNA" : "exPNA",
+      badgeClass: "bg-teal-100 text-teal-800",
+      title: isActive ? "Plan national d'actions (en cours)" : "Plan national d'actions (terminé)",
+    });
     explanations.push("Plan national d'actions : augmente la sensibilite territoriale");
   }
 
   if (invasiveScore > 0) {
+    drivers.push({
+      label: "EEE",
+      badgeClass: "bg-rose-100 text-rose-800",
+      title: "Réglementation d'introduction ou de lutte (espèce exotique envahissante)",
+    });
     explanations.push("Reglementation d'introduction/lutte : pression de gestion identifiee");
   }
 
@@ -1451,8 +1547,8 @@ function SensitivityScorePanel({ statuts }: { statuts: BdcStatut[] }) {
           {result.drivers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {result.drivers.map((d, i) => (
-                <span key={i} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
-                  {d.code ? `${d.code} ` : ""}{d.label}
+                <span key={i} title={d.title || d.label} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
+                  {d.label}
                 </span>
               ))}
             </div>
@@ -1604,8 +1700,8 @@ function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                 {sensitivity.drivers.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {sensitivity.drivers.map((d, i) => (
-                      <span key={i} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
-                        {d.code ? `${d.code} ` : ""}{d.label}
+                      <span key={i} title={d.title || d.label} className={`px-2 py-0.5 rounded-full text-xs font-semibold ${d.badgeClass}`}>
+                        {d.label}
                       </span>
                     ))}
                   </div>
