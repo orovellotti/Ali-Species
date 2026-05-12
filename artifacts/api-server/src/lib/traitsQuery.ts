@@ -136,6 +136,15 @@ export async function runTraitQuery(
       const pat = `%${filters.valueContains}%`;
       conds.push(sql`(st.traits->${traitKey}->>'value') ILIKE ${pat}`);
     }
+  } else if (filters.valueContains && filters.valueContains.length > 0) {
+    // Filet de sécurité : si le LLM oublie traitKey mais fournit valueContains,
+    // on cherche la sous-chaîne dans n'importe quelle valeur textuelle du jsonb.
+    // Le filtre source= a déjà restreint le scope, ça reste rapide.
+    const pat = `%${filters.valueContains}%`;
+    conds.push(sql`EXISTS (
+      SELECT 1 FROM jsonb_each(st.traits) AS kv(k, v)
+      WHERE (v->>'value') ILIKE ${pat}
+    )`);
   }
 
   const whereSql = sql.join(conds, sql` AND `);

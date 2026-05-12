@@ -140,7 +140,7 @@ const TOOL_DEFS = [
         },
         minValue: { type: "number", description: "Valeur minimale (sur le 'raw' numérique du trait). Optionnel." },
         maxValue: { type: "number", description: "Valeur maximale (sur le 'raw' numérique du trait). Optionnel." },
-        valueContains: { type: "string", description: "Sous-chaîne à chercher dans la valeur textuelle du trait (utile pour traits catégoriels: habitat, lifestyle, trophicNiche, diet, reproMode, activity)." },
+        valueContains: { type: "string", description: "Sous-chaîne à chercher dans la valeur textuelle du trait (utile pour traits catégoriels). VALEURS RÉELLES en français : avonet trophicNiche=Nectarivore|Frugivore|Granivore|Invertivore|Omnivore|Charognard|'Vertivore (vertébrés)'|'Herbivore terrestre'|'Herbivore aquatique'|'Prédateur aquatique' ; avonet trophicLevel=Carnivore|Herbivore|Omnivore|Scavenger ; avonet lifestyle=Aérien|Aquatique|Insessorial|Généraliste|Terrestre ; avonet migration='Migration partielle'|Sédentaire|Migrateur ; pantheria activity=Diurne|Nocturne ; amphibio diet=Carnivore|Herbivore|Omnivore. Exemple : 'oiseaux nectarivores' → source=avonet, traitKey=trophicNiche, valueContains=Nectarivore." },
         sortBy: {
           type: "string",
           enum: ["value_desc", "value_asc", "name"],
