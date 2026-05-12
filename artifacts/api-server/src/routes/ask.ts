@@ -355,7 +355,7 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
   let lastQueryResult: { totalCount: number; items: SpeciesItem[] } | null = null;
   let usedFilters: Filters | null = null;
 
-  for (let turn = 0; turn < 4; turn++) {
+  for (let turn = 0; turn < 8; turn++) {
     let resp;
     try {
       resp = await anthropic.messages.create(
