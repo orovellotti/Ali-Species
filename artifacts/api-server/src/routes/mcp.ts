@@ -8,6 +8,7 @@ import { getInteractionsForCdNom } from "./interactions.js";
 import { getTraitsForCdNom } from "./taxons.js";
 import { getBhlForCdNom } from "./bhl.js";
 import { runStatusBreakdown } from "../lib/breakdown.js";
+import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
 
@@ -94,7 +95,7 @@ function buildServer(): McpServer {
         genre: z.string().describe("Genre taxonomique (premier mot du nom binomial), ex: Vulpes, Ophrys, Quercus.").optional(),
         rang: z.string().optional().describe("Rang TAXREF (ES = espèce par défaut, GN, FM, OR, CL, PH, KD, SSES…)."),
         statutType: z.string().optional().describe("Type de statut : LRM, LRE, LRN, LRR, PN, PR, PD, POM, DH, DO, BERN, BONN, BARC, OSPAR, ZDET, PNA, exPNA, SENSNAT, SENSREG, SENSDEP, REGL, REGLII, REGLLUTTE, REGLSO. Voir list_status_types pour la liste complète."),
-        statutCode: z.string().optional().describe("Code du statut (CR, EN, VU, NT, LC, DD, NA pour les listes rouges ; II, IV pour DH ; A2, A3 pour Berne…)."),
+        statutCode: z.string().optional().describe(STATUT_CODE_REAL_DOC),
         cdSig: z.string().optional().describe("Code SIG du territoire : METRO (France métropolitaine), 11 (Île-de-France), 75 (Paris)… Voir list_territoires."),
         groupe2Inpn: z.string().optional().describe("Grand groupe vernaculaire INPN (Mammifères, Oiseaux, Reptiles, Amphibiens, Poissons, Insectes, Plantes à fleurs…)."),
         habitat: z.string().optional().describe("Code habitat : 1=marin, 2=eau douce, 3=terrestre, 4=marin/eau douce, 5=marin/terrestre, 6=eau douce/terrestre, 7=marin/eau douce/terrestre, 8=continental."),
@@ -614,7 +615,7 @@ function buildServer(): McpServer {
         famille: z.string().optional(),
         groupe2Inpn: z.string().optional(),
         statutType: z.string().optional().describe("Croiser avec un statut (ex: PN, LRN)"),
-        statutCode: z.string().optional().describe("Code du statut (ex: VU, EN, CR)"),
+        statutCode: z.string().optional().describe(STATUT_CODE_REAL_DOC),
         cdSig: z.string().optional().describe("Code SIG d'un territoire"),
         limit: z.number().int().min(1).max(30).optional(),
       },

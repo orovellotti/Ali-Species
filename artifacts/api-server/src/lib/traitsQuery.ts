@@ -1,5 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
+import { resolveStatutCode } from "./statutCodeAlias.js";
 
 export type TraitSource = "pantheria" | "avonet" | "amphibio";
 
@@ -109,7 +110,10 @@ export async function runTraitQuery(
   if (filters.statutType || filters.statutCode || filters.cdSig) {
     const subConds: SQL[] = [sql`bs.cd_nom = t.cd_nom`];
     if (filters.statutType) subConds.push(sql`bs.cd_type_statut = ${filters.statutType}`);
-    if (filters.statutCode) subConds.push(sql`bs.code_statut = ${filters.statutCode}`);
+    if (filters.statutCode) {
+      const resolved = resolveStatutCode(filters.statutType, filters.statutCode) ?? filters.statutCode;
+      subConds.push(sql`bs.code_statut = ${resolved}`);
+    }
     if (filters.cdSig) subConds.push(sql`bs.cd_sig = ${filters.cdSig}`);
     conds.push(sql`EXISTS (SELECT 1 FROM bdc_statuts bs WHERE ${sql.join(subConds, sql` AND `)})`);
   }

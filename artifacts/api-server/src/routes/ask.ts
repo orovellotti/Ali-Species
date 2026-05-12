@@ -8,6 +8,7 @@ import { runStatusBreakdown, type BreakdownFilters } from "../lib/breakdown.js";
 import { looksLikeSpeciesName } from "../lib/heuristics.js";
 import { runQuery, type Filters, type SpeciesItem } from "../lib/query.js";
 import { runTraitQuery, getTraitsBundle, TRAIT_KEYS, TRAIT_SOURCES, type TraitFilters } from "../lib/traitsQuery.js";
+import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 
 const queryTraitsInputSchema = z
   .object({
@@ -152,7 +153,7 @@ const TOOL_DEFS = [
         famille: { type: "string", description: "Filtrer par famille." },
         groupe2Inpn: { type: "string", description: "Grand groupe INPN (Mammifères, Oiseaux, Amphibiens...)." },
         statutType: { type: "string", description: "Code de type de statut pour restreindre aux taxa ayant ce statut (PN, LRN, DH, DO, REGLII, ZDET, etc.)." },
-        statutCode: { type: "string", description: "Code de statut spécifique (CR, EN, VU, II, IV...)." },
+        statutCode: { type: "string", description: `Code de statut. ${STATUT_CODE_REAL_DOC}` },
         cdSig: { type: "string", description: "Code SIG du territoire (METRO, 11, 75...)." },
         limit: { type: "number", description: "Nombre max de résultats (défaut 12, max 30)." },
       },
@@ -192,7 +193,7 @@ const TOOL_DEFS = [
           type: "string",
           description: "Code du type de statut. Codes valides: LRM (LR mondiale), LRE (LR européenne), LRN (LR nationale), LRR (LR régionale), PN (Protection nationale), PR (Protection régionale), PD (Protection départementale), POM (Protection COM), DH (Directive Habitats), DO (Directive Oiseaux), BERN, BONN, BARC, OSPAR, ZDET (ZNIEFF déterminantes), PNA (Plan national en cours), exPNA, SENSNAT, SENSREG, SENSDEP, REGL, REGLII (interdiction d'introduction = invasives), REGLLUTTE, REGLSO."
         },
-        statutCode: { type: "string", description: "Code du statut (ex: CR, EN, VU, NT, LC, DD, NA pour les listes rouges; A2, A3, B2 pour Berne; II, IV pour DH...)." },
+        statutCode: { type: "string", description: STATUT_CODE_REAL_DOC },
         cdSig: { type: "string", description: "Code SIG du territoire (région ou département). Ex: METRO (France métropolitaine), 11 (Île-de-France), 75 (Paris)... Laisse vide si pas précisé." },
         groupe2Inpn: { type: "string", description: "Grand groupe vernaculaire INPN (ex: Mammifères, Oiseaux, Reptiles, Amphibiens, Poissons, Insectes, Plantes à fleurs)." },
         habitat: { type: "string", description: "Code habitat: 1=marin, 2=eau douce, 3=terrestre, 4=marin/eau douce, 5=marin/terrestre, 6=eau douce/terrestre, 7=marin/eau douce/terrestre, 8=continental." },
