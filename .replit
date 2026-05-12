@@ -73,3 +73,8 @@ externalPort = 3003
 [[ports]]
 localPort = 18516
 externalPort = 3001
+
+[userenv]
+
+[userenv.shared]
+BHL_API_KEY = "569a2339-0577-4448-baca-6e8d01b5ba9e"

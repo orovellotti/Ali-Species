@@ -22,12 +22,17 @@ interface BhlRawResult {
   BHLType?: string;
   ItemID?: number | string;
   TitleID?: number | string;
+  PartID?: number | string;
   Title?: string;
   FullTitle?: string;
+  ContainerTitle?: string;
   ItemUrl?: string;
   TitleUrl?: string;
+  PartUrl?: string;
   Date?: string;
   PublicationDate?: string;
+  Genre?: string;
+  Volume?: string;
   Authors?: Array<BhlAuthor | string>;
 }
 
@@ -67,15 +72,20 @@ function safeBhlUrl(raw: string | null | undefined): string | null {
 function toRef(r: BhlRawResult): BhlReference | null {
   const itemId = r.ItemID != null ? Number(r.ItemID) : null;
   const titleId = r.TitleID != null ? Number(r.TitleID) : null;
-  const title = String(r.Title ?? r.FullTitle ?? "").trim();
+  const partId = r.PartID != null ? Number(r.PartID) : null;
+  const baseTitle = String(r.Title ?? r.FullTitle ?? "").trim();
+  const container = String(r.ContainerTitle ?? "").trim();
+  const title = container && baseTitle ? `${baseTitle} (${container}${r.Volume ? `, vol. ${r.Volume}` : ""})` : baseTitle;
   const candidate =
+    safeBhlUrl(r.PartUrl) ??
     safeBhlUrl(r.ItemUrl) ??
     safeBhlUrl(r.TitleUrl) ??
+    (partId && Number.isFinite(partId) ? `https://www.biodiversitylibrary.org/part/${partId}` : null) ??
     (itemId && Number.isFinite(itemId) ? `https://www.biodiversitylibrary.org/item/${itemId}` : null) ??
     (titleId && Number.isFinite(titleId) ? `https://www.biodiversitylibrary.org/bibliography/${titleId}` : null);
   if (!title || !candidate) return null;
   return {
-    itemId: Number.isFinite(itemId) ? itemId : null,
+    itemId: Number.isFinite(itemId) ? itemId : (Number.isFinite(partId) ? partId : null),
     titleId: Number.isFinite(titleId) ? titleId : null,
     title,
     authors: normaliseAuthors(r.Authors),
