@@ -262,6 +262,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GbifInfo"
+  /taxons/{cdNom}/bhl:
+    get:
+      operationId: getTaxonBhl
+      tags: [taxons]
+      summary: Get Biodiversity Heritage Library references for a taxon
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: BHL references
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BhlInfo"
+        "503":
+          description: BHL API key not configured on the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BhlInfo"
   /taxons/{cdNom}/media:
     get:
       operationId: getTaxonMedia
@@ -505,6 +530,53 @@ components:
           type: array
           items:
             type: string
+          nullable: true
+    BhlReference:
+      type: object
+      properties:
+        itemId:
+          type: integer
+          nullable: true
+        titleId:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        authors:
+          type: string
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        url:
+          type: string
+        bhlType:
+          type: string
+          nullable: true
+      required:
+        - title
+        - url
+    BhlInfo:
+      type: object
+      properties:
+        scientificName:
+          type: string
+          nullable: true
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/BhlReference"
+        source:
+          type: string
+          nullable: true
+        fetchedAt:
+          type: string
+          nullable: true
+        unavailable:
+          type: boolean
+          nullable: true
+        message:
+          type: string
           nullable: true
     Error:
       type: object

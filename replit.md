@@ -36,13 +36,14 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `GET /api/taxons/:cdNom/statuts` — Get BDC conservation statuts (Liste rouge, Protection, Directives, Conventions, etc.)
 - `GET /api/taxons/:cdNom/wikipedia` — Get Wikipedia FR extract (with EN fallback)
 - `GET /api/taxons/:cdNom/gbif` — Get GBIF data (occurrence count, IUCN Red List status)
+- `GET /api/taxons/:cdNom/bhl` — Get Biodiversity Heritage Library references (historical publications, cached 30 days in `bhl_cache` table; requires `BHL_API_KEY`, returns 503 with explanation when unset)
 - `GET /api/taxons/stats` — Get database statistics
 - `GET /api/taxons/taxonomy-tree` — Get 5-level taxonomy tree (règnes→phyla→classes→ordres→familles) for treemap visualization
 - `GET /api/taxons/random` — Get a random species taxon
 - `GET /api/taxons/:cdNom/traits` — Merged trait payload (DB-cached static sources + live Wikidata)
 - `GET /api/taxons/:cdNom/interactions` — GloBI biotic interactions (eats / eaten by / parasite of / etc.)
 - `POST /api/ask` — Natural-language agent (LLM-backed) that composes queries against `query_taxons`, `query_traits`, `get_taxon`, `get_statuts`, `get_interactions`, `get_traits`, `get_wikipedia`, `get_gbif` tools
-- `GET /api/mcp` — MCP server endpoint (v1.3.0) exposing **21 tools** to AI assistants (Claude, Cursor, ChatGPT…), grouped in 5 families: search/navigation (search_taxons, query_taxa, get_taxon, get_classification, get_children, get_parent, get_synonyms, get_random_species, list_taxonomic_facets), statuses (get_statuts, status_breakdown, list_status_types, list_territoires), stats & traits (get_global_stats, query_traits, get_trait_keys, get_traits), external enrichments (get_interactions, get_wikipedia, get_gbif), and SPARQL (run_sparql proxied to Oxigraph upstream with clear degradation message when the triplestore is unavailable in autoscale prod).
+- `GET /api/mcp` — MCP server endpoint (v1.4.0) exposing **22 tools** to AI assistants (Claude, Cursor, ChatGPT…), grouped in 5 families: search/navigation (search_taxons, query_taxa, get_taxon, get_classification, get_children, get_parent, get_synonyms, get_random_species, list_taxonomic_facets), statuses (get_statuts, status_breakdown, list_status_types, list_territoires), stats & traits (get_global_stats, query_traits, get_trait_keys, get_traits), external enrichments (get_interactions, get_wikipedia, get_gbif, get_bhl), and SPARQL (run_sparql proxied to Oxigraph upstream with clear degradation message when the triplestore is unavailable in autoscale prod).
 - `GET /api/sparql` (and `POST`) — SPARQL 1.1 endpoint, proxied to Oxigraph; returns **503 with local-setup hint** when Oxigraph is unavailable (e.g. in autoscale prod)
 - `GET /api/sparql/ui` — YASGUI SPARQL client; auto-falls back to a static "run Oxigraph locally" instructions page when upstream is down
 - `GET /api/sparql/status` — Triplestore reachability + triple count
@@ -70,6 +71,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - **Wikipedia REST API** — FR/EN page summaries for taxon descriptions (`/api/rest_v1/page/summary/`)
 - **Wikipedia/Wikimedia Commons** — Taxon images (fallback chain)
 - **GBIF Species API** — Species matching, occurrence counts, IUCN Red List categories
+- **Biodiversity Heritage Library (BHL)** — Historical publication references via `op=PublicationSearch` (requires `BHL_API_KEY`, free at https://www.biodiversitylibrary.org/getapikey.aspx). Cached per cd_nom 30 days in `bhl_cache` table.
 - Note: TAXREF LD (MNHN) is unavailable due to cyberattack since summer 2025
 
 ### Linked Open Data — RDF / SPARQL

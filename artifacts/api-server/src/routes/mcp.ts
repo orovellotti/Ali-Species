@@ -6,6 +6,7 @@ import { sql, eq, and, ilike, or, desc, asc, ne, type SQL } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
 import { getInteractionsForCdNom } from "./interactions.js";
 import { getTraitsForCdNom } from "./taxons.js";
+import { getBhlForCdNom } from "./bhl.js";
 import { runStatusBreakdown } from "../lib/breakdown.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
@@ -34,7 +35,7 @@ function notFound(message: string) {
 
 function buildServer(): McpServer {
   const server = new McpServer(
-    { name: "ali-species-mcp", version: "1.3.0" },
+    { name: "ali-species-mcp", version: "1.4.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -642,6 +643,25 @@ function buildServer(): McpServer {
         avonet: TRAIT_KEYS.avonet,
         amphibio: TRAIT_KEYS.amphibio,
       });
+    },
+  );
+
+  server.registerTool(
+    "get_bhl",
+    {
+      title: "Références bibliographiques BHL pour un taxon",
+      description:
+        "Retourne les publications historiques numérisées (Biodiversity Heritage Library, biodiversitylibrary.org) mentionnant ce taxon : titre, auteurs, date, URL BHL. Sources souvent du XVIIIe-XXe siècle (descriptions originales d'espèces, flores, faunes). Données mises en cache 30 jours.",
+      inputSchema: {
+        cdNom: z.number().int().describe("Identifiant TAXREF cd_nom"),
+      },
+    },
+    async ({ cdNom }) => {
+      const { reason, payload } = await getBhlForCdNom(cdNom);
+      if (reason === "not_found") return notFound(`Taxon cd_nom=${cdNom} introuvable.`);
+      if (reason === "key_missing") return notFound(`BHL_API_KEY non configurée côté serveur.`);
+      if (reason === "upstream_error" || !payload) return notFound(`BHL momentanément indisponible.`);
+      return toJson(payload);
     },
   );
 

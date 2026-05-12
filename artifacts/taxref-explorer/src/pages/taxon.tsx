@@ -7,6 +7,7 @@ import {
   useGetTaxonWikipedia,
   useGetTaxonGbif,
   useGetTaxonStatuts,
+  useGetTaxonBhl,
   getGetTaxonQueryKey,
   getGetTaxonClassificationQueryKey,
   getGetTaxonMediaQueryKey,
@@ -14,6 +15,7 @@ import {
   getGetTaxonWikipediaQueryKey,
   getGetTaxonGbifQueryKey,
   getGetTaxonStatutsQueryKey,
+  getGetTaxonBhlQueryKey,
   getRandomTaxon
 } from "@workspace/api-client-react";
 import type { BdcStatut } from "@workspace/api-client-react";
@@ -494,6 +496,8 @@ export default function TaxonDetail() {
   const { data: children, isLoading: childrenLoading } = useGetTaxonChildren(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonChildrenQueryKey(cdNom) } });
   const { data: wikipedia, isLoading: wikiLoading } = useGetTaxonWikipedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonWikipediaQueryKey(cdNom) } });
   const { data: gbif, isLoading: gbifLoading } = useGetTaxonGbif(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonGbifQueryKey(cdNom) } });
+  const { data: bhlData, error: bhlError, isLoading: bhlLoading } = useGetTaxonBhl(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonBhlQueryKey(cdNom), retry: false, throwOnError: false } });
+  const bhl = bhlData ?? (bhlError && typeof bhlError === "object" && "data" in bhlError ? (bhlError as { data?: typeof bhlData }).data : undefined);
   const { data: statuts, isLoading: statutsLoading } = useGetTaxonStatuts(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonStatutsQueryKey(cdNom) } });
 
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -913,6 +917,55 @@ export default function TaxonDetail() {
             <TraitsSection cdNom={taxon.cdNom} />
 
             <InteractionsSection cdNom={taxon.cdNom} />
+
+            {bhlLoading ? (
+              <Skeleton className="h-16 w-full rounded-2xl" />
+            ) : bhl?.unavailable && bhl?.message ? (
+              <CollapsibleSection
+                icon={<BookOpen className="w-4 h-4 text-muted-foreground" />}
+                title="Bibliographie historique (BHL)"
+                defaultOpen={false}
+              >
+                <p className="text-xs text-muted-foreground">{bhl.message}</p>
+              </CollapsibleSection>
+            ) : bhl?.references && bhl.references.length > 0 ? (
+              <CollapsibleSection
+                icon={<BookOpen className="w-4 h-4 text-primary" />}
+                title="Bibliographie historique (BHL)"
+                count={bhl.references.length}
+                defaultOpen={false}
+              >
+                <p className="text-xs text-muted-foreground mb-3">
+                  Publications numerisees mentionnant ce taxon, issues de la <a href="https://www.biodiversitylibrary.org/" target="_blank" rel="noreferrer" className="text-primary hover:underline">Biodiversity Heritage Library</a> (descriptions originales, flores et faunes anciennes).
+                </p>
+                <ul className="space-y-2">
+                  {bhl.references.slice(0, 15).map((ref, i) => (
+                    <li key={`${ref.itemId ?? ref.titleId ?? i}-${i}`} className="p-3 bg-muted/40 rounded-xl border border-border/50">
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-sm text-foreground hover:text-primary inline-flex items-start gap-1.5 group"
+                        data-testid={`link-bhl-${ref.itemId ?? ref.titleId ?? i}`}
+                      >
+                        <span className="leading-snug">{ref.title}</span>
+                        <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 opacity-60 group-hover:opacity-100" />
+                      </a>
+                      {(ref.authors || ref.date) && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {ref.authors}{ref.authors && ref.date ? " - " : ""}{ref.date}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {bhl.references.length > 15 && (
+                  <div className="text-xs text-muted-foreground mt-2 italic">
+                    +{bhl.references.length - 15} autres references disponibles via l'API BHL.
+                  </div>
+                )}
+              </CollapsibleSection>
+            ) : null}
 
             {childrenLoading ? (
               <Skeleton className="h-14 w-full rounded-2xl" />
