@@ -195,7 +195,6 @@ export const en = {
       ],
       complex: [
         "Which bats are listed in Annex II of the Habitats Directive?",
-        "Which diurnal raptors are ZNIEFF determinants in Brittany?",
         "Which nectarivorous birds are in the AVONET database?",
         "Carnivores of France ranked by body mass",
       ],

@@ -195,7 +195,6 @@ export const fr = {
       ],
       complex: [
         "Quelles chauves-souris sont inscrites à l'annexe II de la Directive Habitats ?",
-        "Quels rapaces diurnes sont déterminants ZNIEFF en Bretagne ?",
         "Quels oiseaux nectarivores trouve-t-on dans la base AVONET ?",
         "Carnivores de France triés par masse corporelle",
       ],
