@@ -122,7 +122,10 @@ export function ConversationalBar() {
 
       {turns.length === 0 && !loading && (
         <div className="mt-5 px-2">
-          <div className="flex justify-center gap-1 mb-3">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
+            <span className="text-xs text-muted-foreground font-medium mr-1">
+              {t("conversational.suggestionLevelsLabel")}
+            </span>
             {levelOrder.map((lvl) => {
               const isActive = activeLevel === lvl;
               return (

@@ -179,6 +179,7 @@ export const en = {
     pagingPre: "Showing ",
     pagingMid: " of ",
     pagingPost: " results",
+    suggestionLevelsLabel: "Query type:",
     suggestionLevels: {
       simple: "Simple",
       complex: "Complex",
