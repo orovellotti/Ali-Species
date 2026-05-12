@@ -28,7 +28,6 @@ const TAXO_COLS = [
   ["classe", "classe"],
   ["ordre", "ordre"],
   ["famille", "famille"],
-  ["genre", "genre"],
   ["groupe2Inpn", "group2_inpn"],
 ] as const;
 
@@ -41,6 +40,11 @@ export async function runStatusBreakdown(filters: BreakdownFilters): Promise<Bre
   for (const [key, col] of TAXO_COLS) {
     const v = filters[key];
     if (v) conds.push(sql`t.${sql.raw(col)} ILIKE ${v}`);
+  }
+  // The taxons table has no `genre` column — derive from lb_nom prefix.
+  if (filters.genre) {
+    const g = filters.genre.trim().replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+    conds.push(sql`t.lb_nom ~* ${'^' + g + '\\M'}`);
   }
   if (filters.cdSig) conds.push(sql`s.cd_sig = ${filters.cdSig}`);
 

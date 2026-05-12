@@ -72,12 +72,27 @@ export async function runQuery(
   if (rang) conds.push(sql`t.rang = ${rang}`);
 
   if (filters.name) {
-    const pat = `%${filters.name.trim()}%`;
-    conds.push(sql`(t.lb_nom ILIKE ${pat} OR t.nom_vern ILIKE ${pat})`);
+    const raw = filters.name.trim();
+    // For single-word queries (typical taxonomic names like "Ophrys"), match on
+    // word boundaries to avoid catching unrelated substrings (e.g. "Ophrys"
+    // inside "Callophrys"). For multi-word queries, fall back to plain ILIKE
+    // substring (vernacular names are often multi-word).
+    if (/^[\p{L}\-]+$/u.test(raw)) {
+      const escaped = raw.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+      conds.push(sql`(t.lb_nom ~* ${'\\m' + escaped + '\\M'} OR t.nom_vern ~* ${'\\m' + escaped + '\\M'})`);
+    } else {
+      const pat = `%${raw}%`;
+      conds.push(sql`(t.lb_nom ILIKE ${pat} OR t.nom_vern ILIKE ${pat})`);
+    }
+  }
+  // The taxons table has no `genre` column — derive it from lb_nom prefix.
+  if (typeof filters.genre === "string" && filters.genre.length > 0) {
+    const g = filters.genre.trim().replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+    conds.push(sql`t.lb_nom ~* ${'^' + g + '\\M'}`);
   }
   const filterCols: ReadonlyArray<readonly [keyof Filters, string]> = [
     ["regne", "regne"], ["phylum", "phylum"], ["classe", "classe"],
-    ["ordre", "ordre"], ["famille", "famille"], ["genre", "genre"],
+    ["ordre", "ordre"], ["famille", "famille"],
     ["groupe2Inpn", "group2_inpn"], ["habitat", "habitat"],
   ];
   for (const [k, col] of filterCols) {

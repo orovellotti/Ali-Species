@@ -180,13 +180,13 @@ const TOOL_DEFS = [
     input_schema: {
       type: "object" as const,
       properties: {
-        name: { type: "string", description: "Nom scientifique ou vernaculaire (recherche partielle insensible à la casse)." },
+        name: { type: "string", description: "Nom scientifique OU vernaculaire en recherche libre. ATTENTION : si l'utilisateur précise explicitement un rang taxonomique (genre X, famille Y, ordre Z, classe W), utilise PLUTÔT le filtre dédié (`genre`, `famille`, `ordre`, `classe`) — sinon `name` peut matcher par hasard d'autres taxons (ex: `name=Ophrys` matcherait Callophrys, Ceratophrys… alors que `genre=Ophrys` ne donne que les vraies Ophrys orchidées)." },
         regne: { type: "string", description: "Règne TAXREF, ex: Animalia, Plantae, Fungi, Bacteria, Chromista, Protozoa, Archaea." },
         phylum: { type: "string", description: "Embranchement (phylum), ex: Chordata, Arthropoda, Mollusca, Tracheophyta..." },
         classe: { type: "string", description: "Classe, ex: Mammalia, Aves, Reptilia, Amphibia, Actinopterygii, Insecta, Magnoliopsida..." },
         ordre: { type: "string", description: "Ordre, ex: Carnivora, Passeriformes, Lepidoptera..." },
         famille: { type: "string", description: "Famille, ex: Canidae, Felidae, Orchidaceae..." },
-        genre: { type: "string", description: "Genre, ex: Vulpes, Canis..." },
+        genre: { type: "string", description: "Genre taxonomique (premier mot du nom binomial), ex: Vulpes, Canis, Ophrys, Quercus. À UTILISER systématiquement quand l'utilisateur dit 'du genre X' / 'genus X' / 'espèces du genre X'." },
         rang: { type: "string", description: "Rang taxonomique TAXREF (ES, GN, FM, OR, CL, PH, KD, SSES, ...). Par défaut, espèces (ES)." },
         statutType: {
           type: "string",
@@ -319,6 +319,13 @@ Quand le résultat est revenu, formule une réponse synthétique en français qu
 - Pour get_traits : présente les traits clés par source (ex: "Loup gris — PanTHERIA : masse 32 kg, longévité 16 ans, gestation 63 jours, taille de portée 5. Wikidata : longueur 1,4 m.")
 - N'inclut PAS la liste complète (l'interface affiche automatiquement des cartes cliquables sous ta réponse pour query_taxa et query_traits)
 - Invite à cliquer sur les cartes pour voir le détail
+
+Règle critique sur les filtres taxonomiques :
+- "du genre X" / "genus X" / "espèces du genre X" → utilise filtre genre=X (PAS name=X, qui ferait une recherche par sous-chaîne et matcherait des taxons sans rapport ; ex: name=Ophrys matche Callophrys, Acanthophrys…).
+- "de la famille X" / "family X" → utilise filtre famille=X.
+- "de l'ordre X" / "order X" → utilise filtre ordre=X.
+- "de la classe X" / "class X" → utilise filtre classe=X.
+- N'utilise name que pour une recherche libre par nom scientifique ou vernaculaire (ex: "loup", "Vulpes vulpes", "rouge-gorge").
 
 Indices pour traduire une question:
 - "mammifères" → classe=Mammalia ou groupe2Inpn=Mammifères
