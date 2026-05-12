@@ -344,6 +344,15 @@ Indices pour traduire une question:
 - "invasives" / "interdites d'introduction" → statutType=REGLII
 - "ZNIEFF déterminantes" → statutType=ZDET
 - "directive habitats/oiseaux" → DH ou DO
+- "rapaces" / "rapaces diurnes" → classe=Aves AND ordre IN (Accipitriformes, Falconiformes). Comme query_taxa/query_traits ne supporte qu'un seul ordre, fais DEUX appels (un par ordre) et combine les résultats dans ta réponse — n'oublie JAMAIS Accipitriformes (aigles, vautours, busards, milans, buses), c'est l'essentiel des grandes envergures. Pour "rapaces nocturnes" → ordre=Strigiformes.
+- "chouettes" / "hiboux" → ordre=Strigiformes.
+
+Règle critique sur les superlatifs et tris :
+- Toute question contenant "le plus", "la plus", "trié par", "classé par", "top", "les premiers", "les plus grands/lourds/longs/rapides" → utilise OBLIGATOIREMENT query_traits avec le bon traitKey ET sortBy="value_desc" (ou "value_asc" pour le plus petit). Ne te contente JAMAIS de query_taxa qui ne renvoie pas de valeurs ordonnées.
+- Format des paramètres : sortBy ne prend QUE "value_desc", "value_asc" ou "name" (le trait à trier est défini par traitKey, pas par sortBy).
+- "envergure" → source=avonet, traitKey=wingLen, sortBy=value_desc.
+- "masse" / "poids" (mammifères) → source=pantheria, traitKey=adultBodyMass, sortBy=value_desc.
+- "longévité" → traitKey=maxLongevity (pantheria) ou longevity (avonet), sortBy=value_desc.
 
 Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans utiliser le tool.`;
 
@@ -357,18 +366,38 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
 
   for (let turn = 0; turn < 8; turn++) {
     let resp;
-    try {
-      resp = await anthropic.messages.create(
-        {
-          model: "claude-sonnet-4-6",
-          max_tokens: 8192,
-          system: systemPrompt,
-          tools: TOOL_DEFS as any,
-          messages,
-        },
-        { timeout: ANTHROPIC_TIMEOUT_MS },
-      );
-    } catch (err) {
+    let lastErr: unknown = null;
+    // 1 immediate retry on transient errors (Anthropic 5xx, network blip).
+    // Total worst-case latency stays bounded by ANTHROPIC_TIMEOUT_MS * 2.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        resp = await anthropic.messages.create(
+          {
+            model: "claude-sonnet-4-6",
+            max_tokens: 8192,
+            system: systemPrompt,
+            tools: TOOL_DEFS as any,
+            messages,
+          },
+          { timeout: ANTHROPIC_TIMEOUT_MS },
+        );
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        const status = (err as { status?: number })?.status ?? 0;
+        const isRetryable =
+          status >= 500 ||
+          status === 429 ||
+          (err as { name?: string })?.name === "APIConnectionError" ||
+          /ECONNRESET|ETIMEDOUT|fetch failed/i.test((err as Error)?.message ?? "");
+        req.log?.warn?.({ err, status, attempt, retryable: isRetryable }, "anthropic call failed");
+        if (!isRetryable || attempt === 1) break;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    if (lastErr || !resp) {
+      const err = lastErr;
       const isTimeout =
         (err as { name?: string })?.name === "APIConnectionTimeoutError" ||
         /timeout/i.test((err as Error)?.message ?? "");
