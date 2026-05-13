@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import cors, { type CorsOptions } from "cors";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import router, { shareRouter } from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -52,5 +52,6 @@ app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 app.use("/api", router);
+app.use(shareRouter);
 
 export default app;

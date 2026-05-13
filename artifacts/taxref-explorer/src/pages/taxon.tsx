@@ -1,13 +1,15 @@
 import { Layout } from "@/components/Layout";
-import { 
-  useGetTaxon, 
-  useGetTaxonClassification, 
-  useGetTaxonMedia, 
+import {
+  useGetTaxonProfile,
+  useGetTaxon,
+  useGetTaxonClassification,
+  useGetTaxonMedia,
   useGetTaxonChildren,
   useGetTaxonWikipedia,
   useGetTaxonGbif,
   useGetTaxonStatuts,
   useGetTaxonBhl,
+  getGetTaxonProfileQueryKey,
   getGetTaxonQueryKey,
   getGetTaxonClassificationQueryKey,
   getGetTaxonMediaQueryKey,
@@ -18,7 +20,7 @@ import {
   getGetTaxonBhlQueryKey,
   getRandomTaxon
 } from "@workspace/api-client-react";
-import type { BdcStatut } from "@workspace/api-client-react";
+import type { BdcStatut, TaxonProfile, TaxonMedia, WikipediaInfo, GbifInfo, BlockError } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -493,15 +495,63 @@ export default function TaxonDetail() {
   const params = useParams();
   const cdNom = parseCdNomFromParam(params.slug || "0");
 
-  const { data: taxon, isLoading: taxonLoading } = useGetTaxon(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonQueryKey(cdNom) } });
-  const { data: classification, isLoading: classLoading } = useGetTaxonClassification(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonClassificationQueryKey(cdNom) } });
-  const { data: media, isLoading: mediaLoading } = useGetTaxonMedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonMediaQueryKey(cdNom) } });
-  const { data: children, isLoading: childrenLoading } = useGetTaxonChildren(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonChildrenQueryKey(cdNom) } });
-  const { data: wikipedia, isLoading: wikiLoading } = useGetTaxonWikipedia(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonWikipediaQueryKey(cdNom) } });
-  const { data: gbif, isLoading: gbifLoading } = useGetTaxonGbif(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonGbifQueryKey(cdNom) } });
-  const { data: bhlData, error: bhlError, isLoading: bhlLoading } = useGetTaxonBhl(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonBhlQueryKey(cdNom), retry: false, throwOnError: false } });
-  const bhl = bhlData ?? (bhlError && typeof bhlError === "object" && "data" in bhlError ? (bhlError as { data?: typeof bhlData }).data : undefined);
-  const { data: statuts, isLoading: statutsLoading } = useGetTaxonStatuts(cdNom, { query: { enabled: !!cdNom, queryKey: getGetTaxonStatutsQueryKey(cdNom) } });
+  // Unified profile endpoint — single round trip for taxon + classification + statuts + media + wikipedia + gbif.
+  // Falls back below to per-block hooks if profile fails (e.g. server older than client).
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+  } = useGetTaxonProfile(cdNom, {
+    query: { enabled: !!cdNom, queryKey: getGetTaxonProfileQueryKey(cdNom), retry: 1, throwOnError: false },
+  });
+  const profileFallback = !!cdNom && (profileError || (!profileLoading && !profile));
+
+  const { data: taxonFb, isLoading: taxonFbLoading } = useGetTaxon(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonQueryKey(cdNom) },
+  });
+  const { data: classFb, isLoading: classFbLoading } = useGetTaxonClassification(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonClassificationQueryKey(cdNom) },
+  });
+  const { data: mediaFb, isLoading: mediaFbLoading } = useGetTaxonMedia(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonMediaQueryKey(cdNom) },
+  });
+  const { data: wikiFb, isLoading: wikiFbLoading } = useGetTaxonWikipedia(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonWikipediaQueryKey(cdNom) },
+  });
+  const { data: gbifFb, isLoading: gbifFbLoading } = useGetTaxonGbif(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonGbifQueryKey(cdNom) },
+  });
+  const { data: statutsFb, isLoading: statutsFbLoading } = useGetTaxonStatuts(cdNom, {
+    query: { enabled: profileFallback, queryKey: getGetTaxonStatutsQueryKey(cdNom) },
+  });
+
+  // Children are not in the profile (full list can be 100 items) — keep dedicated hook, always enabled.
+  const { data: children, isLoading: childrenLoading } = useGetTaxonChildren(cdNom, {
+    query: { enabled: !!cdNom, queryKey: getGetTaxonChildrenQueryKey(cdNom) },
+  });
+  // BHL stays lazy (heavy external call, may be unavailable).
+  const { data: bhlData, error: bhlError, isLoading: bhlLoading } = useGetTaxonBhl(cdNom, {
+    query: { enabled: !!cdNom, queryKey: getGetTaxonBhlQueryKey(cdNom), retry: false, throwOnError: false },
+  });
+  const bhl = bhlData ?? (bhlError && typeof bhlError === "object" && "data" in bhlError ? (bhlError as unknown as { data?: typeof bhlData }).data : undefined);
+
+  const isBlockError = (b: unknown): b is BlockError =>
+    !!b && typeof b === "object" && (b as { error?: unknown }).error === true;
+  const safeBlock = <T,>(b: T | BlockError | undefined | null): T | undefined =>
+    b == null || isBlockError(b) ? undefined : (b as T);
+
+  const taxon = (profile?.taxon as TaxonProfile["taxon"] | undefined) ?? taxonFb;
+  const taxonLoading = profileLoading && !profileFallback ? profileLoading : taxonFbLoading;
+  const classification = (profile?.classification as TaxonProfile["classification"] | undefined) ?? classFb;
+  const classLoading = profileLoading && !profileFallback ? profileLoading : classFbLoading;
+  const media = (safeBlock<TaxonMedia>(profile?.media as TaxonMedia | BlockError | undefined)) ?? mediaFb;
+  const mediaLoading = profileLoading && !profileFallback ? profileLoading : mediaFbLoading;
+  const wikipedia = (safeBlock<WikipediaInfo>(profile?.wikipedia as WikipediaInfo | BlockError | undefined)) ?? wikiFb;
+  const wikiLoading = profileLoading && !profileFallback ? profileLoading : wikiFbLoading;
+  const gbif = (safeBlock<GbifInfo>(profile?.gbif as GbifInfo | BlockError | undefined)) ?? gbifFb;
+  const gbifLoading = profileLoading && !profileFallback ? profileLoading : gbifFbLoading;
+  const statuts = (profile?.statuts as BdcStatut[] | undefined) ?? statutsFb;
+  const statutsLoading = profileLoading && !profileFallback ? profileLoading : statutsFbLoading;
 
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);

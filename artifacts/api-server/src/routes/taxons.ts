@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable } from "@workspace/db";
+import { fetchWikipedia, fetchGbif, fetchMedia, fetchTaxonRow } from "../lib/profileFetchers.js";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -75,14 +76,74 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
   const limitRaw = typeof req.query.limit === "string" ? parseInt(req.query.limit) : 20;
   const limit = Math.min(Math.max(limitRaw || 20, 1), 50);
 
-  if (!q || q.length < 2) {
-    res.json([]);
+  if (!q || q.length < 2) { res.json([]); return; }
+
+  // Try the dedicated search index first. Fall back to the legacy ILIKE path
+  // if the table is empty (e.g. on a fresh DB before build-search-index ran).
+  let indexHasRows = false;
+  try {
+    const probe = await db.execute(sql`SELECT 1 FROM taxon_search_index LIMIT 1`);
+    const r = probe as unknown as { rows?: unknown[] };
+    indexHasRows = (r.rows ?? (probe as unknown as unknown[])).length > 0;
+  } catch {
+    indexHasRows = false;
+  }
+
+  if (indexHasRows) {
+    const territoireFilter = territoire
+      ? sql`AND s.cd_nom IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_sig = ${territoire})`
+      : sql``;
+    const regneFilter = regne ? sql`AND s.regne = ${regne}` : sql``;
+
+    // Lower+unaccent the query once, then score:
+    //   100 = exact match on any name; 80 = prefix; raw similarity (0..1)*40 otherwise.
+    // Add rank_boost (species > genus > ...) and is_reference tiebreaker.
+    const rows = await db.execute(sql`
+      WITH q AS (SELECT lower(unaccent(${q})) AS qn)
+      SELECT
+        s.cd_nom        AS "cdNom",
+        s.cd_ref        AS "cdRef",
+        s.scientific_name AS "lbNom",
+        s.vernacular_fr AS "nomVern",
+        s.rang          AS "rang",
+        NULL::text      AS "famille",
+        s.regne         AS "regne"
+      FROM taxon_search_index s, q
+      WHERE (s.normalized_text ILIKE '%' || q.qn || '%' OR s.normalized_text % q.qn)
+      ${regneFilter}
+      ${territoireFilter}
+      ORDER BY
+        CASE
+          -- Exact match on a single name (scientific or vernacular). normalized_text
+          -- is "name1 | name2 | name3" so an exact name appears either alone, at the
+          -- start, in the middle, or at the end, surrounded by " | " separators.
+          WHEN s.normalized_text = q.qn
+            OR s.normalized_text LIKE q.qn || ' | %'
+            OR s.normalized_text LIKE '% | ' || q.qn
+            OR s.normalized_text LIKE '% | ' || q.qn || ' | %'
+            THEN 0
+          -- Prefix on the first name (scientific name, the canonical one).
+          WHEN s.normalized_text LIKE q.qn || '%' THEN 1
+          -- Prefix on any subsequent name in the blob.
+          WHEN s.normalized_text LIKE '% | ' || q.qn || '%' THEN 2
+          -- Substring anywhere.
+          WHEN s.normalized_text LIKE '%' || q.qn || '%' THEN 3
+          -- Fuzzy (trigram) only.
+          ELSE 4
+        END,
+        s.rank_boost DESC,
+        s.is_reference DESC,
+        similarity(s.normalized_text, q.qn) DESC,
+        length(s.scientific_name) ASC
+      LIMIT ${limit}
+    `);
+    const list = (rows as unknown as { rows: unknown[] }).rows ?? (rows as unknown as unknown[]);
+    res.json(list);
     return;
   }
 
+  // Legacy fallback (kept identical to the pre-T5 behaviour for safety).
   const pattern = `%${q}%`;
-
-  // Unaccent on both sides so "mesange" matches "Mésange", "ile" matches "Île", etc.
   const conds: any[] = [
     or(
       sql`unaccent(${taxonsTable.lbNom}) ILIKE unaccent(${pattern})`,
@@ -93,21 +154,15 @@ router.get("/taxons/search", async (req, res): Promise<void> => {
   if (territoire) {
     conds.push(sql`${taxonsTable.cdNom} IN (SELECT DISTINCT cd_nom FROM bdc_statuts WHERE cd_sig = ${territoire})`);
   }
-
   const results = await db
     .select({
-      cdNom: taxonsTable.cdNom,
-      cdRef: taxonsTable.cdRef,
-      lbNom: taxonsTable.lbNom,
-      nomVern: taxonsTable.nomVern,
-      rang: taxonsTable.rang,
-      famille: taxonsTable.famille,
-      regne: taxonsTable.regne,
+      cdNom: taxonsTable.cdNom, cdRef: taxonsTable.cdRef,
+      lbNom: taxonsTable.lbNom, nomVern: taxonsTable.nomVern,
+      rang: taxonsTable.rang, famille: taxonsTable.famille, regne: taxonsTable.regne,
     })
     .from(taxonsTable)
     .where(and(...conds))
     .limit(limit);
-
   res.json(results);
 });
 
@@ -1152,75 +1207,10 @@ router.get("/taxons/:cdNom/traits", async (req, res): Promise<void> => {
 router.get("/taxons/:cdNom/wikipedia", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
   const cdNom = parseInt(raw, 10);
-
-  if (isNaN(cdNom)) {
-    res.status(400).json({ error: "Invalid cdNom" });
-    return;
-  }
-
-  const [taxon] = await db
-    .select({ lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide })
-    .from(taxonsTable)
-    .where(eq(taxonsTable.cdNom, cdNom));
-
-  if (!taxon) {
-    res.json({ extract: null, url: null, title: null });
-    return;
-  }
-
-  const searchName = taxon.nomValide?.split(" ").slice(0, 2).join(" ") || taxon.lbNom;
-
-  try {
-    const wikiRes = await fetch(
-      `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`,
-      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
-    );
-
-    if (wikiRes.ok) {
-      const data = await wikiRes.json() as {
-        extract?: string;
-        content_urls?: { desktop?: { page?: string } };
-        title?: string;
-        type?: string;
-      };
-
-      if (data.type !== "disambiguation" && data.extract) {
-        res.json({
-          extract: data.extract,
-          url: data.content_urls?.desktop?.page || null,
-          title: data.title || null,
-        });
-        return;
-      }
-    }
-
-    const wikiResEn = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`,
-      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
-    );
-
-    if (wikiResEn.ok) {
-      const data = await wikiResEn.json() as {
-        extract?: string;
-        content_urls?: { desktop?: { page?: string } };
-        title?: string;
-        type?: string;
-      };
-
-      if (data.type !== "disambiguation" && data.extract) {
-        res.json({
-          extract: data.extract,
-          url: data.content_urls?.desktop?.page || null,
-          title: data.title || null,
-        });
-        return;
-      }
-    }
-
-    res.json({ extract: null, url: null, title: null });
-  } catch {
-    res.json({ extract: null, url: null, title: null });
-  }
+  if (isNaN(cdNom)) { res.status(400).json({ error: "Invalid cdNom" }); return; }
+  const taxon = await fetchTaxonRow(cdNom);
+  if (!taxon) { res.json({ extract: null, url: null, title: null }); return; }
+  res.json(await fetchWikipedia(taxon));
 });
 
 const IUCN_LABELS: Record<string, string> = {
@@ -1247,170 +1237,22 @@ const IUCN_LABELS: Record<string, string> = {
 router.get("/taxons/:cdNom/gbif", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
   const cdNom = parseInt(raw, 10);
-
-  if (isNaN(cdNom)) {
-    res.status(400).json({ error: "Invalid cdNom" });
-    return;
-  }
-
-  const [taxon] = await db
-    .select({ lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide, regne: taxonsTable.regne })
-    .from(taxonsTable)
-    .where(eq(taxonsTable.cdNom, cdNom));
-
+  if (isNaN(cdNom)) { res.status(400).json({ error: "Invalid cdNom" }); return; }
+  const taxon = await fetchTaxonRow(cdNom);
   if (!taxon) {
     res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
     return;
   }
-
-  const searchName = taxon.nomValide?.split(" ").slice(0, 2).join(" ") || taxon.lbNom;
-
-  try {
-    const matchUrl = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(searchName)}${taxon.regne ? `&kingdom=${encodeURIComponent(taxon.regne)}` : ""}`;
-    const matchRes = await fetch(matchUrl);
-
-    if (!matchRes.ok) {
-      res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
-      return;
-    }
-
-    const matchData = await matchRes.json() as { usageKey?: number; matchType?: string };
-
-    if (!matchData.usageKey || matchData.matchType === "NONE") {
-      res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
-      return;
-    }
-
-    const gbifKey = matchData.usageKey;
-
-    const [countRes, iucnRes] = await Promise.all([
-      fetch(`https://api.gbif.org/v1/occurrence/count?taxonKey=${gbifKey}`),
-      fetch(`https://api.gbif.org/v1/species/${gbifKey}/iucnRedListCategory`),
-    ]);
-
-    let occurrenceCount: number | null = null;
-    if (countRes.ok) {
-      const countText = await countRes.text();
-      const parsed = parseInt(countText, 10);
-      occurrenceCount = Number.isNaN(parsed) ? null : parsed;
-    }
-
-    let iucnCategory: string | null = null;
-    let iucnCategoryLabel: string | null = null;
-    if (iucnRes.ok) {
-      const iucnData = await iucnRes.json() as { category?: string; code?: string };
-      const code = iucnData.code || iucnData.category;
-      if (code) {
-        iucnCategory = code;
-        iucnCategoryLabel = IUCN_LABELS[code] || IUCN_LABELS[iucnData.category || ""] || code;
-      }
-    }
-
-    res.json({
-      gbifKey,
-      occurrenceCount,
-      iucnCategory,
-      iucnCategoryLabel,
-      gbifUrl: `https://www.gbif.org/species/${gbifKey}`,
-      distributionCountries: null,
-    });
-  } catch {
-    res.json({ gbifKey: null, occurrenceCount: null, iucnCategory: null, iucnCategoryLabel: null, gbifUrl: null, distributionCountries: null });
-  }
+  res.json(await fetchGbif(taxon));
 });
 
 router.get("/taxons/:cdNom/media", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.cdNom) ? req.params.cdNom[0] : req.params.cdNom;
   const cdNom = parseInt(raw, 10);
-
-  if (isNaN(cdNom)) {
-    res.status(400).json({ error: "Invalid cdNom" });
-    return;
-  }
-
-  const [taxon] = await db
-    .select({ lbNom: taxonsTable.lbNom, nomValide: taxonsTable.nomValide })
-    .from(taxonsTable)
-    .where(eq(taxonsTable.cdNom, cdNom));
-
-  if (!taxon) {
-    res.json({ images: [] });
-    return;
-  }
-
-  const searchName = taxon.nomValide?.split(" ").slice(0, 2).join(" ") || taxon.lbNom;
-
-  try {
-    const wikiResponse = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchName)}`,
-      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
-    );
-
-    if (wikiResponse.ok) {
-      const wikiData = await wikiResponse.json() as {
-        thumbnail?: { source?: string };
-        originalimage?: { source?: string };
-        title?: string;
-      };
-
-      const images: Array<{ url: string; title: string | null; author: string | null }> = [];
-
-      if (wikiData.originalimage?.source) {
-        images.push({
-          url: wikiData.originalimage.source,
-          title: wikiData.title || searchName,
-          author: "Wikipedia",
-        });
-      } else if (wikiData.thumbnail?.source) {
-        images.push({
-          url: wikiData.thumbnail.source,
-          title: wikiData.title || searchName,
-          author: "Wikipedia",
-        });
-      }
-
-      if (images.length > 0) {
-        res.json({ images });
-        return;
-      }
-    }
-
-    const commonsResponse = await fetch(
-      `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(searchName)}&prop=pageimages&format=json&pithumbsize=800&pilicense=any`,
-      { headers: { "User-Agent": "TaxrefExplorer/1.0" } }
-    );
-
-    if (commonsResponse.ok) {
-      const commonsData = await commonsResponse.json() as {
-        query?: {
-          pages?: Record<string, {
-            thumbnail?: { source?: string };
-            title?: string;
-          }>;
-        };
-      };
-
-      const pages = commonsData?.query?.pages || {};
-      const images: Array<{ url: string; title: string | null; author: string | null }> = [];
-
-      for (const page of Object.values(pages)) {
-        if (page.thumbnail?.source) {
-          images.push({
-            url: page.thumbnail.source,
-            title: page.title || searchName,
-            author: "Wikimedia Commons",
-          });
-        }
-      }
-
-      res.json({ images });
-      return;
-    }
-
-    res.json({ images: [] });
-  } catch {
-    res.json({ images: [] });
-  }
+  if (isNaN(cdNom)) { res.status(400).json({ error: "Invalid cdNom" }); return; }
+  const taxon = await fetchTaxonRow(cdNom);
+  if (!taxon) { res.json({ images: [] }); return; }
+  res.json(await fetchMedia(taxon));
 });
 
 export default router;

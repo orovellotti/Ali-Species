@@ -26,6 +26,7 @@ import type {
   SearchTaxonsParams,
   TaxonDetail,
   TaxonMedia,
+  TaxonProfile,
   TaxonStats,
   TaxonSummary,
   WikipediaInfo
@@ -1040,6 +1041,88 @@ export function useGetTaxonBhl<TData = Awaited<ReturnType<typeof getTaxonBhl>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTaxonBhlQueryOptions(cdNom,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * Single endpoint that fetches every block needed by the taxon detail page in one round trip.
+External data sources (Wikipedia, GBIF, GloBI, Commons) degrade gracefully: if they fail,
+the corresponding block is replaced by `{ error: true, message: "<block> unavailable" }`
+instead of failing the whole response.
+
+ * @summary Unified taxon profile (taxon + classification + statuts + media + wikipedia + gbif + traits + interactions + sensitivity + share summary)
+ */
+export const getGetTaxonProfileUrl = (cdNom: number,) => {
+
+
+
+
+  return `/api/taxons/${cdNom}/profile`
+}
+
+export const getTaxonProfile = async (cdNom: number, options?: RequestInit): Promise<TaxonProfile> => {
+
+  return customFetch<TaxonProfile>(getGetTaxonProfileUrl(cdNom),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxonProfileQueryKey = (cdNom: number,) => {
+    return [
+    `/api/taxons/${cdNom}/profile`
+    ] as const;
+    }
+
+
+export const getGetTaxonProfileQueryOptions = <TData = Awaited<ReturnType<typeof getTaxonProfile>>, TError = ErrorType<Error>>(cdNom: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaxonProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxonProfileQueryKey(cdNom);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxonProfile>>> = ({ signal }) => getTaxonProfile(cdNom, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(cdNom), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxonProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaxonProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxonProfile>>>
+export type GetTaxonProfileQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Unified taxon profile (taxon + classification + statuts + media + wikipedia + gbif + traits + interactions + sensitivity + share summary)
+ */
+
+export function useGetTaxonProfile<TData = Awaited<ReturnType<typeof getTaxonProfile>>, TError = ErrorType<Error>>(
+ cdNom: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaxonProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaxonProfileQueryOptions(cdNom,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

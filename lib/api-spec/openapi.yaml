@@ -287,6 +287,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BhlInfo"
+  /taxons/{cdNom}/profile:
+    get:
+      operationId: getTaxonProfile
+      tags: [taxons]
+      summary: Unified taxon profile (taxon + classification + statuts + media + wikipedia + gbif + traits + interactions + sensitivity + share summary)
+      description: |
+        Single endpoint that fetches every block needed by the taxon detail page in one round trip.
+        External data sources (Wikipedia, GBIF, GloBI, Commons) degrade gracefully: if they fail,
+        the corresponding block is replaced by `{ error: true, message: "<block> unavailable" }`
+        instead of failing the whole response.
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Unified taxon profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonProfile"
+        "404":
+          description: Taxon not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /taxons/{cdNom}/media:
     get:
       operationId: getTaxonMedia
@@ -585,3 +615,188 @@ components:
           type: string
       required:
         - error
+    BlockError:
+      type: object
+      properties:
+        error:
+          type: boolean
+        message:
+          type: string
+      required:
+        - error
+        - message
+    SensitivityDriver:
+      type: object
+      properties:
+        label:
+          type: string
+        code:
+          type: string
+          nullable: true
+        title:
+          type: string
+        kind:
+          type: string
+      required:
+        - label
+        - title
+        - kind
+    SensitivityResult:
+      type: object
+      properties:
+        score:
+          type: integer
+        label:
+          type: string
+        ecological:
+          type: number
+        regulatory:
+          type: number
+        territorial:
+          type: number
+        management:
+          type: number
+        drivers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SensitivityDriver"
+      required:
+        - score
+        - label
+        - ecological
+        - regulatory
+        - territorial
+        - management
+        - drivers
+    ChildrenSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        preview:
+          type: array
+          items:
+            type: object
+            properties:
+              cdNom:
+                type: integer
+              lbNom:
+                type: string
+              nomVern:
+                type: string
+                nullable: true
+              rang:
+                type: string
+                nullable: true
+            required:
+              - cdNom
+              - lbNom
+      required:
+        - total
+        - preview
+    TraitsSummary:
+      type: object
+      properties:
+        hasStaticTraits:
+          type: boolean
+        staticSourcesCount:
+          type: integer
+        staticSources:
+          type: array
+          items:
+            type: string
+      required:
+        - hasStaticTraits
+        - staticSourcesCount
+        - staticSources
+    InteractionsSummary:
+      type: object
+      properties:
+        totalPartners:
+          type: integer
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              count:
+                type: integer
+            required:
+              - id
+              - label
+              - count
+      required:
+        - totalPartners
+        - groups
+    ShareSummary:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        canonicalUrl:
+          type: string
+      required:
+        - title
+        - description
+        - canonicalUrl
+    TaxonProfile:
+      type: object
+      properties:
+        taxon:
+          $ref: "#/components/schemas/TaxonDetail"
+        classification:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaxonSummary"
+        childrenSummary:
+          $ref: "#/components/schemas/ChildrenSummary"
+        media:
+          oneOf:
+            - $ref: "#/components/schemas/TaxonMedia"
+            - $ref: "#/components/schemas/BlockError"
+        statuts:
+          type: array
+          items:
+            $ref: "#/components/schemas/BdcStatut"
+        sensitivity:
+          $ref: "#/components/schemas/SensitivityResult"
+        wikipedia:
+          oneOf:
+            - $ref: "#/components/schemas/WikipediaInfo"
+            - $ref: "#/components/schemas/BlockError"
+        gbif:
+          oneOf:
+            - $ref: "#/components/schemas/GbifInfo"
+            - $ref: "#/components/schemas/BlockError"
+        traitsSummary:
+          $ref: "#/components/schemas/TraitsSummary"
+        interactionsSummary:
+          oneOf:
+            - $ref: "#/components/schemas/InteractionsSummary"
+            - $ref: "#/components/schemas/BlockError"
+            - type: "null"
+        shareSummary:
+          $ref: "#/components/schemas/ShareSummary"
+        generatedAt:
+          type: string
+      required:
+        - taxon
+        - classification
+        - childrenSummary
+        - media
+        - statuts
+        - sensitivity
+        - wikipedia
+        - gbif
+        - traitsSummary
+        - shareSummary
+        - generatedAt

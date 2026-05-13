@@ -12,6 +12,8 @@
     "rdf-export": "tsx ./src/rdf-export.ts",
     "materialize-wikidata": "tsx ./src/materialize-wikidata.ts",
     "materialize-globi": "tsx ./src/materialize-globi.ts",
+    "build-profile-summaries": "tsx ./src/build-profile-summaries.ts",
+    "build-search-index": "tsx ./src/build-search-index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

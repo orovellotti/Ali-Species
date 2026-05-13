@@ -31,6 +31,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 ### API Endpoints
 - `GET /api/taxons/search?q=...&regne=...&limit=...` — Autocomplete search by scientific or vernacular name
 - `GET /api/taxons/:cdNom` — Get full taxon details
+- `GET /api/taxons/:cdNom/profile` — **Unified profile endpoint** : agrège taxon + classification + childrenSummary + media + statuts + sensitivity + wikipedia + gbif + traitsSummary + interactionsSummary + shareSummary en 1 requête (`Promise.allSettled`, dégradation gracieuse). Préfère `taxon_profile_summary` (TTL 7 j) si frais → header `X-Profile-Source: summary`, sinon calcul live + write-through. Le frontend `taxon.tsx` utilise `useGetTaxonProfile` ; les routes individuelles restent disponibles en fallback.
 - `GET /api/taxons/:cdNom/children` — Get subordinate taxa
 - `GET /api/taxons/:cdNom/classification` — Get classification hierarchy (breadcrumbs)
 - `GET /api/taxons/:cdNom/media` — Get images from Wikipedia/Wikimedia Commons
@@ -136,6 +137,20 @@ The full graph (TAXREF v18 + BdC Statuts + traits + Wikidata mappings + GloBI in
 - `pnpm --filter @workspace/scripts run rdf-export` — generate gzipped Turtle dump in `exports/ali-species-<sha>.ttl.gz`
 - `pnpm --filter @workspace/scripts run materialize-wikidata` — pre-fetch Wikidata mappings for every taxon (long-running, batched 50/req)
 - `pnpm --filter @workspace/scripts run materialize-globi` — pre-fetch GloBI biotic interactions per taxon (long-running)
+- `pnpm --filter @workspace/scripts run build-profile-summaries` — précalcule la table `taxon_profile_summary` (HTTP-based, batch + concurrency, idempotent)
+- `pnpm --filter @workspace/scripts run build-search-index` — reconstruit `taxon_search_index` (1 row/cd_nom, fold synonymes sur la row de référence, ~708k rows, GIN trigram sur `normalized_text`)
+
+## Architecture annexes
+
+### Cache externe générique (`external_cache`)
+Table `external_cache` (PK = `provider` + `cache_key`, payload jsonb, status, expires_at). Helper `artifacts/api-server/src/lib/externalCache.ts` → `getCachedOrFetch({provider, cacheKey, ttlSeconds, fetcher, allowStaleOnError})` avec negative-cache 5 min sur erreur. Routes `/wikipedia`, `/gbif`, `/media` y délèguent. Les caches dédiés `wikidata_cache`, `globi_cache`, `bhl_cache` restent (couplés aux scripts de matérialisation RDF).
+
+### Pages partage (/share + /api/og)
+- `GET /share/taxon/:cdNom` (servi par api-server, hors `/api`, paths artifact = `["/api","/share"]`) → HTML statique avec balises OG/Twitter complètes + JSON-LD + meta-refresh vers `/taxon/:slug`. Optimisé pour les crawlers LinkedIn/Slack/X qui n'exécutent pas le JS.
+- `GET /api/og/taxon/:cdNom.png` → 302 redirect vers la meilleure image Wikimedia du taxon (cache 1h + stale-while-revalidate 24h). Fallback `/og-default.png` si pas d'image.
+
+### Index recherche dédié (`taxon_search_index`)
+Table dénormalisée (1 row/cd_nom) folded : `scientific_name` + `vernacular_fr/en` + `synonyms[]` (autres rows même cd_ref) → `normalized_text` lower+unaccent. `rank_boost` (ES=100 > GN=70 > FM=50 > … > KD=10, +5 si `is_reference`). `/api/taxons/search` : exact → prefix mot → prefix middle → trigram, ordonné par `rank_boost` puis `is_reference` puis `similarity`. Index GIN `gin_trgm_ops` sur `normalized_text` créé manuellement par le script (drizzle ne sait pas pousser l'opclass). Fallback automatique sur l'ancienne logique ILIKE si la table est vide.
 
 ## Trait Sources (Static, DB-cached)
 

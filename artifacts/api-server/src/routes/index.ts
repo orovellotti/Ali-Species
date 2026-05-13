@@ -8,6 +8,8 @@ import sparqlRouter from "./sparql";
 import exportsRouter from "./exports";
 import bhlRouter from "./bhl";
 import sitemapRouter from "./sitemap";
+import profileRouter from "./profile";
+import shareRouter, { registerOgRoute } from "./share";
 
 const router: IRouter = Router();
 
@@ -22,6 +24,9 @@ router.use(sparqlRouter);
 router.use(exportsRouter);
 router.use(bhlRouter);
 router.use(sitemapRouter);
+router.use(profileRouter);
+registerOgRoute(router);
 router.use(taxonsRouter);
 
+export { shareRouter };
 export default router;

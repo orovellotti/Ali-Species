@@ -119,6 +119,79 @@ export interface Error {
   error: string;
 }
 
+export interface BlockError {
+  error: boolean;
+  message: string;
+}
+
+export interface SensitivityDriver {
+  label: string;
+  code?: string | null;
+  title: string;
+  kind: string;
+}
+
+export interface SensitivityResult {
+  score: number;
+  label: string;
+  ecological: number;
+  regulatory: number;
+  territorial: number;
+  management: number;
+  drivers: SensitivityDriver[];
+}
+
+export type ChildrenSummaryPreviewItem = {
+  cdNom: number;
+  lbNom: string;
+  nomVern?: string | null;
+  rang?: string | null;
+};
+
+export interface ChildrenSummary {
+  total: number;
+  preview: ChildrenSummaryPreviewItem[];
+}
+
+export interface TraitsSummary {
+  hasStaticTraits: boolean;
+  staticSourcesCount: number;
+  staticSources: string[];
+}
+
+export type InteractionsSummaryGroupsItem = {
+  id: string;
+  label: string;
+  count: number;
+};
+
+export interface InteractionsSummary {
+  totalPartners: number;
+  groups: InteractionsSummaryGroupsItem[];
+}
+
+export interface ShareSummary {
+  title: string;
+  description: string;
+  imageUrl?: string | null;
+  canonicalUrl: string;
+}
+
+export interface TaxonProfile {
+  taxon: TaxonDetail;
+  classification: TaxonSummary[];
+  childrenSummary: ChildrenSummary;
+  media: TaxonMedia | BlockError;
+  statuts: BdcStatut[];
+  sensitivity: SensitivityResult;
+  wikipedia: WikipediaInfo | BlockError;
+  gbif: GbifInfo | BlockError;
+  traitsSummary: TraitsSummary;
+  interactionsSummary?: InteractionsSummary | BlockError | null;
+  shareSummary: ShareSummary;
+  generatedAt: string;
+}
+
 export type ListStatusTypes200Item = {
   code: string;
   label: string;

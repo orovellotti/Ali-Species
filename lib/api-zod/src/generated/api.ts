@@ -244,6 +244,142 @@ export const GetTaxonBhlResponse = zod.object({
 
 
 /**
+ * Single endpoint that fetches every block needed by the taxon detail page in one round trip.
+External data sources (Wikipedia, GBIF, GloBI, Commons) degrade gracefully: if they fail,
+the corresponding block is replaced by `{ error: true, message: "<block> unavailable" }`
+instead of failing the whole response.
+
+ * @summary Unified taxon profile (taxon + classification + statuts + media + wikipedia + gbif + traits + interactions + sensitivity + share summary)
+ */
+export const GetTaxonProfileParams = zod.object({
+  "cdNom": zod.coerce.number().describe('CD_NOM identifier')
+})
+
+export const GetTaxonProfileResponse = zod.object({
+  "taxon": zod.object({
+  "cdNom": zod.number(),
+  "cdRef": zod.number(),
+  "cdSup": zod.number().nullish(),
+  "regne": zod.string().nullish(),
+  "phylum": zod.string().nullish(),
+  "classe": zod.string().nullish(),
+  "ordre": zod.string().nullish(),
+  "famille": zod.string().nullish(),
+  "group1Inpn": zod.string().nullish(),
+  "group2Inpn": zod.string().nullish(),
+  "group3Inpn": zod.string().nullish(),
+  "rang": zod.string().nullish(),
+  "lbNom": zod.string(),
+  "lbAuteur": zod.string().nullish(),
+  "nomComplet": zod.string().nullish(),
+  "nomValide": zod.string().nullish(),
+  "nomVern": zod.string().nullish(),
+  "nomVernEng": zod.string().nullish(),
+  "habitat": zod.string().nullish(),
+  "fr": zod.string().nullish(),
+  "url": zod.string().nullish()
+}),
+  "classification": zod.array(zod.object({
+  "cdNom": zod.number(),
+  "cdRef": zod.number(),
+  "lbNom": zod.string(),
+  "nomVern": zod.string().nullish(),
+  "rang": zod.string().nullish(),
+  "famille": zod.string().nullish(),
+  "regne": zod.string().nullish()
+})),
+  "childrenSummary": zod.object({
+  "total": zod.number(),
+  "preview": zod.array(zod.object({
+  "cdNom": zod.number(),
+  "lbNom": zod.string(),
+  "nomVern": zod.string().nullish(),
+  "rang": zod.string().nullish()
+}))
+}),
+  "media": zod.union([zod.object({
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "title": zod.string().nullish(),
+  "author": zod.string().nullish()
+}))
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+})]),
+  "statuts": zod.array(zod.object({
+  "cdTypeStatut": zod.string(),
+  "lbTypeStatut": zod.string().nullish(),
+  "regroupementType": zod.string().nullish(),
+  "codeStatut": zod.string().nullish(),
+  "labelStatut": zod.string().nullish(),
+  "rqStatut": zod.string().nullish(),
+  "cdSig": zod.string().nullish(),
+  "lbAdmTr": zod.string().nullish(),
+  "niveauAdmin": zod.string().nullish(),
+  "fullCitation": zod.string().nullish(),
+  "docUrl": zod.string().nullish()
+})),
+  "sensitivity": zod.object({
+  "score": zod.number(),
+  "label": zod.string(),
+  "ecological": zod.number(),
+  "regulatory": zod.number(),
+  "territorial": zod.number(),
+  "management": zod.number(),
+  "drivers": zod.array(zod.object({
+  "label": zod.string(),
+  "code": zod.string().nullish(),
+  "title": zod.string(),
+  "kind": zod.string()
+}))
+}),
+  "wikipedia": zod.union([zod.object({
+  "extract": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "title": zod.string().nullish()
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+})]),
+  "gbif": zod.union([zod.object({
+  "gbifKey": zod.number().nullish(),
+  "occurrenceCount": zod.number().nullish(),
+  "iucnCategory": zod.string().nullish(),
+  "iucnCategoryLabel": zod.string().nullish(),
+  "gbifUrl": zod.string().nullish(),
+  "distributionCountries": zod.array(zod.string()).nullish()
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+})]),
+  "traitsSummary": zod.object({
+  "hasStaticTraits": zod.boolean(),
+  "staticSourcesCount": zod.number(),
+  "staticSources": zod.array(zod.string())
+}),
+  "interactionsSummary": zod.union([zod.object({
+  "totalPartners": zod.number(),
+  "groups": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "count": zod.number()
+}))
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+}),zod.null()]).optional(),
+  "shareSummary": zod.object({
+  "title": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "canonicalUrl": zod.string()
+}),
+  "generatedAt": zod.string()
+})
+
+
+/**
  * @summary Get media for a taxon from INPN
  */
 export const GetTaxonMediaParams = zod.object({

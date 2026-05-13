@@ -4,3 +4,6 @@ export * from "./species_traits";
 export * from "./wikidata_cache";
 export * from "./globi_cache";
 export * from "./bhl_cache";
+export * from "./external_cache";
+export * from "./taxon_profile_summary";
+export * from "./taxon_search_index";
