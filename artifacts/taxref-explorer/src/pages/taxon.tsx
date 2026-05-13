@@ -507,7 +507,7 @@ export default function TaxonDetail() {
   const [randomLoading, setRandomLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [, navigate] = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const handleRandom = useCallback(async () => {
     setRandomLoading(true);
@@ -545,11 +545,15 @@ export default function TaxonDetail() {
     else if (types.has("PN") || types.has("PR") || types.has("PD")) fact = t("share.factProtected");
     else if (Array.from(types).some((tt) => tt.startsWith("DH") || tt.startsWith("DO"))) fact = t("share.factDirective");
     else fact = t("share.fallbackFact");
+    const isEn = i18n.language?.toLowerCase().startsWith("en");
+    const vernSource = isEn
+      ? (taxon.nomVernEng || taxon.nomVern)
+      : (taxon.nomVern || taxon.nomVernEng);
     return {
       cdNom: taxon.cdNom,
       scientificName: taxon.lbNom,
       author: taxon.lbAuteur,
-      vernacular: taxon.nomVern ? taxon.nomVern.split(",")[0].trim() : null,
+      vernacular: vernSource ? vernSource.split(",")[0].trim() : null,
       rankLabel: formatRank(taxon.rang),
       imageUrl: firstImg ? proxyImg(firstImg.url) : null,
       imageCredit: firstImg?.author ?? null,
@@ -558,7 +562,7 @@ export default function TaxonDetail() {
       fact,
       badge,
     };
-  }, [taxon, media, sensitivity, statuts, t]);
+  }, [taxon, media, sensitivity, statuts, t, i18n.language]);
 
   if (taxonLoading) {
     return (
