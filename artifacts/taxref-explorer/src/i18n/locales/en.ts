@@ -190,19 +190,19 @@ export const en = {
     citedSpecies: "Species mentioned",
     suggestionLevelsLabel: "Query type:",
     suggestionLevels: {
-      simple: "Simple",
-      complex: "Complex",
-      advanced: "Advanced",
+      simple: "Child",
+      complex: "Adult",
+      advanced: "Expert",
     },
     suggestions: {
       simple: [
         "Which bird of France has the largest wingspan?",
-        "Which protected species lives the longest?",
         "Which animal eats the mosquitoes around us?",
+        "Show me a random species",
       ],
       complex: [
+        "Which protected species lives the longest?",
         "Which protected species has the most varied diet?",
-        "Which protected animal is the most connected in the web of life?",
         "Which species has the most different protection statuses?",
       ],
       advanced: [

@@ -190,19 +190,19 @@ export const fr = {
     citedSpecies: "Espèces citées",
     suggestionLevelsLabel: "Type de requête :",
     suggestionLevels: {
-      simple: "Simples",
-      complex: "Complexes",
-      advanced: "Avancées",
+      simple: "Enfant",
+      complex: "Adulte",
+      advanced: "Expert",
     },
     suggestions: {
       simple: [
         "Quel oiseau de France a la plus grande envergure ?",
-        "Quelle espèce protégée vit le plus longtemps ?",
         "Quel animal mange les moustiques autour de nous ?",
+        "Montre-moi une espèce au hasard",
       ],
       complex: [
+        "Quelle espèce protégée vit le plus longtemps ?",
         "Quelle espèce protégée a le régime alimentaire le plus varié ?",
-        "Quel animal protégé est le plus connecté dans le réseau du vivant ?",
         "Quelle espèce a le plus de statuts de protection différents ?",
       ],
       advanced: [
