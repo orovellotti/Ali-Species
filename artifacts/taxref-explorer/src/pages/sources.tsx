@@ -2,6 +2,7 @@ import { Layout } from "@/components/Layout";
 import { Link } from "wouter";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Helmet } from "react-helmet-async";
 
 type Source = {
   id: string;
@@ -214,9 +215,19 @@ const SOURCES: Source[] = [
 ];
 
 export default function Sources() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || "fr";
   return (
     <Layout>
+      <Helmet>
+        <html lang={lang} />
+        <title>{t("sources.title")}</title>
+        <meta name="description" content={t("sources.metaDescription")} />
+        <meta property="og:title" content={t("sources.title")} />
+        <meta property="og:description" content={t("sources.metaDescription")} />
+        <meta property="og:type" content="article" />
+        <link rel="canonical" href="https://alispecies.io/sources" />
+      </Helmet>
       <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
         {/* Breadcrumb */}
         <nav

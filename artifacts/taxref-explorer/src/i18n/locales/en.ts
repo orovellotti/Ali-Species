@@ -124,6 +124,8 @@ export const en = {
     sourcesImagesBody: " Wikipedia and Wikimedia Commons (free licence)",
   },
   sources: {
+    title: "Sources & citations — ALI Species",
+    metaDescription: "Open datasets used by ALI Species: TAXREF v18 (PatriNat), BdC Statuts, GloBI, PanTHERIA, AVONET, AmphiBIO, Wikidata, GBIF, BHL. Publisher, licence and formal citation for each source.",
     breadcrumbHome: "Home",
     breadcrumbCurrent: "Sources",
     heading: "Sources & citations",

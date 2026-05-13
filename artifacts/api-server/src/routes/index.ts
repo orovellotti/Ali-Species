@@ -7,6 +7,7 @@ import interactionsRouter from "./interactions";
 import sparqlRouter from "./sparql";
 import exportsRouter from "./exports";
 import bhlRouter from "./bhl";
+import sitemapRouter from "./sitemap";
 
 const router: IRouter = Router();
 
@@ -20,6 +21,7 @@ router.use("/sparql", express.text({ type: "application/sparql-query", limit: "1
 router.use(sparqlRouter);
 router.use(exportsRouter);
 router.use(bhlRouter);
+router.use(sitemapRouter);
 router.use(taxonsRouter);
 
 export default router;

@@ -124,6 +124,8 @@ export const fr = {
     sourcesImagesBody: " Wikipedia et Wikimedia Commons (licence libre)",
   },
   sources: {
+    title: "Sources & citations — ALI Species",
+    metaDescription: "Jeux de données ouverts utilisés par ALI Species : TAXREF v18 (PatriNat), BdC Statuts, GloBI, PanTHERIA, AVONET, AmphiBIO, Wikidata, GBIF, BHL. Éditeur, licence et citation formelle pour chaque source.",
     breadcrumbHome: "Accueil",
     breadcrumbCurrent: "Sources",
     heading: "Sources & citations",

@@ -1,0 +1,325 @@
+Paste this into Replit Agent:
+
+````text
+Implement these 5 architecture improvements for ALi Species, in this priority order.
+
+Context:
+ALi Species is a pnpm workspace using React + Vite frontend, Express 5 backend, PostgreSQL + Drizzle ORM, Zod, Orval, and wouter. It browses TAXREF v18 species data with media, statuses, traits, GBIF, Wikipedia, GloBI and BHL enrichments.
+
+Goal:
+Make the app faster, easier to maintain, and better for viral sharing.
+
+---
+
+## 1. Add one complete species profile API
+
+Problem:
+The taxon page currently needs many separate API calls:
+- taxon details
+- classification
+- children
+- media
+- statuts
+- Wikipedia
+- GBIF
+- traits
+- interactions
+
+Create one page-optimized endpoint:
+
+GET /api/taxons/:cdNom/profile
+
+It should return:
+
+```ts
+{
+  taxon,
+  classification,
+  childrenSummary,
+  media,
+  statuts,
+  sensitivity,
+  wikipedia,
+  gbif,
+  traitsSummary,
+  interactionsSummary,
+  shareSummary
+}
+````
+
+Rules:
+
+* Do not remove existing endpoints.
+* Reuse existing services/functions where possible.
+* Degrade gracefully: if Wikipedia/GBIF/GloBI fail, return null or an error object for that block, not a full 500.
+* Add Zod schemas.
+* Add OpenAPI documentation.
+* Regenerate Orval frontend client.
+* Update the taxon detail page to prefer this endpoint.
+
+Acceptance:
+
+* One request can render most of the taxon page.
+* Existing routes still work.
+* Typecheck and build pass.
+
+---
+
+## 2. Add a generic external API cache
+
+Problem:
+External APIs are called repeatedly and can fail or slow the app.
+
+Create a generic cache table:
+
+```ts
+external_cache
+- provider text
+- cache_key text
+- payload jsonb
+- fetched_at timestamp
+- expires_at timestamp
+- status text // success | error
+- error_message text nullable
+- primary key(provider, cache_key)
+```
+
+Create a helper:
+
+```ts
+getCachedOrFetch<T>({
+  provider,
+  cacheKey,
+  ttlSeconds,
+  fetcher,
+  allowStaleOnError?: boolean
+}): Promise<T>
+```
+
+Use it for:
+
+* Wikipedia
+* GBIF
+* BHL
+* GloBI
+* Wikidata where relevant
+
+Rules:
+
+* If cached and not expired, return cache.
+* If expired, refetch.
+* If refetch fails and allowStaleOnError is true, return stale cache.
+* If no cache and fetch fails, return a controlled error.
+* Do not cache invalid URLs blindly.
+* Keep existing specific cache tables for now if needed; do not break current scripts.
+
+Acceptance:
+
+* Wikipedia/GBIF/BHL/GloBI calls use the generic helper or are prepared to migrate to it.
+* External API failures do not crash taxon profile pages.
+* Cache hit/miss is logged.
+
+---
+
+## 3. Precompute important species summaries
+
+Problem:
+Some data is expensive or repeated: sensitivity badges, best image, short description, share-card text.
+
+Create a read-model table:
+
+```ts
+taxon_profile_summary
+- cd_nom int primary key
+- best_image_url text nullable
+- best_image_credit text nullable
+- short_description text nullable
+- sensitivity_score int nullable
+- sensitivity_label text nullable
+- status_badges jsonb
+- classification_summary jsonb
+- share_title text nullable
+- share_description text nullable
+- updated_at timestamp
+```
+
+Create a script:
+
+```text
+pnpm --filter @workspace/scripts run build-profile-summaries
+```
+
+The script should:
+
+* iterate over reference/species taxa
+* compute sensitivity from statuts
+* select best media image when available
+* create a short description from Wikipedia/status/classification fallback
+* generate share title + share description
+* upsert into `taxon_profile_summary`
+
+Rules:
+
+* Keep it resumable/idempotent.
+* Use batches.
+* Do not require all external APIs to succeed.
+* Use existing `computeSensitivity()` logic, moved to a shared place if needed.
+
+Acceptance:
+
+* Summary table can be rebuilt.
+* `/api/taxons/:cdNom/profile` reads from this table when available.
+* If summary is missing, profile endpoint falls back to live computation.
+
+---
+
+## 4. Add real social share pages
+
+Problem:
+Client-side React metadata is not always enough for LinkedIn, X, WhatsApp or Slack previews.
+
+Create a server-rendered share route:
+
+GET /share/taxon/:cdNom
+
+This route should return HTML directly from Express with:
+
+```html
+<meta property="og:title" />
+<meta property="og:description" />
+<meta property="og:image" />
+<meta property="og:url" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" />
+<meta name="twitter:description" />
+<meta name="twitter:image" />
+```
+
+Use data from:
+
+* `taxon_profile_summary`
+* fallback to taxon name + best media image
+
+Also create:
+
+GET /api/og/taxon/:cdNom.png
+
+This should generate or return a social preview image.
+
+Implementation options:
+
+* First version may redirect to best Wikimedia image if PNG generation is too much.
+* Better version: use Satori + Resvg to generate a branded ALi Species image.
+
+Rules:
+
+* The share page should redirect human users to `/taxon/:slug` after metadata is available, or show a simple landing card with a link.
+* Social crawlers must see proper OG metadata in the initial HTML response.
+* Missing image should use a default branded ALi Species OG image.
+
+Acceptance:
+
+* Sharing `/share/taxon/:cdNom` on LinkedIn/X/Slack shows a useful title, description and image.
+* No client-side rendering is required for metadata.
+* Missing summary/image never breaks the page.
+
+---
+
+## 5. Improve search with a dedicated search index
+
+Problem:
+Search currently works with `ILIKE`, `pg_trgm`, and `unaccent`, but ranking can improve.
+
+Create a dedicated table:
+
+```ts
+taxon_search_index
+- cd_nom int primary key
+- scientific_name text
+- vernacular_fr text
+- vernacular_en text
+- synonyms text[]
+- normalized_text text
+- rank_boost int
+- is_reference boolean
+- regne text nullable
+- rang text nullable
+- updated_at timestamp
+```
+
+Create a script:
+
+```text
+pnpm --filter @workspace/scripts run build-search-index
+```
+
+The script should:
+
+* normalize accents and lowercase names
+* include scientific names
+* include French vernacular names
+* include English vernacular names
+* include synonyms if available from TAXREF
+* boost reference taxa
+* boost species over obscure ranks
+* boost taxa with image/status/summary if available
+
+Update:
+
+GET /api/taxons/search
+
+Search strategy:
+
+1. Exact match on normalized names.
+2. Prefix match.
+3. Trigram similarity fallback.
+4. Sort by relevance + rank_boost.
+
+Rules:
+
+* Keep existing query parameters: q, regne, limit.
+* Keep accent-insensitive behavior.
+* Do not remove the old search logic immediately; keep fallback if index is empty.
+* Add indexes for performance:
+
+  * trigram index on normalized_text
+  * btree on regne
+  * btree on rank_boost
+  * maybe GIN on synonyms if useful
+
+Acceptance:
+
+* Search still works for “mesange” → “Mésange”.
+* Scientific and vernacular names rank well.
+* Reference taxa are preferred over synonyms.
+* If search index is missing, old search still works.
+
+---
+
+## General implementation rules
+
+* Work incrementally.
+* Keep existing APIs backwards compatible.
+* Add migrations using the existing Drizzle setup.
+* Add Zod schemas for new API responses.
+* Update OpenAPI spec and regenerate Orval clients.
+* Add basic tests where the repo already has test patterns.
+* Run:
+
+```sh
+pnpm run typecheck
+pnpm run build
+```
+
+* Fix all TypeScript and build errors.
+
+Recommended order:
+
+1. `/api/taxons/:cdNom/profile`
+2. `external_cache`
+3. `taxon_profile_summary`
+4. `/share/taxon/:cdNom` and `/api/og/taxon/:cdNom.png`
+5. `taxon_search_index`
+
+```
+```
