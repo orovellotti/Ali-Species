@@ -61,12 +61,22 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 
 ### UX Features (Taxon Page)
-- **Species dashboard**: Sensitivity score + driver badges displayed prominently near title
+- **Species dashboard**: Sensitivity score + driver badges displayed prominently near title. `computeSensitivity()` émet une pastille par (cdTypeStatut × territoire) — "LRN EN", "LRR EN", "PN/PR/PD/POM", "DH/DO" nommées, "ZNIEFF (territoire)", "PNA/exPNA" — avec tooltips détaillées.
 - **Image lightbox**: Click-to-zoom with fullscreen overlay (X to close)
 - **Sticky image column**: Right sidebar stays visible while scrolling
-- **SEO**: react-helmet-async with title/meta/OG/Twitter/JSON-LD structured data
+- **SEO**: react-helmet-async with title/meta/OG/Twitter/JSON-LD structured data per page; static `index.html` fallback contains French meta description, Open Graph, Twitter Card, and JSON-LD `WebSite` + `SearchAction` for crawlers and social previews.
 - **Visual hierarchy**: UICN badge color-coded, tags with borders and icons, Wikipedia inline, taxonomy collapsed by default
 - **External links**: INPN + GBIF side by side below image
+
+### Layout & Responsive
+- **Header** (`components/Layout.tsx`): logo + tagline (tagline hidden < sm), full nav inline ≥ lg, **burger menu** (Lucide `Menu`/`X`) below lg with backdrop-blur overlay, body-scroll lock when open, auto-close on `wouter` location change, full ARIA (`aria-expanded`, `aria-controls`, `aria-label`).
+- **Footer**: logo strip + bottom links use `flex-wrap` so they reflow cleanly on small screens.
+- **ConversationalBar suggestions**: 3 query-type groups (Simple / Complex / Advanced) shown side-by-side in a `grid-cols-1 md:grid-cols-3` layout with colored dot per level (emerald/amber/rose). All examples are click-to-prefill. Bilingual (FR/EN) via `conversational.suggestions` i18n keys.
+
+### `/api/ask` Conversational Agent
+- Loop budget: `turn < 8` (handles alias resolution + multi-call patterns like "rapaces" = Accipitriformes + Falconiformes).
+- **Anthropic resilience**: 1 transparent retry with 400 ms backoff on transient errors (HTTP 5xx, 429, `APIConnectionError`, `ECONNRESET`/`ETIMEDOUT`/`fetch failed`). Worst-case latency bounded by `ANTHROPIC_TIMEOUT_MS * 2` (= 60 s). Non-retryable errors still return 502/504 with friendly message + last partial result.
+- **System prompt rules** : "rapaces (diurnes)" → DEUX appels (Accipitriformes + Falconiformes) ; "rapaces nocturnes" / "chouettes" / "hiboux" → Strigiformes ; toute question superlative ("le plus grand/lourd/long", "trié par", "top N") DOIT utiliser `query_traits` avec `traitKey` ET `sortBy=value_desc|value_asc` (jamais `query_taxa` qui ne renvoie pas d'ordre). Mappings: envergure→avonet/wingLen, masse→pantheria/adultBodyMass, longévité→pantheria/maxLongevity ou avonet/longevity.
 
 ### External APIs
 - **Wikipedia REST API** — FR/EN page summaries for taxon descriptions (`/api/rest_v1/page/summary/`)

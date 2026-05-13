@@ -1,0 +1,80 @@
+Paste this into Replit Agent:
+
+```text
+We need to add a viral sharing feature to ALI Species.
+
+Goal:
+Every species search result should be transformable into a beautiful shareable discovery card optimized for LinkedIn, X/Twitter, Instagram Story, and screenshots.
+
+Feature name:
+“Share this discovery”
+
+User flow:
+1. User searches for a species, place, or natural-language biodiversity question.
+2. On the result page, add a visible button: “Share this discovery”.
+3. When clicked, generate a visual card with:
+   - species/common name or query title
+   - scientific name if available
+   - striking species image
+   - short surprising fact
+   - rarity/protection/conservation status if available
+   - location if relevant
+   - ALI Species logo / alispecies.io
+   - CTA: “Ask nature anything on ALI Species”
+4. User can:
+   - copy share link
+   - download PNG
+   - share on LinkedIn
+   - share on X/Twitter
+   - copy prewritten post text
+
+Card design:
+- modern, premium, cinematic
+- dark or natural gradient background
+- large species image
+- big readable title
+- short text, not too scientific
+- 1200x630 for LinkedIn/X
+- 1080x1920 for Stories
+- mobile-first
+
+Example card text:
+Title: “The hidden predator of Marseille”
+Subtitle: “A protected species found near you”
+Fact: “This species plays a key role in balancing local ecosystems.”
+CTA: “Discover the living world with ALI Species”
+
+Technical requirements:
+- Create reusable component: ShareDiscoveryCard
+- Create modal: ShareDiscoveryModal
+- Generate card from current search result data
+- Use html-to-image or an equivalent library to export PNG
+- Add Open Graph metadata for share URLs if possible
+- Create dynamic share route like:
+  /share/[id]
+- The share page should render the card and include proper og:title, og:description, og:image.
+- If image or status is missing, gracefully fallback to:
+  - natural background gradient
+  - generic biodiversity icon
+  - “A species worth discovering”
+
+Post text templates:
+LinkedIn:
+“I just discovered this species on ALI Species 🌿
+AI is making biodiversity easier to explore, understand and protect.
+Try it here: {url}”
+
+X/Twitter:
+“Discovered this species with ALI Species 🌿
+Ask nature anything: {url}”
+
+Acceptance criteria:
+- A user can generate a beautiful card from any result.
+- User can download the card as PNG.
+- User can copy a public share link.
+- Shared links display nice previews on LinkedIn/X.
+- The design works on desktop and mobile.
+- Missing data never breaks the card.
+```
+
+Start with the share card + PNG download first. Open Graph preview can come second.
