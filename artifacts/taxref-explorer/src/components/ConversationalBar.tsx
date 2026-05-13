@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useMemo, type FormEvent, type ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, Fragment, type FormEvent, type ReactNode } from "react";
 import { Sparkles, Send, Loader2, RotateCcw, Linkedin, Twitter, Link2, Copy, Check } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { taxonUrl } from "@/lib/constants";
 import { localeNumber } from "@/i18n";
 
@@ -242,9 +244,24 @@ function ConversationTurn({
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {linkifyReply(turn.reply, turn.results, linkedCdNoms)}
-            </p>
+            <div className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-headings:font-serif prose-headings:font-semibold prose-strong:text-foreground prose-strong:font-semibold prose-a:text-primary">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <p>{linkifyChildren(children, turn.results, linkedCdNoms)}</p>,
+                  li: ({ children }) => <li>{linkifyChildren(children, turn.results, linkedCdNoms)}</li>,
+                  strong: ({ children }) => <strong>{linkifyChildren(children, turn.results, linkedCdNoms)}</strong>,
+                  em: ({ children }) => <em>{linkifyChildren(children, turn.results, linkedCdNoms)}</em>,
+                  a: ({ href, children }) => (
+                    <a href={href} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {turn.reply}
+              </ReactMarkdown>
+            </div>
             {turn.results.length > 0 && (
               <div className="mt-4 pt-3 border-t border-border/60">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -407,8 +424,26 @@ function buildNameRegex(name: string): RegExp {
   return new RegExp(`(?<![\\p{L}])${escapeRegex(name)}(?![\\p{L}])`, "iu");
 }
 
-function linkifyReply(reply: string, results: ResultItem[], _linked: Set<number>): ReactNode[] {
-  const stripped = reply.replace(/\*\*/g, "");
+function linkifyChildren(children: ReactNode, results: ResultItem[], linked: Set<number>): ReactNode {
+  // react-markdown passes children as a string, an array, or React elements.
+  // We only run the species linkifier on text nodes; React elements (already
+  // styled, e.g. <strong>) are passed through unchanged.
+  if (typeof children === "string") {
+    return <>{linkifyText(children, results, linked)}</>;
+  }
+  if (Array.isArray(children)) {
+    return children.map((c, i) =>
+      typeof c === "string"
+        ? <Fragment key={i}>{linkifyText(c, results, linked)}</Fragment>
+        : <Fragment key={i}>{c}</Fragment>,
+    );
+  }
+  return children;
+}
+
+function linkifyText(reply: string, results: ResultItem[], _linked: Set<number>): ReactNode[] {
+  // Markdown bold/italic markers are now handled by react-markdown — do not strip them.
+  const stripped = reply;
   if (results.length === 0) return [stripped];
 
   // Build all (name → cdNom + lbNom) pairs, sorted by length desc so that

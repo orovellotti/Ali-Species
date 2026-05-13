@@ -265,6 +265,45 @@ async function findExactSpecies(q: string): Promise<SpeciesItem[]> {
     .map(mapTaxonRow);
 }
 
+// ---------- Lightweight in-memory cache for /ask -----------------------
+// Keyed by normalized question (only when history is empty, i.e. fresh
+// conversations like the home-page suggestions). TTL 1 h, ≤ 256 entries.
+type CachedAsk = { payload: unknown; expiresAt: number };
+const ASK_CACHE = new Map<string, CachedAsk>();
+const ASK_CACHE_TTL_MS = 60 * 60 * 1000;
+const ASK_CACHE_MAX = 256;
+
+function normalizeQuestion(q: string): string {
+  return q
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s?]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function askCacheGet(key: string): unknown | null {
+  const hit = ASK_CACHE.get(key);
+  if (!hit) return null;
+  if (hit.expiresAt < Date.now()) {
+    ASK_CACHE.delete(key);
+    return null;
+  }
+  // LRU bump
+  ASK_CACHE.delete(key);
+  ASK_CACHE.set(key, hit);
+  return hit.payload;
+}
+
+function askCacheSet(key: string, payload: unknown): void {
+  if (ASK_CACHE.size >= ASK_CACHE_MAX) {
+    const oldest = ASK_CACHE.keys().next().value;
+    if (oldest) ASK_CACHE.delete(oldest);
+  }
+  ASK_CACHE.set(key, { payload, expiresAt: Date.now() + ASK_CACHE_TTL_MS });
+}
+
 router.post("/ask", async (req, res): Promise<void> => {
   const parsed = askBodySchema.safeParse(req.body ?? {});
   if (!parsed.success) {
@@ -275,6 +314,29 @@ router.post("/ask", async (req, res): Promise<void> => {
     return;
   }
   const { question, history } = parsed.data;
+
+  // Cache lookup (only fresh conversations)
+  const cacheKey = history.length === 0 ? normalizeQuestion(question) : null;
+  if (cacheKey) {
+    const cached = askCacheGet(cacheKey);
+    if (cached) {
+      res.setHeader("X-Ask-Cache", "hit");
+      res.json(cached);
+      return;
+    }
+    res.setHeader("X-Ask-Cache", "miss");
+  }
+
+  // Wrap res.json so any successful response is cached
+  if (cacheKey) {
+    const origJson = res.json.bind(res);
+    res.json = ((body: unknown) => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        try { askCacheSet(cacheKey, body); } catch { /* noop */ }
+      }
+      return origJson(body);
+    }) as typeof res.json;
+  }
 
   // Fast path: if the question looks like just a species name, look it up directly
   // and skip the LLM call entirely.
