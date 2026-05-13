@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type FormEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type FormEvent, type ReactNode } from "react";
 import { Sparkles, Send, Loader2, RotateCcw, Share2 } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -239,6 +239,23 @@ function ConversationTurn({
   onShareAnswer: () => void;
 }) {
   const { t } = useTranslation();
+  const linkedCdNoms = useMemo(() => new Set<number>(), [turn.reply, turn.results]);
+  const unlinkedResults = useMemo(() => {
+    // linkedCdNoms is populated as a side-effect of linkifyReply during the
+    // first render. We need a stable derivation, so we precompute which
+    // results actually appear in the text using the same matcher logic.
+    const found = new Set<number>();
+    const text = turn.reply;
+    for (const r of turn.results) {
+      const names = uniqueNames(r);
+      if (names.some((n) => buildNameRegex(n).test(text))) {
+        found.add(r.cdNom);
+      }
+    }
+    // Mirror into linkedCdNoms so the inline renderer can skip them
+    found.forEach((id) => linkedCdNoms.add(id));
+    return turn.results.filter((r) => !found.has(r.cdNom));
+  }, [turn.reply, turn.results, linkedCdNoms]);
   return (
     <div>
       <div className="flex justify-end mb-3">
@@ -253,7 +270,9 @@ function ConversationTurn({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap flex-1">{turn.reply.replace(/\*\*/g, "")}</p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap flex-1">
+                {linkifyReply(turn.reply, turn.results, linkedCdNoms)}
+              </p>
               <button
                 type="button"
                 onClick={onShareAnswer}
@@ -266,27 +285,20 @@ function ConversationTurn({
                 <span className="hidden sm:inline">{t("shareAnswer.button")}</span>
               </button>
             </div>
-            {turn.results.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {turn.results.map((r) => (
-                  <Link
-                    key={r.cdNom}
-                    href={taxonUrl(r.cdNom, r.lbNom)}
-                    className="block px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors group"
-                    data-testid="link-result"
-                  >
-                    <div className="text-sm font-medium text-foreground italic group-hover:text-primary truncate">
+            {unlinkedResults.length > 0 && (
+              <div className="mt-3 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground/80">{t("conversational.alsoSee")} </span>
+                {unlinkedResults.map((r, i) => (
+                  <span key={r.cdNom}>
+                    {i > 0 && <span>, </span>}
+                    <Link
+                      href={taxonUrl(r.cdNom, r.lbNom)}
+                      className="italic text-primary hover:underline"
+                      data-testid="link-result"
+                    >
                       {r.lbNom}
-                    </div>
-                    {r.nomVern && (
-                      <div className="text-xs text-muted-foreground truncate">{r.nomVern}</div>
-                    )}
-                    {(r.classe || r.famille) && (
-                      <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
-                        {[r.classe, r.famille].filter(Boolean).join(" › ")}
-                      </div>
-                    )}
-                  </Link>
+                    </Link>
+                  </span>
                 ))}
               </div>
             )}
@@ -300,4 +312,88 @@ function ConversationTurn({
       </div>
     </div>
   );
+}
+
+// ---------- Reply linkification ----------------------------------------
+
+function uniqueNames(r: ResultItem): string[] {
+  // Scientific name + first vernacular (split on commas — TAXREF often
+  // packs several synonyms into nomVern).
+  const out: string[] = [];
+  const sci = r.lbNom?.trim();
+  if (sci) out.push(sci);
+  if (r.nomVern) {
+    for (const part of r.nomVern.split(/[,;]/)) {
+      const v = part.trim();
+      if (v && v.length >= 4) out.push(v);
+    }
+  }
+  return out;
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildNameRegex(name: string): RegExp {
+  // Word-boundary on each side, case-insensitive, unicode-aware.
+  // We avoid \b because it doesn't play nice with accents — use lookarounds
+  // on non-letter chars instead.
+  return new RegExp(`(?<![\\p{L}])${escapeRegex(name)}(?![\\p{L}])`, "iu");
+}
+
+function linkifyReply(reply: string, results: ResultItem[], _linked: Set<number>): ReactNode[] {
+  const stripped = reply.replace(/\*\*/g, "");
+  if (results.length === 0) return [stripped];
+
+  // Build all (name → cdNom + lbNom) pairs, sorted by length desc so that
+  // longer names match before their shorter prefixes (e.g. "Mésange bleue"
+  // before "Mésange").
+  type Match = { start: number; end: number; cdNom: number; lbNom: string; matched: string };
+  const candidates: Array<{ name: string; cdNom: number; lbNom: string }> = [];
+  for (const r of results) {
+    for (const n of uniqueNames(r)) {
+      candidates.push({ name: n, cdNom: r.cdNom, lbNom: r.lbNom });
+    }
+  }
+  candidates.sort((a, b) => b.name.length - a.name.length);
+
+  // Find non-overlapping matches, longest-first.
+  const matches: Match[] = [];
+  const occupied: Array<[number, number]> = [];
+  for (const c of candidates) {
+    const re = new RegExp(`(?<![\\p{L}])${escapeRegex(c.name)}(?![\\p{L}])`, "giu");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      const start = m.index;
+      const end = start + m[0].length;
+      const overlaps = occupied.some(([a, b]) => start < b && end > a);
+      if (overlaps) continue;
+      matches.push({ start, end, cdNom: c.cdNom, lbNom: c.lbNom, matched: m[0] });
+      occupied.push([start, end]);
+    }
+  }
+  matches.sort((a, b) => a.start - b.start);
+
+  if (matches.length === 0) return [stripped];
+
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    if (m.start > cursor) nodes.push(stripped.slice(cursor, m.start));
+    nodes.push(
+      <Link
+        key={`m-${i}-${m.start}`}
+        href={taxonUrl(m.cdNom, m.lbNom)}
+        className="text-primary italic hover:underline font-medium"
+        data-testid="link-inline-taxon"
+      >
+        {m.matched}
+      </Link>,
+    );
+    cursor = m.end;
+  }
+  if (cursor < stripped.length) nodes.push(stripped.slice(cursor));
+  return nodes;
 }
