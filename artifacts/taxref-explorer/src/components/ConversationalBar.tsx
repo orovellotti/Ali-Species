@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { taxonUrl, formatRank } from "@/lib/constants";
 import { localeNumber } from "@/i18n";
 import { ShareDiscoveryModal } from "@/components/ShareDiscoveryModal";
+import { ShareAnswerModal, type ShareableAnswer } from "@/components/ShareAnswerModal";
 import { useShareTaxon } from "@/hooks/use-share-taxon";
 
 type ResultItem = {
@@ -30,10 +31,26 @@ export function ConversationalBar() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { shareData, shareUrl, sharingCdNom, openShareFor: openShare, closeShare } = useShareTaxon();
+  const [answerToShare, setAnswerToShare] = useState<ShareableAnswer | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t, i18n } = useTranslation();
   const lang = i18n.resolvedLanguage || "fr";
+
+  // Auto-submit when arriving with `?q=...` (deep-link from a shared answer)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const seed = params.get("q");
+    if (seed && seed.trim()) {
+      // Strip the param from the URL so a manual reset doesn't re-trigger
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      window.history.replaceState({}, "", url.toString());
+      void ask(seed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function openShareFor(e: MouseEvent, r: ResultItem) {
     e.preventDefault();
@@ -188,6 +205,13 @@ export function ConversationalBar() {
               turn={tn}
               lang={lang}
               onShare={openShareFor}
+              onShareAnswer={() =>
+                setAnswerToShare({
+                  question: tn.question,
+                  reply: tn.reply,
+                  results: tn.results.map((r) => ({ cdNom: r.cdNom, lbNom: r.lbNom, nomVern: r.nomVern })),
+                })
+              }
               sharingCdNom={sharingCdNom}
             />
           ))}
@@ -212,6 +236,14 @@ export function ConversationalBar() {
           shareUrl={shareUrl}
         />
       )}
+
+      {answerToShare && (
+        <ShareAnswerModal
+          open={true}
+          onClose={() => setAnswerToShare(null)}
+          data={answerToShare}
+        />
+      )}
     </div>
   );
 }
@@ -220,11 +252,13 @@ function ConversationTurn({
   turn,
   lang,
   onShare,
+  onShareAnswer,
   sharingCdNom,
 }: {
   turn: Turn;
   lang: string;
   onShare: (e: MouseEvent, r: ResultItem) => void;
+  onShareAnswer: () => void;
   sharingCdNom: number | null;
 }) {
   const { t } = useTranslation();
@@ -241,7 +275,20 @@ function ConversationTurn({
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{turn.reply.replace(/\*\*/g, "")}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap flex-1">{turn.reply.replace(/\*\*/g, "")}</p>
+              <button
+                type="button"
+                onClick={onShareAnswer}
+                className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 active:scale-95 transition-all shadow-sm"
+                aria-label={t("shareAnswer.button")}
+                title={t("shareAnswer.button")}
+                data-testid="button-share-answer"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t("shareAnswer.button")}</span>
+              </button>
+            </div>
             {turn.results.length > 0 && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {turn.results.map((r) => (

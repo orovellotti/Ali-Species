@@ -61,6 +61,11 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `/a-propos` — About page with PatriNat and Natural Solutions credits and MCP integration card
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 
+### Share this answer (chat reply)
+- Bouton **Partager cette réponse** dans le header de chaque tour de chat (`ConversationTurn` dans `ConversationalBar.tsx`). Ouvre `ShareAnswerModal` qui affiche question + réponse tronquée (600 char max) + jusqu'à 5 espèces citées.
+- Lien partageable : `${origin}${BASE_URL}?q={encodedQuestion}` — la home page détecte `?q=` au mount, strip le param de l'URL (history.replaceState) et auto-soumet la question via `ask(seed)` pour rejouer la requête côté destinataire.
+- Actions modal : Copier le lien / Copier le texte (template LinkedIn) / LinkedIn (`share-offsite`) / X (`twitter.com/intent/tweet`). Templates i18n FR/EN avec `{{question}}`, `{{reply}}`, `{{url}}`. Modal lazy-mounted, ESC ferme + body scroll-lock + aria-modal.
+
 ### Share this discovery (viral card)
 - Bouton **Partager cette découverte** dans le header de la page taxon (à côté du badge Rang/CD_NOM). Ouvre `ShareDiscoveryModal` avec aperçu live de la carte.
 - Composant réutilisable `ShareDiscoveryCard` (`components/ShareDiscoveryCard.tsx`) — 2 formats : **landscape 1200×630** (LinkedIn/X/OG) et **story 1080×1920** (Instagram/TikTok). Fond gradient vert naturel + image espèce + nom scientifique italique + vernaculaire + badge sensibilité (couleur selon score : rose ≥80, ambre ≥50, emerald sinon) + fact auto-généré + CTA "Demandez tout à la nature" + handle alispecies.io. Auto-shrink du titre si nom > 28-30 caractères. Fallback gradient + feuille si pas d'image.
