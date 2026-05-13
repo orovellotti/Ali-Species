@@ -248,7 +248,7 @@ function ConversationTurn({
                   <div key={r.cdNom} className="relative group">
                     <Link
                       href={taxonUrl(r.cdNom, r.lbNom)}
-                      className="block px-3 py-2 pr-9 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                      className="block px-3 py-2 pr-24 sm:pr-28 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
                       data-testid="link-result"
                     >
                       <div className="text-sm font-medium text-foreground italic group-hover:text-primary truncate">
@@ -267,7 +267,7 @@ function ConversationTurn({
                       type="button"
                       onClick={(e) => onShare(e, r)}
                       disabled={sharingCdNom === r.cdNom}
-                      className="absolute top-1.5 right-1.5 w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                      className="absolute top-2 right-2 h-7 px-2 rounded-md inline-flex items-center gap-1.5 text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
                       aria-label={t("share.button")}
                       title={t("share.button")}
                       data-testid={`button-share-${r.cdNom}`}
@@ -275,7 +275,10 @@ function ConversationTurn({
                       {sharingCdNom === r.cdNom ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <Share2 className="w-3.5 h-3.5" />
+                        <>
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">{t("share.button")}</span>
+                        </>
                       )}
                     </button>
                   </div>
