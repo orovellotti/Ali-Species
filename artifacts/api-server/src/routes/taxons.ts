@@ -390,7 +390,7 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
     node.uicn[u.code] = (node.uicn[u.code] || 0) + u.c;
   }
 
-  function sortAndSlice<T extends { children?: any[] }>(arr: T[], limit: number): T[] {
+  function sortAndSlice<T>(arr: T[], limit: number): T[] {
     const sumVal = (node: any): number => {
       if (node.value != null) return node.value;
       return (node.children || []).reduce((s: number, c: any) => s + sumVal(c), 0);

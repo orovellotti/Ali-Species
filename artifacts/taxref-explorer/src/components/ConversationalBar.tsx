@@ -442,9 +442,9 @@ function linkifyChildren(children: ReactNode, results: ResultItem[], linked: Set
 }
 
 function linkifyText(reply: string, results: ResultItem[], _linked: Set<number>): ReactNode[] {
-  // Markdown bold/italic markers are now handled by react-markdown — do not strip them.
-  const stripped = reply;
-  if (results.length === 0) return [stripped];
+  // Markdown markers (** _ etc.) are handled upstream by react-markdown; we just
+  // walk the plain text chunk we receive and turn species names into links.
+  if (results.length === 0) return [reply];
 
   // Build all (name → cdNom + lbNom) pairs, sorted by length desc so that
   // longer names match before their shorter prefixes (e.g. "Mésange bleue"
@@ -464,7 +464,7 @@ function linkifyText(reply: string, results: ResultItem[], _linked: Set<number>)
   for (const c of candidates) {
     const re = new RegExp(`(?<![\\p{L}])${escapeRegex(c.name)}(?![\\p{L}])`, "giu");
     let m: RegExpExecArray | null;
-    while ((m = re.exec(stripped)) !== null) {
+    while ((m = re.exec(reply)) !== null) {
       const start = m.index;
       const end = start + m[0].length;
       const overlaps = occupied.some(([a, b]) => start < b && end > a);
@@ -475,13 +475,13 @@ function linkifyText(reply: string, results: ResultItem[], _linked: Set<number>)
   }
   matches.sort((a, b) => a.start - b.start);
 
-  if (matches.length === 0) return [stripped];
+  if (matches.length === 0) return [reply];
 
   const nodes: ReactNode[] = [];
   let cursor = 0;
   for (let i = 0; i < matches.length; i++) {
     const m = matches[i];
-    if (m.start > cursor) nodes.push(stripped.slice(cursor, m.start));
+    if (m.start > cursor) nodes.push(reply.slice(cursor, m.start));
     nodes.push(
       <Link
         key={`m-${i}-${m.start}`}
@@ -494,6 +494,6 @@ function linkifyText(reply: string, results: ResultItem[], _linked: Set<number>)
     );
     cursor = m.end;
   }
-  if (cursor < stripped.length) nodes.push(stripped.slice(cursor));
+  if (cursor < reply.length) nodes.push(reply.slice(cursor));
   return nodes;
 }
