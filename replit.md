@@ -73,7 +73,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - **Species dashboard**: Sensitivity score + driver badges displayed prominently near title. `computeSensitivity()` émet une pastille par (cdTypeStatut × territoire) — "LRN EN", "LRR EN", "PN/PR/PD/POM", "DH/DO" nommées, "ZNIEFF (territoire)", "PNA/exPNA" — avec tooltips détaillées.
 - **Image lightbox**: Click-to-zoom with fullscreen overlay (X to close)
 - **Sticky image column**: Right sidebar stays visible while scrolling
-- **SEO**: react-helmet-async with title/meta/OG/Twitter/JSON-LD structured data per page; static `index.html` fallback contains French meta description, Open Graph, Twitter Card, and JSON-LD `WebSite` + `SearchAction` for crawlers and social previews.
+- **SEO**: react-helmet-async with title/meta/OG/Twitter/JSON-LD structured data per page; static `index.html` fallback contains French meta description, Open Graph, Twitter Card, and JSON-LD `WebSite` + `SearchAction` for crawlers and social previews. Robots meta = `index, follow, max-image-preview:large, max-snippet:-1`. `hreflang` alternates fr/en/x-default. Static `public/robots.txt` (allow all + explicit allow GPTBot, ClaudeBot, PerplexityBot, Google-Extended ; disallow `/api/`) et `public/sitemap.xml` (pages principales + 4 taxons featured) servis depuis la racine. Note : sur le domaine de preview `*.replit.dev`, Replit ajoute automatiquement `X-Robots-Tag: noindex` — ce header disparaît en production sur le custom domain alispecies.io.
 - **Visual hierarchy**: UICN badge color-coded, tags with borders and icons, Wikipedia inline, taxonomy collapsed by default
 - **External links**: INPN + GBIF side by side below image
 
