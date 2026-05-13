@@ -208,6 +208,8 @@ export const fr = {
       advanced: [
         "Quel prédateur dépend le plus d'espèces elles-mêmes menacées ?",
         "Quelle espèce protégée est à la fois prédateur, proie et connecteur écologique ?",
+        "Quels pollinisateurs de plantes menacées sont eux-mêmes en Liste rouge ?",
+        "Quelles espèces sous PNA actif n'ont aucune interaction trophique documentée ?",
       ],
     },
   },

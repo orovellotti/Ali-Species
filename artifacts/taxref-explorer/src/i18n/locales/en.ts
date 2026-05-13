@@ -208,6 +208,8 @@ export const en = {
       advanced: [
         "Which predator depends most on species that are themselves threatened?",
         "Which protected species is at once predator, prey and ecological connector?",
+        "Which pollinators of threatened plants are themselves on the Red List?",
+        "Which species under an active National Action Plan have no documented trophic interaction?",
       ],
     },
   },
