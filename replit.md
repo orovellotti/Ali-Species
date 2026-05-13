@@ -60,6 +60,15 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `/a-propos` — About page with PatriNat and Natural Solutions credits and MCP integration card
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 
+### Share this discovery (viral card)
+- Bouton **Partager cette découverte** dans le header de la page taxon (à côté du badge Rang/CD_NOM). Ouvre `ShareDiscoveryModal` avec aperçu live de la carte.
+- Composant réutilisable `ShareDiscoveryCard` (`components/ShareDiscoveryCard.tsx`) — 2 formats : **landscape 1200×630** (LinkedIn/X/OG) et **story 1080×1920** (Instagram/TikTok). Fond gradient vert naturel + image espèce + nom scientifique italique + vernaculaire + badge sensibilité (couleur selon score : rose ≥80, ambre ≥50, emerald sinon) + fact auto-généré + CTA "Demandez tout à la nature" + handle alispecies.io. Auto-shrink du titre si nom > 28-30 caractères. Fallback gradient + feuille si pas d'image.
+- Fact intelligent dérivé des statuts BdC : CR/EN/VU sur Liste rouge → phrase dédiée ; PN/PR/PD → "espèce protégée" ; DH*/DO* → "directives européennes" ; sinon fallback générique.
+- Export PNG via `html-to-image` (`toPng` avec `pixelRatio: 2`, `cacheBust: true`, dimensions explicites). Le canvas n'est pas tainted car les images passent par `/api/image-proxy` (même origine).
+- Actions : Télécharger PNG / Copier lien (canonical URL) / Copier texte (template LinkedIn ou X selon contexte) / Partager LinkedIn (popup `share-offsite`) / Partager X (`twitter.com/intent/tweet`). Templates i18n FR/EN avec interpolation `{{url}}`.
+- Modal lazy-mounted (`{shareData && <Modal>}`) : la carte 1080×1920 n'est pas dans le DOM tant que l'utilisateur ne clique pas. ESC ferme + body scroll-lock + aria-modal.
+- **Phase 2 (à faire)** : route serveur `/share/:cdNom` qui sert un HTML statique avec `og:image` pointant vers une carte rendue côté serveur, pour des previews riches LinkedIn/X sans crawler JS.
+
 ### UX Features (Taxon Page)
 - **Species dashboard**: Sensitivity score + driver badges displayed prominently near title. `computeSensitivity()` émet une pastille par (cdTypeStatut × territoire) — "LRN EN", "LRR EN", "PN/PR/PD/POM", "DH/DO" nommées, "ZNIEFF (territoire)", "PNA/exPNA" — avec tooltips détaillées.
 - **Image lightbox**: Click-to-zoom with fullscreen overlay (X to close)

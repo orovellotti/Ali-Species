@@ -22,9 +22,12 @@ import type { BdcStatut } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users, X, ZoomIn, Shuffle, Network, Sparkles, Database } from "lucide-react";
+import { ChevronRight, ChevronDown, Image as ImageIcon, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, ScrollText, Activity, AlertTriangle, Info, Users, X, ZoomIn, Shuffle, Network, Sparkles, Database, Share2 } from "lucide-react";
+import { ShareDiscoveryModal } from "@/components/ShareDiscoveryModal";
+import type { ShareCardData } from "@/components/ShareDiscoveryCard";
 import { useState, useMemo, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 
 function proxyImg(url: string | undefined | null): string {
@@ -502,14 +505,16 @@ export default function TaxonDetail() {
 
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [randomLoading, setRandomLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
 
   const handleRandom = useCallback(async () => {
     setRandomLoading(true);
     try {
-      const t = await getRandomTaxon();
-      if (t?.cdNom && t?.lbNom) {
-        navigate(taxonUrl(t.cdNom, t.lbNom));
+      const random = await getRandomTaxon();
+      if (random?.cdNom && random?.lbNom) {
+        navigate(taxonUrl(random.cdNom, random.lbNom));
       }
     } finally {
       setRandomLoading(false);
@@ -520,6 +525,40 @@ export default function TaxonDetail() {
     if (!statuts || statuts.length === 0) return null;
     return computeSensitivity(statuts);
   }, [statuts]);
+
+  const shareData: ShareCardData | null = useMemo(() => {
+    if (!taxon) return null;
+    const firstImg = media?.images?.[0];
+    let badge: ShareCardData["badge"] = null;
+    let fact: string | null = null;
+    if (sensitivity && sensitivity.score > 0 && sensitivity.drivers.length > 0) {
+      const d = sensitivity.drivers[0];
+      const tone: NonNullable<ShareCardData["badge"]>["tone"] =
+        sensitivity.score >= 80 ? "danger" : sensitivity.score >= 50 ? "warning" : "info";
+      badge = { label: d.label, tone };
+    }
+    const codes = new Set((statuts || []).map((s: BdcStatut) => s.codeStatut).filter(Boolean) as string[]);
+    const types = new Set((statuts || []).map((s: BdcStatut) => s.cdTypeStatut).filter(Boolean) as string[]);
+    if (codes.has("CR")) fact = t("share.factRedListCR");
+    else if (codes.has("EN")) fact = t("share.factRedListEN");
+    else if (codes.has("VU")) fact = t("share.factRedListVU");
+    else if (types.has("PN") || types.has("PR") || types.has("PD")) fact = t("share.factProtected");
+    else if (Array.from(types).some((tt) => tt.startsWith("DH") || tt.startsWith("DO"))) fact = t("share.factDirective");
+    else fact = t("share.fallbackFact");
+    return {
+      cdNom: taxon.cdNom,
+      scientificName: taxon.lbNom,
+      author: taxon.lbAuteur,
+      vernacular: taxon.nomVern ? taxon.nomVern.split(",")[0].trim() : null,
+      rankLabel: formatRank(taxon.rang),
+      imageUrl: firstImg ? proxyImg(firstImg.url) : null,
+      imageCredit: firstImg?.author ?? null,
+      classe: taxon.classe ?? null,
+      famille: taxon.famille ?? null,
+      fact,
+      badge,
+    };
+  }, [taxon, media, sensitivity, statuts, t]);
 
   if (taxonLoading) {
     return (
@@ -671,11 +710,21 @@ export default function TaxonDetail() {
           
           <div className="space-y-8">
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <Badge variant="secondary" className="font-mono text-xs tracking-wider uppercase bg-primary/10 text-primary hover:bg-primary/20">
                   {formatRank(taxon.rang)}
                 </Badge>
                 <span className="text-xs font-mono text-muted-foreground/60">CD_NOM {taxon.cdNom}</span>
+                <button
+                  type="button"
+                  onClick={() => setShareOpen(true)}
+                  className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                  data-testid="button-share-discovery"
+                  aria-label={t("share.button")}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("share.button")}</span>
+                </button>
               </div>
               
               <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-1 italic" data-testid="text-taxon-name" lang="la">
@@ -1104,6 +1153,15 @@ export default function TaxonDetail() {
 
         </div>
       </div>
+
+      {shareData && (
+        <ShareDiscoveryModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          data={shareData}
+          shareUrl={canonicalUrl}
+        />
+      )}
     </Layout>
   );
 }
