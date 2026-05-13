@@ -14,6 +14,7 @@
     "materialize-globi": "tsx ./src/materialize-globi.ts",
     "build-profile-summaries": "tsx ./src/build-profile-summaries.ts",
     "build-search-index": "tsx ./src/build-search-index.ts",
+    "ensure-extensions": "tsx ./src/ensure-extensions.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
