@@ -314,6 +314,7 @@ export const en = {
   },
   shareAnswer: {
     button: "Share",
+    barLabel: "Share:",
     modalTitle: "Share this answer",
     modalSubtitle: "The recipient will be able to replay the same question from the link.",
     questionLabel: "Question",

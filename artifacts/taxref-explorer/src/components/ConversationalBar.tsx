@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect, useMemo, type FormEvent, type ReactNode } from "react";
-import { Sparkles, Send, Loader2, RotateCcw, Share2 } from "lucide-react";
+import { Sparkles, Send, Loader2, RotateCcw, Linkedin, Twitter, Link2, Copy, Check } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { taxonUrl } from "@/lib/constants";
 import { localeNumber } from "@/i18n";
-import { ShareAnswerModal, type ShareableAnswer } from "@/components/ShareAnswerModal";
 
 type ResultItem = {
   cdNom: number;
@@ -28,7 +27,6 @@ export function ConversationalBar() {
   const [loading, setLoading] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [answerToShare, setAnswerToShare] = useState<ShareableAnswer | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t, i18n } = useTranslation();
@@ -192,18 +190,7 @@ export function ConversationalBar() {
       {turns.length > 0 && (
         <div ref={scrollRef} className="mt-8 space-y-8 text-left">
           {turns.map((tn, idx) => (
-            <ConversationTurn
-              key={idx}
-              turn={tn}
-              lang={lang}
-              onShareAnswer={() =>
-                setAnswerToShare({
-                  question: tn.question,
-                  reply: tn.reply,
-                  results: tn.results.map((r) => ({ cdNom: r.cdNom, lbNom: r.lbNom, nomVern: r.nomVern })),
-                })
-              }
-            />
+            <ConversationTurn key={idx} turn={tn} lang={lang} />
           ))}
           <div className="flex justify-center pt-2">
             <button
@@ -218,13 +205,6 @@ export function ConversationalBar() {
         </div>
       )}
 
-      {answerToShare && (
-        <ShareAnswerModal
-          open={true}
-          onClose={() => setAnswerToShare(null)}
-          data={answerToShare}
-        />
-      )}
     </div>
   );
 }
@@ -232,11 +212,9 @@ export function ConversationalBar() {
 function ConversationTurn({
   turn,
   lang,
-  onShareAnswer,
 }: {
   turn: Turn;
   lang: string;
-  onShareAnswer: () => void;
 }) {
   const { t } = useTranslation();
   const linkedCdNoms = useMemo(() => new Set<number>(), [turn.reply, turn.results]);
@@ -269,22 +247,9 @@ function ConversationTurn({
             <Sparkles className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap flex-1">
-                {linkifyReply(turn.reply, turn.results, linkedCdNoms)}
-              </p>
-              <button
-                type="button"
-                onClick={onShareAnswer}
-                className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold text-white bg-emerald-700 border border-emerald-800 hover:bg-emerald-800 active:scale-95 transition-all shadow-md hover:shadow-lg"
-                aria-label={t("shareAnswer.button")}
-                title={t("shareAnswer.button")}
-                data-testid="button-share-answer"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t("shareAnswer.button")}</span>
-              </button>
-            </div>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {linkifyReply(turn.reply, turn.results, linkedCdNoms)}
+            </p>
             {unlinkedResults.length > 0 && (
               <div className="mt-3 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground/80">{t("conversational.alsoSee")} </span>
@@ -307,9 +272,107 @@ function ConversationTurn({
                 {t("conversational.pagingPre")}{turn.results.length}{t("conversational.pagingMid")}{localeNumber(turn.totalCount, lang)}{t("conversational.pagingPost")}
               </div>
             )}
+            <ShareAnswerBar question={turn.question} reply={turn.reply} />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------- Inline social share bar -------------------------------------
+
+function ShareAnswerBar({ question, reply }: { question: string; reply: string }) {
+  const { t } = useTranslation();
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [textCopied, setTextCopied] = useState(false);
+
+  const trimmedReply = reply.replace(/\*\*/g, "").trim();
+  const shortReply = trimmedReply.length > 600 ? trimmedReply.slice(0, 597) + "…" : trimmedReply;
+  const baseUrl = (import.meta.env.BASE_URL || "/").toString();
+  const shareUrl = `${window.location.origin}${baseUrl}?q=${encodeURIComponent(question)}`;
+  const linkedinText = t("shareAnswer.linkedinText", { url: shareUrl, question, reply: shortReply });
+  const twitterText = t("shareAnswer.twitterText", { url: shareUrl, question });
+
+  async function copy(text: string, kind: "link" | "text") {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (kind === "link") {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } else {
+        setTextCopied(true);
+        setTimeout(() => setTextCopied(false), 2000);
+      }
+    } catch {
+      /* clipboard refused — silently ignore */
+    }
+  }
+
+  function shareLinkedin() {
+    window.open(
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+      "_blank",
+      "noopener,width=600,height=600",
+    );
+  }
+  function shareTwitter() {
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`,
+      "_blank",
+      "noopener,width=600,height=600",
+    );
+  }
+
+  return (
+    <div className="mt-4 pt-3 border-t border-border/60 flex items-center gap-2 flex-wrap">
+      <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
+        {t("shareAnswer.barLabel")}
+      </span>
+      <button
+        type="button"
+        onClick={shareLinkedin}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold text-white bg-[#0A66C2] hover:bg-[#084e98] active:scale-95 transition-all shadow-sm"
+        aria-label="LinkedIn"
+        title="LinkedIn"
+        data-testid="button-share-linkedin"
+      >
+        <Linkedin className="w-3.5 h-3.5" />
+        <span>LinkedIn</span>
+      </button>
+      <button
+        type="button"
+        onClick={shareTwitter}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold text-white bg-black hover:bg-neutral-800 active:scale-95 transition-all shadow-sm"
+        aria-label="X / Twitter"
+        title="X / Twitter"
+        data-testid="button-share-twitter"
+      >
+        <Twitter className="w-3.5 h-3.5" />
+        <span>X</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => copy(shareUrl, "link")}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium text-foreground bg-background border border-border hover:bg-muted active:scale-95 transition-all"
+        aria-label={t("shareAnswer.copyLink")}
+        title={t("shareAnswer.copyLink")}
+        data-testid="button-copy-link"
+      >
+        {linkCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link2 className="w-3.5 h-3.5" />}
+        <span>{linkCopied ? t("shareAnswer.linkCopied") : t("shareAnswer.copyLink")}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => copy(linkedinText, "text")}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium text-foreground bg-background border border-border hover:bg-muted active:scale-95 transition-all"
+        aria-label={t("shareAnswer.copyText")}
+        title={t("shareAnswer.copyText")}
+        data-testid="button-copy-text"
+      >
+        {textCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+        <span>{textCopied ? t("shareAnswer.textCopied") : t("shareAnswer.copyText")}</span>
+      </button>
     </div>
   );
 }

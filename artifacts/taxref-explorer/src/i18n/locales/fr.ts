@@ -314,6 +314,7 @@ export const fr = {
   },
   shareAnswer: {
     button: "Je partage",
+    barLabel: "Je partage :",
     modalTitle: "Partager cette réponse",
     modalSubtitle: "Le destinataire pourra rejouer la même question depuis le lien.",
     questionLabel: "Question",
