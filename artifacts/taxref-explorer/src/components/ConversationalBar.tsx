@@ -34,8 +34,11 @@ export function ConversationalBar() {
   const suggestionGroups = (t("conversational.suggestions", { returnObjects: true }) as unknown as Record<string, string[]>) ?? {};
   const levelLabels = (t("conversational.suggestionLevels", { returnObjects: true }) as unknown as Record<string, string>) ?? {};
   const levelOrder: Array<"simple" | "complex" | "advanced"> = ["simple", "complex", "advanced"];
-  const [activeLevel, setActiveLevel] = useState<"simple" | "complex" | "advanced">("simple");
-  const activeSuggestions = suggestionGroups[activeLevel] ?? [];
+  const levelDots: Record<"simple" | "complex" | "advanced", string> = {
+    simple: "bg-emerald-500",
+    complex: "bg-amber-500",
+    advanced: "bg-rose-500",
+  };
 
   function pickSuggestion(s: string) {
     setInput(s);
@@ -121,44 +124,43 @@ export function ConversationalBar() {
       </form>
 
       {turns.length === 0 && !loading && (
-        <div className="mt-5 px-2">
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
-            <span className="text-xs text-muted-foreground font-medium mr-1">
-              {t("conversational.suggestionLevelsLabel")}
-            </span>
+        <div className="mt-6 px-2">
+          <p className="text-xs text-muted-foreground font-medium text-center mb-4">
+            {t("conversational.suggestionLevelsLabel")}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {levelOrder.map((lvl) => {
-              const isActive = activeLevel === lvl;
+              const items = suggestionGroups[lvl] ?? [];
+              if (items.length === 0) return null;
               return (
-                <button
+                <div
                   key={lvl}
-                  type="button"
-                  onClick={() => setActiveLevel(lvl)}
-                  className={
-                    "text-xs px-3 py-1 rounded-full border transition-colors " +
-                    (isActive
-                      ? "border-primary/60 bg-primary/10 text-foreground"
-                      : "border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40")
-                  }
-                  data-testid={`tab-suggestion-${lvl}`}
-                  aria-pressed={isActive}
+                  className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/40 p-3"
+                  data-testid={`group-suggestion-${lvl}`}
                 >
-                  {levelLabels[lvl] ?? lvl}
-                </button>
+                  <div className="flex items-center gap-2 px-1">
+                    <span className={"w-2 h-2 rounded-full " + levelDots[lvl]} aria-hidden="true" />
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-foreground/80">
+                      {levelLabels[lvl] ?? lvl}
+                    </span>
+                  </div>
+                  <ul className="flex flex-col gap-1.5">
+                    {items.map((s) => (
+                      <li key={s}>
+                        <button
+                          type="button"
+                          onClick={() => pickSuggestion(s)}
+                          className="w-full text-left text-xs leading-snug px-2.5 py-2 rounded-md border border-transparent text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                          data-testid="button-suggestion"
+                        >
+                          {s}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               );
             })}
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            {activeSuggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => pickSuggestion(s)}
-                className="text-xs px-3 py-1.5 rounded-full border border-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                data-testid="button-suggestion"
-              >
-                {s}
-              </button>
-            ))}
           </div>
         </div>
       )}
