@@ -276,7 +276,7 @@ function ConversationTurn({
               <button
                 type="button"
                 onClick={onShareAnswer}
-                className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 active:scale-95 transition-all shadow-sm"
+                className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold text-white bg-emerald-700 border border-emerald-800 hover:bg-emerald-800 active:scale-95 transition-all shadow-md hover:shadow-lg"
                 aria-label={t("shareAnswer.button")}
                 title={t("shareAnswer.button")}
                 data-testid="button-share-answer"
