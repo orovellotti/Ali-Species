@@ -245,21 +245,28 @@ function ConversationTurn({
             <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
               {linkifyReply(turn.reply, turn.results, linkedCdNoms)}
             </p>
-            {unlinkedResults.length > 0 && (
-              <div className="mt-3 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground/80">{t("conversational.alsoSee")} </span>
-                {unlinkedResults.map((r, i) => (
-                  <span key={r.cdNom}>
-                    {i > 0 && <span>, </span>}
+            {turn.results.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-border/60">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  {t("conversational.citedSpecies")}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {turn.results.map((r) => (
                     <Link
+                      key={r.cdNom}
                       href={taxonUrl(r.cdNom, r.lbNom)}
-                      className="italic text-primary hover:underline"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/15 text-xs hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                       data-testid="link-result"
                     >
-                      {r.lbNom}
+                      <span className="italic text-primary font-medium group-hover:underline">{r.lbNom}</span>
+                      {r.nomVern && (
+                        <span className="text-muted-foreground truncate max-w-[180px]">
+                          — {r.nomVern.split(/[,;]/)[0].trim()}
+                        </span>
+                      )}
                     </Link>
-                  </span>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
             {turn.totalCount > turn.results.length && turn.results.length > 0 && (

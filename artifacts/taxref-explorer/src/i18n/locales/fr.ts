@@ -187,6 +187,7 @@ export const fr = {
     pagingMid: " sur ",
     pagingPost: " résultats",
     alsoSee: "Voir aussi :",
+    citedSpecies: "Espèces citées",
     suggestionLevelsLabel: "Type de requête :",
     suggestionLevels: {
       simple: "Simples",
