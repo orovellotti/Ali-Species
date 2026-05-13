@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Search, Loader2, ChevronRight } from "lucide-react";
+import { Search, Loader2, ChevronRight, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useShareTaxon } from "@/hooks/use-share-taxon";
 import { getSearchTaxonsQueryKey, useSearchTaxons } from "@workspace/api-client-react";
 import { formatRank, taxonUrl } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
+import { ShareDiscoveryModal } from "@/components/ShareDiscoveryModal";
 
 export function SearchAutocomplete() {
   const [, setLocation] = useLocation();
@@ -13,6 +15,7 @@ export function SearchAutocomplete() {
   const [isFocused, setIsFocused] = useState(false);
   const debouncedQuery = useDebounce(query, 300);
   const { t } = useTranslation();
+  const { shareData, shareUrl, sharingCdNom, openShareFor, closeShare } = useShareTaxon();
 
   const { data: results, isLoading } = useSearchTaxons(
     { q: debouncedQuery, limit: 8 },
@@ -57,9 +60,9 @@ export function SearchAutocomplete() {
           ) : (
             <ul className="py-2" data-testid="list-search-results">
               {results.map((taxon) => (
-                <li key={taxon.cdNom}>
+                <li key={taxon.cdNom} className="relative group">
                   <button
-                    className="w-full px-5 py-3 text-left hover:bg-muted flex items-center justify-between group transition-colors"
+                    className="w-full px-5 py-3 pr-14 text-left hover:bg-muted flex items-center justify-between transition-colors"
                     onClick={() => handleSelect(taxon.cdNom, taxon.lbNom)}
                     data-testid={`button-taxon-${taxon.cdNom}`}
                   >
@@ -83,11 +86,47 @@ export function SearchAutocomplete() {
                     </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
                   </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      // onMouseDown beats the parent input's onBlur (200ms timeout)
+                      // so the dropdown stays open while the modal opens.
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void openShareFor({
+                        cdNom: taxon.cdNom,
+                        lbNom: taxon.lbNom ?? "",
+                        nomVern: taxon.nomVern ?? null,
+                        rang: taxon.rang ?? "",
+                        famille: taxon.famille ?? null,
+                      });
+                    }}
+                    disabled={sharingCdNom === taxon.cdNom}
+                    className="absolute top-1/2 -translate-y-1/2 right-3 w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                    aria-label={t("share.button")}
+                    title={t("share.button")}
+                    data-testid={`button-share-${taxon.cdNom}`}
+                  >
+                    {sharingCdNom === taxon.cdNom ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Share2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
+      )}
+
+      {shareData && (
+        <ShareDiscoveryModal
+          open={true}
+          onClose={closeShare}
+          data={shareData}
+          shareUrl={shareUrl}
+        />
       )}
     </div>
   );
