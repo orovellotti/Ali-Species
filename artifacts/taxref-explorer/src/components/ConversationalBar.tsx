@@ -58,12 +58,7 @@ export function ConversationalBar() {
 
   function pickSuggestion(s: string) {
     setInput(s);
-    const el = inputRef.current;
-    if (el) {
-      el.focus();
-      const len = s.length;
-      requestAnimationFrame(() => el.setSelectionRange(len, len));
-    }
+    void ask(s);
   }
 
   useEffect(() => {
