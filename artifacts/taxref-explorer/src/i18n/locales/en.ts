@@ -195,7 +195,7 @@ export const en = {
     },
     suggestions: {
       simple: [
-        "Which cute animal is actually a fierce predator?",
+        "Which bird of France has the largest wingspan?",
         "Which protected species lives the longest?",
         "Which animal eats the mosquitoes around us?",
       ],

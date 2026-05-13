@@ -195,7 +195,7 @@ export const fr = {
     },
     suggestions: {
       simple: [
-        "Quel animal mignon est en réalité un redoutable prédateur ?",
+        "Quel oiseau de France a la plus grande envergure ?",
         "Quelle espèce protégée vit le plus longtemps ?",
         "Quel animal mange les moustiques autour de nous ?",
       ],
