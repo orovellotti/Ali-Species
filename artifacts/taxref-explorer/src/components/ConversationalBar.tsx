@@ -1,12 +1,10 @@
-import { useState, useRef, useEffect, type FormEvent, type MouseEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { Sparkles, Send, Loader2, RotateCcw, Share2 } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
-import { taxonUrl, formatRank } from "@/lib/constants";
+import { taxonUrl } from "@/lib/constants";
 import { localeNumber } from "@/i18n";
-import { ShareDiscoveryModal } from "@/components/ShareDiscoveryModal";
 import { ShareAnswerModal, type ShareableAnswer } from "@/components/ShareAnswerModal";
-import { useShareTaxon } from "@/hooks/use-share-taxon";
 
 type ResultItem = {
   cdNom: number;
@@ -30,7 +28,6 @@ export function ConversationalBar() {
   const [loading, setLoading] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { shareData, shareUrl, sharingCdNom, openShareFor: openShare, closeShare } = useShareTaxon();
   const [answerToShare, setAnswerToShare] = useState<ShareableAnswer | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,11 +49,6 @@ export function ConversationalBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function openShareFor(e: MouseEvent, r: ResultItem) {
-    e.preventDefault();
-    e.stopPropagation();
-    void openShare(r);
-  }
   const suggestionGroups = (t("conversational.suggestions", { returnObjects: true }) as unknown as Record<string, string[]>) ?? {};
   const levelLabels = (t("conversational.suggestionLevels", { returnObjects: true }) as unknown as Record<string, string>) ?? {};
   const levelOrder: Array<"simple" | "complex" | "advanced"> = ["simple", "complex", "advanced"];
@@ -204,7 +196,6 @@ export function ConversationalBar() {
               key={idx}
               turn={tn}
               lang={lang}
-              onShare={openShareFor}
               onShareAnswer={() =>
                 setAnswerToShare({
                   question: tn.question,
@@ -212,7 +203,6 @@ export function ConversationalBar() {
                   results: tn.results.map((r) => ({ cdNom: r.cdNom, lbNom: r.lbNom, nomVern: r.nomVern })),
                 })
               }
-              sharingCdNom={sharingCdNom}
             />
           ))}
           <div className="flex justify-center pt-2">
@@ -226,15 +216,6 @@ export function ConversationalBar() {
             </button>
           </div>
         </div>
-      )}
-
-      {shareData && (
-        <ShareDiscoveryModal
-          open={true}
-          onClose={closeShare}
-          data={shareData}
-          shareUrl={shareUrl}
-        />
       )}
 
       {answerToShare && (
@@ -251,15 +232,11 @@ export function ConversationalBar() {
 function ConversationTurn({
   turn,
   lang,
-  onShare,
   onShareAnswer,
-  sharingCdNom,
 }: {
   turn: Turn;
   lang: string;
-  onShare: (e: MouseEvent, r: ResultItem) => void;
   onShareAnswer: () => void;
-  sharingCdNom: number | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -292,43 +269,24 @@ function ConversationTurn({
             {turn.results.length > 0 && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {turn.results.map((r) => (
-                  <div key={r.cdNom} className="relative group">
-                    <Link
-                      href={taxonUrl(r.cdNom, r.lbNom)}
-                      className="block px-3 py-2 pr-24 sm:pr-28 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                      data-testid="link-result"
-                    >
-                      <div className="text-sm font-medium text-foreground italic group-hover:text-primary truncate">
-                        {r.lbNom}
+                  <Link
+                    key={r.cdNom}
+                    href={taxonUrl(r.cdNom, r.lbNom)}
+                    className="block px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors group"
+                    data-testid="link-result"
+                  >
+                    <div className="text-sm font-medium text-foreground italic group-hover:text-primary truncate">
+                      {r.lbNom}
+                    </div>
+                    {r.nomVern && (
+                      <div className="text-xs text-muted-foreground truncate">{r.nomVern}</div>
+                    )}
+                    {(r.classe || r.famille) && (
+                      <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
+                        {[r.classe, r.famille].filter(Boolean).join(" › ")}
                       </div>
-                      {r.nomVern && (
-                        <div className="text-xs text-muted-foreground truncate">{r.nomVern}</div>
-                      )}
-                      {(r.classe || r.famille) && (
-                        <div className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
-                          {[r.classe, r.famille].filter(Boolean).join(" › ")}
-                        </div>
-                      )}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={(e) => onShare(e, r)}
-                      disabled={sharingCdNom === r.cdNom}
-                      className="absolute top-2 right-2 h-7 px-2 rounded-md inline-flex items-center gap-1.5 text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:border-primary/40 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
-                      aria-label={t("share.button")}
-                      title={t("share.button")}
-                      data-testid={`button-share-${r.cdNom}`}
-                    >
-                      {sharingCdNom === r.cdNom ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <Share2 className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">{t("share.button")}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                    )}
+                  </Link>
                 ))}
               </div>
             )}
