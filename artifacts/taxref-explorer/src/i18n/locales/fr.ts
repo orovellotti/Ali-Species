@@ -313,7 +313,7 @@ export const fr = {
     linkedinText: "Je viens de découvrir cette espèce sur ALI Species 🌿\nL'IA rend la biodiversité plus simple à explorer, comprendre et protéger.\nEssayez ici : {{url}}",
   },
   shareAnswer: {
-    button: "Partager cette réponse",
+    button: "Je partage",
     modalTitle: "Partager cette réponse",
     modalSubtitle: "Le destinataire pourra rejouer la même question depuis le lien.",
     questionLabel: "Question",

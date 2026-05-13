@@ -313,7 +313,7 @@ export const en = {
     linkedinText: "I just discovered this species on ALI Species 🌿\nAI is making biodiversity easier to explore, understand and protect.\nTry it here: {{url}}",
   },
   shareAnswer: {
-    button: "Share this answer",
+    button: "Share",
     modalTitle: "Share this answer",
     modalSubtitle: "The recipient will be able to replay the same question from the link.",
     questionLabel: "Question",
