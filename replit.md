@@ -58,6 +58,7 @@ ALi species - A web application for browsing the French national taxonomic refer
 - `/taxonomie` — Conservation statuses browser
 - `/sources` — Data sources page with citations and links to RDF/SPARQL section
 - `/export` — **RDF/SPARQL documentation page** with TTL dump download button, live graph stats (taxa/statuses/triples counters from `/api/exports/info`), endpoint section that conditionally renders YASGUI link **or** local Oxigraph setup instructions based on `/api/sparql/status`, vocabulary list, sample SPARQL queries, and CC-BY 4.0 license
+- `/ai-agents` — **Developer / AI agent hub** : doc consolidée MCP (URL + 22 tools groupés en 5 familles + configs Claude Desktop/Cursor copy-pastable) + RDF/SPARQL (download TTL gz, endpoint, YASGUI, vocabulaires, exemple de requête) + guides "construire une skill IA" pour Claude (MCP), OpenAI (Custom GPT via OpenAPI + function calling avec snippet TS) et tout autre agent (REST). Trois cards endpoint en haut (MCP/REST/SPARQL) avec copy-to-clipboard. Remplace l'ancienne ancre `/export#mcp`.
 - `/a-propos` — About page with PatriNat and Natural Solutions credits and MCP integration card
 - `/taxon/:slug` — Taxon detail page (SEO-friendly URLs like `/taxon/61098-capra-ibex`); supports old `/taxon/:cdNom` format via `parseCdNomFromParam()`
 

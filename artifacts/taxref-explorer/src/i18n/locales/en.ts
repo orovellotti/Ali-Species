@@ -9,6 +9,7 @@ export const en = {
     statuses: "Statuses",
     sources: "Sources",
     export: "Export",
+    aiAgents: "AI & API",
     about: "About",
     beta: "Beta",
     tagline: "All Life Intelligence",
@@ -53,6 +54,10 @@ export const en = {
     cardPlantaeDesc: "Flowering plants, ferns, mosses and green algae.",
     cardFungiSubtitle: "Fungi",
     cardFungiDesc: "Fungi, moulds and yeasts — a kingdom in its own right.",
+  },
+  aiAgents: {
+    title: "AI & API – ALI Species",
+    metaDescription: "Plug Claude, ChatGPT or any AI agent into French biodiversity: MCP server (22 tools), public REST API, SPARQL endpoint and RDF dump. Documentation and configuration examples.",
   },
   about: {
     title: "About – ALI Species",

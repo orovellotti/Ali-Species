@@ -10,6 +10,7 @@ import About from "@/pages/about";
 import Taxonomie from "@/pages/taxonomie";
 import Sources from "@/pages/sources";
 import ExportPage from "@/pages/export";
+import AiAgentsPage from "@/pages/ai-agents";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/taxonomie" component={Taxonomie} />
       <Route path="/sources" component={Sources} />
       <Route path="/export" component={ExportPage} />
+      <Route path="/ai-agents" component={AiAgentsPage} />
       <Route path="/a-propos" component={About} />
       <Route path="/taxon/:slug" component={TaxonDetail} />
       <Route component={NotFound} />

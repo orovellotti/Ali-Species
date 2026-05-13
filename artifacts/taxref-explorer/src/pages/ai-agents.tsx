@@ -4,11 +4,25 @@ import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { Server, Network, Sparkles, Copy, Check, Download, ExternalLink, Code2, Zap } from "lucide-react";
 
-const MCP_URL = "https://alispecies.io/api/mcp";
-const SPARQL_URL = "https://alispecies.io/api/sparql";
-const REST_BASE = "https://alispecies.io/api";
-const RDF_DUMP = "https://alispecies.io/api/exports/rdf.ttl.gz";
-const YASGUI_URL = "https://alispecies.io/api/sparql/ui";
+function getOrigin(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const origin = window.location.origin;
+    // On preview/dev, prefer the public canonical domain so copy-pasted
+    // configs work for end users (Claude Desktop etc.).
+    if (origin.includes("alispecies.io")) return origin;
+    if (origin.includes("localhost") || origin.includes(".replit.dev")) {
+      return "https://alispecies.io";
+    }
+    return origin;
+  }
+  return "https://alispecies.io";
+}
+const ORIGIN = getOrigin();
+const MCP_URL = `${ORIGIN}/api/mcp`;
+const SPARQL_URL = `${ORIGIN}/api/sparql`;
+const REST_BASE = `${ORIGIN}/api`;
+const RDF_DUMP = `${ORIGIN}/api/exports/rdf.ttl.gz`;
+const YASGUI_URL = `${ORIGIN}/api/sparql/ui`;
 
 const MCP_TOOLS: Array<{ family: string; tools: string[] }> = [
   {
@@ -290,12 +304,13 @@ export default function AiAgentsPage() {
             </p>
             <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
               <li>
-                <strong className="text-foreground">{fr ? "Custom GPT" : "Custom GPT"}</strong>
-                {" — "}{fr ? "crée un GPT, ajoute une Action en pointant vers le schéma OpenAPI" : "create a GPT, add an Action pointing to the OpenAPI schema"} :
-                {" "}<code className="font-mono text-xs">{REST_BASE}/openapi.json</code>
+                <strong className="text-foreground">Custom GPT</strong>
+                {" — "}{fr
+                  ? "crée un GPT, ajoute une Action et décris les endpoints REST listés sur cette page (la spec OpenAPI complète est dans le repo open source)."
+                  : "create a GPT, add an Action and describe the REST endpoints listed on this page (the full OpenAPI spec lives in the open-source repo)."}
               </li>
               <li>
-                <strong className="text-foreground">{fr ? "Function calling" : "Function calling"}</strong>
+                <strong className="text-foreground">Function calling</strong>
                 {" — "}{fr ? "déclare chaque endpoint REST comme une fonction outil :" : "declare each REST endpoint as a tool function:"}
               </li>
             </ul>
