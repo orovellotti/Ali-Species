@@ -80,8 +80,20 @@ export function ShareDiscoveryModal({ open, onClose, data, shareUrl }: Props) {
     }
   }
 
-  const twitterText = t("share.twitterText", { url: shareUrl });
-  const linkedinText = t("share.linkedinText", { url: shareUrl });
+  // Build a rich title (vernacular + scientific) and a fact line from the
+  // already-computed card data, so the share text mentions the actual species
+  // and one interesting piece of info instead of being generic.
+  const title = data.vernacular
+    ? `« ${data.vernacular} » (${data.scientificName})`
+    : data.scientificName;
+  const factLine =
+    data.fact && data.fact.trim().length > 0
+      ? data.fact
+      : data.badge?.label
+        ? data.badge.label
+        : [data.classe, data.famille].filter(Boolean).join(" · ") || "";
+  const twitterText = t("share.twitterText", { url: shareUrl, title, fact: factLine });
+  const linkedinText = t("share.linkedinText", { url: shareUrl, title, fact: factLine });
 
   function openTwitter() {
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;

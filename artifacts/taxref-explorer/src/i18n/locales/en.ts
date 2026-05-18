@@ -314,8 +314,8 @@ export const en = {
     factRedListVU: "Vulnerable on the national Red List.",
     factDirective: "Listed in the European Habitats or Birds Directives.",
     rankLabel: "Rank",
-    twitterText: "Discovered this species with ALI Species 🌿\nAsk nature anything: {{url}}",
-    linkedinText: "I just discovered this species on ALI Species 🌿\nAI is making biodiversity easier to explore, understand and protect.\nTry it here: {{url}}",
+    twitterText: "{{title}}\n{{fact}}\nDiscovered on ALI Species 🌿 — 708,000 French species, one question away.\n{{url}}",
+    linkedinText: "I just discovered {{title}} on ALI Species 🌿\n\n{{fact}}\n\nALI Species lets you explore 708,000 species of fauna, flora and fungi from France along with their conservation statuses, trophic interactions and ecological traits. The AI composes the query for you — just ask.\n\nSee the profile: {{url}}",
   },
   shareAnswer: {
     button: "Share",

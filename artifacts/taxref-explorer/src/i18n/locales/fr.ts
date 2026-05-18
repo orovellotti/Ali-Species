@@ -314,8 +314,8 @@ export const fr = {
     factRedListVU: "Vulnérable sur la Liste rouge nationale.",
     factDirective: "Inscrite aux directives européennes Habitats ou Oiseaux.",
     rankLabel: "Rang",
-    twitterText: "J'ai découvert cette espèce sur ALI Species 🌿\nDemandez tout à la nature : {{url}}",
-    linkedinText: "Je viens de découvrir cette espèce sur ALI Species 🌿\nL'IA rend la biodiversité plus simple à explorer, comprendre et protéger.\nEssayez ici : {{url}}",
+    twitterText: "{{title}}\n{{fact}}\nDécouvert sur ALI Species 🌿 — 708 000 espèces françaises à portée de question.\n{{url}}",
+    linkedinText: "Je viens de découvrir {{title}} sur ALI Species 🌿\n\n{{fact}}\n\nALI Species permet d'explorer 708 000 espèces de la faune, la flore et des champignons de France avec leurs statuts de conservation, leurs interactions trophiques et leurs traits écologiques. L'IA compose la requête pour vous — il suffit de demander.\n\nVoir la fiche : {{url}}",
   },
   shareAnswer: {
     button: "Je partage",
