@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
+Allow: /api/sitemap-index.xml
 Allow: /api/sitemap-taxa.xml
+Allow: /api/sitemap-taxa-
 Disallow: /api/
 
 # AI / LLM crawlers explicitly welcome
@@ -12,7 +14,11 @@ User-agent: PerplexityBot
 Allow: /
 User-agent: Google-Extended
 Allow: /
+User-agent: CCBot
+Allow: /
+User-agent: Applebot-Extended
+Allow: /
 
 Sitemap: https://alispecies.io/sitemap.xml
 Sitemap: https://alispecies.io/sitemap-core.xml
-Sitemap: https://alispecies.io/api/sitemap-taxa.xml
+Sitemap: https://alispecies.io/api/sitemap-index.xml

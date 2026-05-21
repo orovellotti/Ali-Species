@@ -48,13 +48,38 @@ router.get("/share/taxon/:cdNom", async (req, res): Promise<void> => {
   const image = summary?.shareSummary.imageUrl
     || `${SITE_ORIGIN}/api/og/taxon/${cdNom}.png`;
 
+  // JSON-LD with sameAs identifiers — even when crawlers index /share they
+  // pick up the same entity signals as /taxon/:slug, which consolidates
+  // PageRank around the canonical URL.
+  const inpnUrl = `https://inpn.mnhn.fr/espece/cd_nom/${cdNom}`;
+  const gbifUrl = `https://www.gbif.org/species/search?q=${encodeURIComponent(taxon.lbNom)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Taxon",
+    "@id": canonical,
+    name: taxon.lbNom,
+    alternateName: taxon.nomVern ? taxon.nomVern.split(",").map(s => s.trim()) : undefined,
+    scientificName: taxon.nomComplet || taxon.lbNom,
+    taxonRank: taxon.rang || undefined,
+    url: canonical,
+    sameAs: [inpnUrl, gbifUrl],
+    image: image,
+    description,
+    identifier: { "@type": "PropertyValue", name: "CD_NOM", value: cdNom, propertyID: "https://inpn.mnhn.fr/espece/cd_nom" },
+    isPartOf: {
+      "@type": "Dataset",
+      name: "TAXREF v18",
+      creator: { "@type": "Organization", name: "PatriNat (OFB - MNHN - CNRS - IRD)" },
+    },
+  };
+
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8" />
 <title>${escapeHtml(title)} — ALi Species</title>
 <meta name="description" content="${escapeHtml(description)}" />
-<meta name="robots" content="index,follow,max-image-preview:large" />
+<meta name="robots" content="noindex,follow,max-image-preview:large" />
 <link rel="canonical" href="${escapeHtml(canonical)}" />
 
 <meta property="og:type" content="article" />
@@ -70,6 +95,8 @@ router.get("/share/taxon/:cdNom", async (req, res): Promise<void> => {
 <meta name="twitter:title" content="${escapeHtml(title)}" />
 <meta name="twitter:description" content="${escapeHtml(description)}" />
 <meta name="twitter:image" content="${escapeHtml(image)}" />
+
+<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>
 
 <meta http-equiv="refresh" content="0; url=${escapeHtml(canonical)}" />
 <script>window.location.replace(${JSON.stringify(canonical)});</script>

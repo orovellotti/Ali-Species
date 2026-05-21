@@ -559,6 +559,20 @@ export default function TaxonDetail() {
   const [, navigate] = useLocation();
   const { t, i18n } = useTranslation();
 
+  // SEO: when a user (or crawler) lands on a cdNom-only URL or one with a
+  // stale slug, silently rewrite the address bar to the canonical /taxon/:cdNom-:slug
+  // form using history.replaceState (no reload, no extra request, no
+  // duplicate-content signal for Google).
+  useEffect(() => {
+    if (!taxon?.cdNom || !taxon.lbNom) return;
+    const canonical = taxonUrl(taxon.cdNom, taxon.lbNom);
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const desired = `${base}${canonical}`;
+    if (typeof window !== "undefined" && window.location.pathname !== desired) {
+      window.history.replaceState(null, "", desired + window.location.search + window.location.hash);
+    }
+  }, [taxon?.cdNom, taxon?.lbNom]);
+
   const handleRandom = useCallback(async () => {
     setRandomLoading(true);
     try {
@@ -650,14 +664,44 @@ export default function TaxonDetail() {
 
   const hasImages = media && media.images && media.images.length > 0;
 
-  const pageTitle = `${taxon.lbNom}${taxon.nomVern ? ` (${taxon.nomVern.split(",")[0].trim()})` : ""} – ALI Species`;
-  const pageDescription = `${taxon.lbNom}${taxon.lbAuteur ? ` ${taxon.lbAuteur}` : ""}${taxon.nomVern ? ` — ${taxon.nomVern}` : ""}. ${formatRank(taxon.rang)} du referentiel taxonomique TAXREF v18. Classification, statuts de conservation, donnees GBIF et images.`;
+  // ---- Rich SEO metadata, tuned to rank #1 on scientific name searches ----
+  // Title puts the scientific name first (italics in the H1, plain here), then
+  // vernacular in parentheses, then site name. Google reads the first 50-60
+  // chars most heavily.
+  const vernFirst = taxon.nomVern ? taxon.nomVern.split(",")[0].trim() : "";
+  const pageTitle = `${taxon.lbNom}${vernFirst ? ` (${vernFirst})` : ""} — ALi Species`;
+
+  // Description packed with classification + status, in French, mentioning
+  // "France" and "TAXREF v18" for geo + dataset authority signals.
+  const descParts: string[] = [];
+  descParts.push(`${taxon.nomComplet || taxon.lbNom}${vernFirst ? `, « ${vernFirst} »` : ""}`);
+  const classifBits = [taxon.classe, taxon.ordre, taxon.famille].filter(Boolean);
+  if (classifBits.length > 0) descParts.push(classifBits.join(" › "));
+  descParts.push(`${formatRank(taxon.rang)} de la faune et flore de France (TAXREF v18).`);
+  descParts.push("Classification, statuts de conservation (Liste rouge, protection, directives), interactions trophiques, traits écologiques et images.");
+  const pageDescription = descParts.join(" — ");
+
   const firstImage = media?.images?.[0]?.url;
-  const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}${taxonUrl(taxon.cdNom, taxon.lbNom).slice(1)}`;
+  const canonicalPath = taxonUrl(taxon.cdNom, taxon.lbNom);
+  const canonicalUrl = `${window.location.origin}${import.meta.env.BASE_URL}${canonicalPath.slice(1)}`;
+
+  // sameAs identifiers: INPN URL is deterministic from cdNom (always present).
+  // These are critical for Google's Knowledge Graph entity resolution — they
+  // tell Google "this page is about the same entity as the Wikidata/GBIF/INPN
+  // record", which boosts ranking on the scientific name query.
+  const inpnUrl = `https://inpn.mnhn.fr/espece/cd_nom/${taxon.cdNom}`;
+  // Prefer the canonical GBIF species URL (/species/{key}) when we know the
+  // GBIF key — it's a strong entity-identity signal. Fall back to a search
+  // URL only when the GBIF match hasn't loaded yet (weaker signal but still
+  // points to the right entity at GBIF).
+  const gbifUrl = gbif?.gbifUrl
+    || (gbif?.gbifKey ? `https://www.gbif.org/species/${gbif.gbifKey}` : `https://www.gbif.org/species/search?q=${encodeURIComponent(taxon.lbNom)}`);
+  const sameAs = [inpnUrl, gbifUrl];
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Taxon",
+    "@id": canonicalUrl,
     name: taxon.lbNom,
     alternateName: taxon.nomVern ? taxon.nomVern.split(",").map((n: string) => n.trim()) : undefined,
     taxonRank: taxon.rang ? formatRank(taxon.rang) : undefined,
@@ -669,17 +713,35 @@ export default function TaxonDetail() {
     } : undefined,
     image: firstImage || undefined,
     url: canonicalUrl,
-    identifier: {
-      "@type": "PropertyValue",
-      name: "CD_NOM",
-      value: taxon.cdNom,
-    },
+    sameAs,
+    inLanguage: ["fr", "la"],
+    description: pageDescription,
+    identifier: [
+      { "@type": "PropertyValue", name: "CD_NOM", value: taxon.cdNom, propertyID: "https://inpn.mnhn.fr/espece/cd_nom" },
+      { "@type": "PropertyValue", name: "CD_REF", value: taxon.cdRef ?? taxon.cdNom },
+    ],
     isPartOf: {
       "@type": "Dataset",
       name: "TAXREF v18",
       creator: { "@type": "Organization", name: "PatriNat (OFB - MNHN - CNRS - IRD)" },
+      url: "https://inpn.mnhn.fr/programme/referentiel-taxonomique-taxref",
     },
   };
+
+  // BreadcrumbList JSON-LD for the rich-result breadcrumb in SERPs.
+  const breadcrumbItems = classification && classification.length > 0
+    ? classification.map((node, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: node.lbNom,
+        item: `${window.location.origin}${import.meta.env.BASE_URL}${taxonUrl(node.cdNom, node.lbNom).slice(1)}`,
+      }))
+    : [];
+  const breadcrumbJsonLd = breadcrumbItems.length > 1 ? {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbItems,
+  } : null;
 
   const iucnClass = (cat?: string | null) => {
     if (!cat) return "bg-green-100 text-green-800 border-green-200";
@@ -695,17 +757,29 @@ export default function TaxonDetail() {
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
         <link rel="canonical" href={canonicalUrl} />
+        {/* Same URL serves both languages (client-side i18n), so both hreflangs point here. */}
+        <link rel="alternate" hrefLang="fr" href={canonicalUrl} />
+        <link rel="alternate" hrefLang="en" href={canonicalUrl} />
+        <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="ALi Species" />
         <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:locale" content="fr_FR" />
+        <meta property="og:locale:alternate" content="en_US" />
         {firstImage && <meta property="og:image" content={firstImage} />}
+        {firstImage && <meta property="og:image:alt" content={taxon.lbNom} />}
         <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         {firstImage && <meta name="twitter:image" content={firstImage} />}
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        {breadcrumbJsonLd && (
+          <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
+        )}
       </Helmet>
 
       {lightboxImg && (
