@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, taxonsTable } from "@workspace/db";
+import { db, taxonsTable, TAXREF_RANK } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
+import { slugify } from "../lib/slug.js";
 
 const router: IRouter = Router();
 
@@ -8,15 +9,6 @@ const SITE_ORIGIN = "https://alispecies.io";
 // Sitemaps.org spec: max 50 000 URLs per file. We use 45 000 to keep headroom.
 const CHUNK_SIZE = 45_000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 function escapeXml(s: string): string {
   return s
@@ -40,7 +32,7 @@ async function getTotalReferenceSpeciesCount(): Promise<number> {
     .from(taxonsTable)
     .where(
       and(
-        eq(taxonsTable.rang, "ES"),
+        eq(taxonsTable.rang, TAXREF_RANK.SPECIES),
         eq(taxonsTable.cdNom, taxonsTable.cdRef),
       ),
     );
@@ -68,7 +60,7 @@ async function buildChunkXml(chunkIndex: number): Promise<string | null> {
     .from(taxonsTable)
     .where(
       and(
-        eq(taxonsTable.rang, "ES"),
+        eq(taxonsTable.rang, TAXREF_RANK.SPECIES),
         eq(taxonsTable.cdNom, taxonsTable.cdRef),
       ),
     )

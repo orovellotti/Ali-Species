@@ -3,6 +3,7 @@ import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable } from "@workspace
 import { computeSensitivityServer, type ServerSensitivity } from "./sensitivityServer.js";
 import { getInteractionsForCdNom } from "../routes/interactions.js";
 import { getCachedOrFetch, type FetchOutcome } from "./externalCache.js";
+import { slugify } from "./slug.js";
 
 const TTL_WIKIPEDIA = 7 * 24 * 3600;
 const TTL_MEDIA = 7 * 24 * 3600;
@@ -363,15 +364,6 @@ export interface ShareSummary {
 }
 
 const SITE_ORIGIN = "https://alispecies.io";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export function buildShareSummary(args: {
   taxon: ProfileTaxonRow;

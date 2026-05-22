@@ -90,11 +90,20 @@ export function formatStatus(code: string | null | undefined): string {
   return translated !== key ? translated : code;
 }
 
+/**
+ * URL-safe slug builder for taxon names.
+ *
+ * Mirrored server-side in `artifacts/api-server/src/lib/slug.ts` (the
+ * workspaces don't share a browser-safe util package). Keep the two in sync
+ * — they must produce identical output for the same input, otherwise the
+ * canonical URLs built on the client and the sitemap URLs built on the
+ * server will drift.
+ */
 export function slugify(text: string): string {
   return text
+    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }

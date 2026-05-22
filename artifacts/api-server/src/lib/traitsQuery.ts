@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, TAXREF_RANK } from "@workspace/db";
 import { resolveStatutCode } from "./statutCodeAlias.js";
 
 export type TraitSource = "pantheria" | "avonet" | "amphibio";
@@ -92,7 +92,7 @@ export async function runTraitQuery(
 
   const conds: SQL[] = [
     sql`t.cd_nom = t.cd_ref`,
-    sql`t.rang = 'ES'`,
+    sql`t.rang = ${TAXREF_RANK.SPECIES}`,
     sql`st.source = ${source}`,
   ];
 

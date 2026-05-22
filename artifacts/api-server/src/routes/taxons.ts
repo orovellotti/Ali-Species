@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
-import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable } from "@workspace/db";
+import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable, TAXREF_RANK } from "@workspace/db";
 import { fetchWikipedia, fetchGbif, fetchMedia, fetchTaxonRow } from "../lib/profileFetchers.js";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -189,7 +189,7 @@ router.get("/taxons/random", async (_req, res): Promise<void> => {
     .from(taxonsTable)
     .where(and(
       eq(taxonsTable.cdNom, taxonsTable.cdRef),
-      eq(taxonsTable.rang, "ES"),
+      eq(taxonsTable.rang, TAXREF_RANK.SPECIES),
       sql`${taxonsTable.nomVern} IS NOT NULL AND ${taxonsTable.nomVern} != ''`
     ))
     .orderBy(sql`RANDOM()`)
@@ -226,7 +226,7 @@ router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
       FROM taxons
       WHERE ${refOnly}
         AND famille = ${famille}
-        AND rang = 'ES'
+        AND rang = ${TAXREF_RANK.SPECIES}
         AND lb_nom IS NOT NULL
         AND lb_nom <> ''
         ${statutFilter}
@@ -239,7 +239,7 @@ router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
       name: r.name as string,
       value: Number(r.species_count),
       hasChildren: true,
-      rang: "GN",
+      rang: TAXREF_RANK.GENUS,
     }));
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.json(items);
@@ -252,7 +252,7 @@ router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
     FROM taxons
     WHERE ${refOnly}
       AND famille = ${famille}
-      AND rang = 'ES'
+      AND rang = ${TAXREF_RANK.SPECIES}
       AND lb_nom LIKE ${prefix}
       ${statutFilter}
     ORDER BY lb_nom
@@ -264,7 +264,7 @@ router.get("/taxons/taxonomy-children", async (req, res): Promise<void> => {
     cdNom: r.cd_nom as number,
     value: 1,
     hasChildren: false,
-    rang: "ES",
+    rang: TAXREF_RANK.SPECIES,
   }));
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.json(items);
@@ -320,7 +320,7 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
 
   const conds: any[] = [
     refOnly,
-    eq(taxonsTable.rang, "ES"),
+    eq(taxonsTable.rang, TAXREF_RANK.SPECIES),
     sql`${taxonsTable.regne} IS NOT NULL AND ${taxonsTable.regne} != ''`,
   ];
   if (statutType) {
@@ -351,7 +351,7 @@ router.get("/taxons/taxonomy-tree", async (req, res): Promise<void> => {
            UPPER(s.code_statut) AS code, COUNT(DISTINCT t.cd_nom)::int AS c
     FROM taxons t
     JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = 'LRN'
-    WHERE t.cd_nom = t.cd_ref AND t.rang = 'ES'
+    WHERE t.cd_nom = t.cd_ref AND t.rang = ${TAXREF_RANK.SPECIES}
       AND t.regne IS NOT NULL AND t.regne != ''
       AND s.code_statut IS NOT NULL
       ${uicnFilter}
@@ -475,7 +475,7 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
       FROM taxons t
       JOIN bdc_statuts s ON s.cd_nom = t.cd_nom AND s.cd_type_statut = ${statutType}
       WHERE t.cd_nom = t.cd_ref
-        AND t.rang = 'ES'
+        AND t.rang = ${TAXREF_RANK.SPECIES}
         AND t.regne IS NOT NULL AND t.regne != ''
         AND s.code_statut IS NOT NULL
         ${restrictFilter}
@@ -487,7 +487,7 @@ router.get("/taxons/status-by-class", async (req, res): Promise<void> => {
              COUNT(DISTINCT t.cd_nom)::int AS c
       FROM taxons t
       WHERE t.cd_nom = t.cd_ref
-        AND t.rang = 'ES'
+        AND t.rang = ${TAXREF_RANK.SPECIES}
         AND t.regne IS NOT NULL AND t.regne != ''
       GROUP BY 1, 2
     `),
@@ -569,17 +569,17 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
   const [speciesResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(and(refOnly, eq(taxonsTable.rang, "ES")));
+    .where(and(refOnly, eq(taxonsTable.rang, TAXREF_RANK.SPECIES)));
 
   const [generaResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(and(refOnly, eq(taxonsTable.rang, "GN")));
+    .where(and(refOnly, eq(taxonsTable.rang, TAXREF_RANK.GENUS)));
 
   const [familiesResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(taxonsTable)
-    .where(and(refOnly, eq(taxonsTable.rang, "FM")));
+    .where(and(refOnly, eq(taxonsTable.rang, TAXREF_RANK.FAMILY)));
 
   const kingdomCounts = await db
     .select({

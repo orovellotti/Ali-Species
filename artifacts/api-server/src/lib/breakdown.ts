@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, TAXREF_RANK } from "@workspace/db";
 
 export interface BreakdownFilters {
   statutType: string;
@@ -34,7 +34,7 @@ const TAXO_COLS = [
 export async function runStatusBreakdown(filters: BreakdownFilters): Promise<BreakdownResult> {
   const conds = [
     sql`t.cd_nom = t.cd_ref`,
-    sql`t.rang = 'ES'`,
+    sql`t.rang = ${TAXREF_RANK.SPECIES}`,
     sql`s.cd_type_statut = ${filters.statutType}`,
   ];
   for (const [key, col] of TAXO_COLS) {

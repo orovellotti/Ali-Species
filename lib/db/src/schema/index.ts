@@ -1,4 +1,5 @@
 export * from "./taxons";
+export * from "./taxref-ranks";
 export * from "./bdc_statuts";
 export * from "./species_traits";
 export * from "./wikidata_cache";

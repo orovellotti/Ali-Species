@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { fetchTaxonRow } from "../lib/profileFetchers.js";
 import { readProfileSummary } from "../lib/profileSummary.js";
+import { slugify } from "../lib/slug.js";
 
 const router: IRouter = Router();
 
@@ -14,15 +15,6 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 /**

@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { sql, eq, and, ilike, or, desc, asc, ne, type SQL } from "drizzle-orm";
-import { db, taxonsTable, bdcStatutsTable } from "@workspace/db";
+import { db, taxonsTable, bdcStatutsTable, TAXREF_RANK } from "@workspace/db";
 import { getInteractionsForCdNom } from "./interactions.js";
 import { getTraitsForCdNom } from "./taxons.js";
 import { getBhlForCdNom } from "./bhl.js";
@@ -199,7 +199,7 @@ function buildServer(): McpServer {
         .from(taxonsTable)
         .where(and(
           eq(taxonsTable.cdNom, taxonsTable.cdRef),
-          eq(taxonsTable.rang, "ES"),
+          eq(taxonsTable.rang, TAXREF_RANK.SPECIES),
           sql`${taxonsTable.nomVern} IS NOT NULL AND ${taxonsTable.nomVern} != ''`
         ))
         .orderBy(sql`RANDOM()`)
@@ -533,7 +533,7 @@ function buildServer(): McpServer {
         famille: "famille", groupe2Inpn: "group2_inpn",
       };
       const col = colMap[facet];
-      const rangValue = rang ?? "ES";
+      const rangValue = rang ?? TAXREF_RANK.SPECIES;
       const conds: SQL[] = [
         sql`${sql.raw(col)} IS NOT NULL`,
         sql`${sql.raw(col)} != ''`,
@@ -574,13 +574,13 @@ function buildServer(): McpServer {
         SELECT
           COUNT(*)::int AS total_records,
           COUNT(DISTINCT cd_ref)::int AS distinct_taxa,
-          COUNT(*) FILTER (WHERE rang = 'ES' AND cd_nom = cd_ref)::int AS species,
-          COUNT(*) FILTER (WHERE rang = 'GN' AND cd_nom = cd_ref)::int AS genera,
-          COUNT(*) FILTER (WHERE rang = 'FM' AND cd_nom = cd_ref)::int AS families
+          COUNT(*) FILTER (WHERE rang = ${TAXREF_RANK.SPECIES} AND cd_nom = cd_ref)::int AS species,
+          COUNT(*) FILTER (WHERE rang = ${TAXREF_RANK.GENUS} AND cd_nom = cd_ref)::int AS genera,
+          COUNT(*) FILTER (WHERE rang = ${TAXREF_RANK.FAMILY} AND cd_nom = cd_ref)::int AS families
         FROM taxons
       `);
       const byRegneRes = await db.execute(sql`
-        SELECT regne, COUNT(*) FILTER (WHERE rang = 'ES' AND cd_nom = cd_ref)::int AS species
+        SELECT regne, COUNT(*) FILTER (WHERE rang = ${TAXREF_RANK.SPECIES} AND cd_nom = cd_ref)::int AS species
         FROM taxons
         WHERE regne IS NOT NULL AND regne != ''
         GROUP BY regne

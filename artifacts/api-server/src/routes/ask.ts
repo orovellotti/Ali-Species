@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
+import { db, TAXREF_RANK } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { getInteractionsForCdNom, type InteractionGroup, type InteractionPartner } from "./interactions.js";
 import { runStatusBreakdown, type BreakdownFilters } from "../lib/breakdown.js";
@@ -255,7 +255,7 @@ async function findExactSpecies(q: string): Promise<SpeciesItem[]> {
         OR LOWER(lb_nom) LIKE LOWER(${trimmed}) || '%'
       )
     ORDER BY priority,
-      CASE WHEN rang = 'ES' THEN 0 ELSE 1 END,
+      CASE WHEN rang = ${TAXREF_RANK.SPECIES} THEN 0 ELSE 1 END,
       lb_nom
     LIMIT 5
   `);
@@ -562,7 +562,7 @@ Si la question ne porte pas sur les taxons (ex: "qui es-tu ?"), réponds sans ut
                 cdNom: it.cdNom,
                 lbNom: it.lbNom,
                 nomVern: it.nomVern,
-                rang: "ES",
+                rang: TAXREF_RANK.SPECIES,
                 regne: null,
                 classe: it.classe,
                 ordre: null,

@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, TAXREF_RANK } from "@workspace/db";
 import { resolveStatutCode } from "./statutCodeAlias.js";
 
 export interface Filters {
@@ -69,7 +69,7 @@ export async function runQuery(
 ): Promise<{ totalCount: number; items: SpeciesItem[] }> {
   const conds: SQL[] = [sql`t.cd_nom = t.cd_ref`];
 
-  const rang = filters.rang ?? "ES";
+  const rang = filters.rang ?? TAXREF_RANK.SPECIES;
   if (rang) conds.push(sql`t.rang = ${rang}`);
 
   if (filters.name) {
