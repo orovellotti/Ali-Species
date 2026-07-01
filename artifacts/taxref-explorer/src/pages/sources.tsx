@@ -130,6 +130,19 @@ const SOURCES: Source[] = [
       "Poelen J. H., Simons J. D. & Mungall C. J. (2014). Global Biotic Interactions: An open infrastructure to share and analyze species-interaction datasets. Ecological Informatics 24, 148-159. https://doi.org/10.1016/j.ecoinf.2014.08.005",
   },
   {
+    id: "eunis",
+    name: "EUNIS — European Nature Information System",
+    description:
+      "Système d'information européen sur la nature, maintenu par l'Agence européenne pour l'environnement (AEE). Fournit, pour de nombreux vertébrés européens évalués (amphibiens, mammifères, oiseaux…), les grands types d'habitats associés à chaque espèce : habitats préférés et habitats où l'espèce peut également être présente. Source du panneau « Habitats EUNIS » des fiches espèces et des triples habitats du graphe RDF/SPARQL.",
+    publisher: "Agence européenne pour l'environnement (AEE / EEA)",
+    license:
+      "Réutilisation libre avec attribution (politique de réutilisation des données de l'EEA), sauf mention contraire.",
+    url: "https://eunis.eea.europa.eu/",
+    urlLabel: "eunis.eea.europa.eu",
+    citation:
+      "European Environment Agency (EEA). EUNIS — the European Nature Information System. Copenhague. https://eunis.eea.europa.eu/ (fiches espèces consultées en ligne).",
+  },
+  {
     id: "inpn",
     name: "INPN — Inventaire National du Patrimoine Naturel",
     description:

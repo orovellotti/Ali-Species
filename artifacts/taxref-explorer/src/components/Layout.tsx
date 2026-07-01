@@ -6,6 +6,7 @@ import aliLogo from "@/assets/images/ali-logo.png";
 import nsLogo from "@/assets/images/logo-natural-solutions-official.png";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
 import globiLogo from "@/assets/images/globi-logo.png";
+import eeaLogo from "@/assets/images/eea-logo.png";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface LayoutProps {
@@ -153,6 +154,13 @@ export function Layout({ children }: LayoutProps) {
                 src={globiLogo}
                 alt="Global Biotic Interactions (GloBI)"
                 className="h-12 object-contain"
+              />
+            </a>
+            <a href="https://eunis.eea.europa.eu/" target="_blank" rel="noreferrer" className="block hover:opacity-80 transition-opacity" data-testid="link-eunis-footer">
+              <img
+                src={eeaLogo}
+                alt="EUNIS — European Environment Agency (EEA)"
+                className="h-10 object-contain"
               />
             </a>
           </div>
