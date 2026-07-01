@@ -575,12 +575,22 @@ components:
           type: array
           items:
             type: string
+        breedingHabitats:
+          type: array
+          items:
+            type: string
+        winteringHabitats:
+          type: array
+          items:
+            type: string
         sourceUrl:
           type: string
           nullable: true
       required:
         - preferredHabitats
         - otherHabitats
+        - breedingHabitats
+        - winteringHabitats
     BhlReference:
       type: object
       properties:

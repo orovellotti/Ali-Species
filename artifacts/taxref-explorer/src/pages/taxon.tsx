@@ -563,7 +563,11 @@ export default function TaxonDetail() {
               </CollapsibleSection>
             ) : null}
 
-            {eunis && (eunis.preferredHabitats.length > 0 || eunis.otherHabitats.length > 0) ? (
+            {eunis &&
+            (eunis.preferredHabitats.length > 0 ||
+              eunis.otherHabitats.length > 0 ||
+              eunis.breedingHabitats.length > 0 ||
+              eunis.winteringHabitats.length > 0) ? (
               <CollapsibleSection
                 icon={<Layers className="w-4 h-4 text-primary" />}
                 title="Habitats (EUNIS)"
@@ -589,6 +593,26 @@ export default function TaxonDetail() {
                     <div className="text-xs font-semibold text-foreground mb-1.5">Peut aussi frequenter</div>
                     <div className="flex flex-wrap gap-1.5">
                       {eunis.otherHabitats.map((h) => (
+                        <Badge key={h} variant="outline" className="capitalize">{h}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {eunis.breedingHabitats.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-foreground mb-1.5">Habitats de reproduction</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eunis.breedingHabitats.map((h) => (
+                        <Badge key={h} variant="secondary" className="capitalize">{h}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {eunis.winteringHabitats.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-foreground mb-1.5">Habitats d'hivernage</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eunis.winteringHabitats.map((h) => (
                         <Badge key={h} variant="outline" className="capitalize">{h}</Badge>
                       ))}
                     </div>

@@ -8,9 +8,14 @@ description: How to fetch species→habitat data from EUNIS/EEA — external fac
 **No formal API.** The only working source is the live HTML factsheet:
 `https://eunis.eea.europa.eu/species/{Genre espece}` — resolved **by scientific name** (URL-encoded, space → %20), NOT by any code.
 
-**Parse targets:** the `<ul>` lists following the table headers `Most preferred habitats`
-and `May also occur in`. A bogus/uncovered name renders an `<h1>` containing
-`No results found for this search`.
+**Two different factsheet layouts** (upstream, not a code choice):
+- Mammals / amphibians / reptiles: `<ul>` lists following the table headers
+  `Most preferred habitats` and `May also occur in`.
+- Birds: a table with `<th>Breeding habitats</th>` / `<th>Wintering habitats</th>`
+  whose `<td>` holds a `<ul><li>` list. Birds have NO preferred/other lists, so a
+  parser looking only for the mammal headers returns empty for every bird.
+`fetchEunis()` parses all 4 lists; `parseEunisTableList()` handles the bird `<th>/<td>`
+format. A bogus/uncovered name renders an `<h1>` containing `No results found for this search`.
 
 **Coverage is partial:** mainly assessed European vertebrates (amphibians, mammals,
 birds). Plants (Quercus, Fagus…) return empty. Treat empty as "not covered", not an error.
@@ -40,4 +45,5 @@ count" metric over EUNIS must use `COUNT(DISTINCT t.cd_nom)`, not `count(*)` of 
 
 Predicates (namespace `alivocab: https://ali-species.app/vocab/`): `eunisHabitat`
 (all habitats, `@en` literals), `eunisPreferredHabitat` (preferred subset),
+`eunisBreedingHabitat` / `eunisWinteringHabitat` (bird breeding/wintering subsets),
 `eunisFactsheet` (source URL). Only `status='ok'` cache rows carry real data.

@@ -325,6 +325,8 @@ export interface EunisData {
   displayName: string | null;
   preferredHabitats: string[];
   otherHabitats: string[];
+  breedingHabitats: string[];
+  winteringHabitats: string[];
   sourceUrl: string | null;
 }
 
@@ -332,6 +334,8 @@ const EMPTY_EUNIS: EunisData = {
   displayName: null,
   preferredHabitats: [],
   otherHabitats: [],
+  breedingHabitats: [],
+  winteringHabitats: [],
   sourceUrl: null,
 };
 
@@ -343,6 +347,23 @@ function parseEunisHabitatList(html: string, label: string): string[] {
   const ul = segment.match(/<ul[^>]*>([\s\S]*?)<\/ul>/);
   if (!ul) return [];
   return [...ul[1].matchAll(/<li>([\s\S]*?)<\/li>/g)]
+    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+/**
+ * Extract the <li> items of the <ul> inside the <td> that follows a <th> with
+ * the given label. Used for the bird factsheet layout, where habitats live in a
+ * table ("Breeding habitats" / "Wintering habitats") instead of the mammal /
+ * amphibian "Most preferred habitats" / "May also occur in" lists.
+ */
+function parseEunisTableList(html: string, label: string): string[] {
+  const th = html.search(new RegExp(`<th[^>]*>\\s*${label}\\s*</th>`, "i"));
+  if (th < 0) return [];
+  const segment = html.slice(th, th + 2000);
+  const td = segment.match(/<td[^>]*>([\s\S]*?)<\/td>/);
+  if (!td) return [];
+  return [...td[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
     .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())
     .filter(Boolean);
 }
@@ -374,8 +395,26 @@ export async function fetchEunis(taxon: ProfileTaxonRow): Promise<EunisData> {
       if (!displayName || /no results found/i.test(displayName)) return { kind: "empty" };
       const preferredHabitats = parseEunisHabitatList(html, "Most preferred habitats");
       const otherHabitats = parseEunisHabitatList(html, "May also occur in");
-      if (preferredHabitats.length === 0 && otherHabitats.length === 0) return { kind: "empty" };
-      return { kind: "ok", data: { displayName, preferredHabitats, otherHabitats, sourceUrl } };
+      const breedingHabitats = parseEunisTableList(html, "Breeding habitats");
+      const winteringHabitats = parseEunisTableList(html, "Wintering habitats");
+      if (
+        preferredHabitats.length === 0 &&
+        otherHabitats.length === 0 &&
+        breedingHabitats.length === 0 &&
+        winteringHabitats.length === 0
+      )
+        return { kind: "empty" };
+      return {
+        kind: "ok",
+        data: {
+          displayName,
+          preferredHabitats,
+          otherHabitats,
+          breedingHabitats,
+          winteringHabitats,
+          sourceUrl,
+        },
+      };
     },
   });
   return result.data ?? EMPTY_EUNIS;

@@ -447,7 +447,7 @@ function buildServer(): McpServer {
     {
       title: "Habitats EUNIS",
       description:
-        "Retourne les grands types d'habitats associés à une espèce d'après EUNIS (European Nature Information System, Agence européenne pour l'environnement) : habitats préférés et habitats secondaires (où l'espèce peut aussi être présente). Couverture partielle, essentiellement les vertébrés européens évalués (amphibiens, mammifères, oiseaux…) ; renvoie des listes vides si l'espèce n'est pas couverte par EUNIS.",
+        "Retourne les grands types d'habitats associés à une espèce d'après EUNIS (European Nature Information System, Agence européenne pour l'environnement). Pour les mammifères, amphibiens et reptiles : habitats préférés et habitats secondaires (où l'espèce peut aussi être présente). Pour les oiseaux : habitats de reproduction (breeding) et d'hivernage (wintering). Couverture partielle, essentiellement les vertébrés européens évalués ; renvoie des listes vides si l'espèce n'est pas couverte par EUNIS.",
       inputSchema: { cdNom: z.number().int().describe("Identifiant TAXREF (cdNom)") },
     },
     async ({ cdNom }) => {

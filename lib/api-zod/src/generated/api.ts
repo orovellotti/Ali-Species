@@ -357,6 +357,8 @@ export const GetTaxonProfileResponse = zod.object({
   "displayName": zod.string().nullish(),
   "preferredHabitats": zod.array(zod.string()),
   "otherHabitats": zod.array(zod.string()),
+  "breedingHabitats": zod.array(zod.string()),
+  "winteringHabitats": zod.array(zod.string()),
   "sourceUrl": zod.string().nullish()
 }),zod.object({
   "error": zod.boolean(),

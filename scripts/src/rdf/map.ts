@@ -270,37 +270,57 @@ interface EunisPayloadData {
   displayName?: string | null;
   preferredHabitats?: string[];
   otherHabitats?: string[];
+  breedingHabitats?: string[];
+  winteringHabitats?: string[];
   sourceUrl?: string | null;
 }
 
 /**
  * Maps a cached EUNIS envelope (`{ ok, data }` from external_cache) to habitat
- * quads on the taxon. Preferred habitats get both alivocab:eunisHabitat and
- * alivocab:eunisPreferredHabitat; secondary ("may also occur in") habitats get
- * only alivocab:eunisHabitat. Habitat labels are English literals.
+ * quads on the taxon. Every distinct habitat gets alivocab:eunisHabitat; on top
+ * of that, preferred habitats (mammals/amphibians/reptiles) get
+ * alivocab:eunisPreferredHabitat, and bird factsheets get
+ * alivocab:eunisBreedingHabitat / alivocab:eunisWinteringHabitat. Secondary
+ * ("may also occur in") habitats get only the generic property. Habitat labels
+ * are English literals.
  */
 export function eunisToQuads(cdNom: number, envelope: unknown): N3.Quad[] {
   const data = (envelope as { data?: EunisPayloadData } | null)?.data;
   if (!data) return [];
   const preferred = Array.isArray(data.preferredHabitats) ? data.preferredHabitats : [];
   const other = Array.isArray(data.otherHabitats) ? data.otherHabitats : [];
-  if (preferred.length === 0 && other.length === 0) return [];
+  const breeding = Array.isArray(data.breedingHabitats) ? data.breedingHabitats : [];
+  const wintering = Array.isArray(data.winteringHabitats) ? data.winteringHabitats : [];
+  if (
+    preferred.length === 0 &&
+    other.length === 0 &&
+    breeding.length === 0 &&
+    wintering.length === 0
+  )
+    return [];
   const subj = namedNode(id.taxon(cdNom));
   const out: N3.Quad[] = [];
   const EUNIS_HABITAT = namedNode(vocab.eunisHabitat);
-  const EUNIS_PREFERRED = namedNode(vocab.eunisPreferredHabitat);
-  const seen = new Set<string>();
-  for (const h of preferred) {
-    if (!h || seen.has(h)) continue;
-    seen.add(h);
+  const seenHabitat = new Set<string>();
+  const addHabitat = (h: string) => {
+    if (!h || seenHabitat.has(h)) return;
+    seenHabitat.add(h);
     out.push(quad(subj, EUNIS_HABITAT, literal(h, "en")));
-    out.push(quad(subj, EUNIS_PREFERRED, literal(h, "en")));
-  }
-  for (const h of other) {
-    if (!h || seen.has(h)) continue;
-    seen.add(h);
-    out.push(quad(subj, EUNIS_HABITAT, literal(h, "en")));
-  }
+  };
+  const addCategory = (habitats: string[], predicate: string) => {
+    const p = namedNode(predicate);
+    const seen = new Set<string>();
+    for (const h of habitats) {
+      if (!h || seen.has(h)) continue;
+      seen.add(h);
+      addHabitat(h);
+      out.push(quad(subj, p, literal(h, "en")));
+    }
+  };
+  addCategory(preferred, vocab.eunisPreferredHabitat);
+  for (const h of other) addHabitat(h);
+  addCategory(breeding, vocab.eunisBreedingHabitat);
+  addCategory(wintering, vocab.eunisWinteringHabitat);
   if (data.sourceUrl) {
     out.push(quad(subj, namedNode(vocab.eunisFactsheet), namedNode(data.sourceUrl)));
   }

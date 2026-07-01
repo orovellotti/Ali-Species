@@ -69,10 +69,14 @@ export const vocab = {
   statusType: `${PREFIXES.alivocab}statusType`,
   /** Property: territorial scope of the status (FR, REU, NC, …). */
   territory: `${PREFIXES.alivocab}territory`,
-  /** Property: any habitat type associated with the taxon per EUNIS (EEA) — preferred + secondary. */
+  /** Property: any habitat type associated with the taxon per EUNIS (EEA) — preferred + secondary, or breeding + wintering for birds. */
   eunisHabitat: `${PREFIXES.alivocab}eunisHabitat`,
   /** Property: a *preferred* habitat type per EUNIS (subset of eunisHabitat). */
   eunisPreferredHabitat: `${PREFIXES.alivocab}eunisPreferredHabitat`,
+  /** Property: a *breeding* habitat type per EUNIS (bird factsheets; subset of eunisHabitat). */
+  eunisBreedingHabitat: `${PREFIXES.alivocab}eunisBreedingHabitat`,
+  /** Property: a *wintering* habitat type per EUNIS (bird factsheets; subset of eunisHabitat). */
+  eunisWinteringHabitat: `${PREFIXES.alivocab}eunisWinteringHabitat`,
   /** Property: link to the EUNIS species factsheet (provenance). */
   eunisFactsheet: `${PREFIXES.alivocab}eunisFactsheet`,
   /** Source (PanTHERIA, AVONET, …) as a vocab term. */

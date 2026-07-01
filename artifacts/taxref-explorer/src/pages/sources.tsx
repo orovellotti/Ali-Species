@@ -133,7 +133,7 @@ const SOURCES: Source[] = [
     id: "eunis",
     name: "EUNIS — European Nature Information System",
     description:
-      "Système d'information européen sur la nature, maintenu par l'Agence européenne pour l'environnement (AEE). Fournit, pour de nombreux vertébrés européens évalués (amphibiens, mammifères, oiseaux…), les grands types d'habitats associés à chaque espèce : habitats préférés et habitats où l'espèce peut également être présente. Source du panneau « Habitats EUNIS » des fiches espèces et des triples habitats du graphe RDF/SPARQL.",
+      "Système d'information européen sur la nature, maintenu par l'Agence européenne pour l'environnement (AEE). Fournit, pour de nombreux vertébrés européens évalués (amphibiens, mammifères, oiseaux…), les grands types d'habitats associés à chaque espèce : habitats préférés et secondaires pour les mammifères, amphibiens et reptiles, habitats de reproduction et d'hivernage pour les oiseaux. Source du panneau « Habitats EUNIS » des fiches espèces et des triples habitats du graphe RDF/SPARQL.",
     publisher: "Agence européenne pour l'environnement (AEE / EEA)",
     license:
       "Réutilisation libre avec attribution (politique de réutilisation des données de l'EEA), sauf mention contraire.",

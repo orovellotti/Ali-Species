@@ -100,6 +100,8 @@ export interface EunisInfo {
   displayName?: string | null;
   preferredHabitats: string[];
   otherHabitats: string[];
+  breedingHabitats: string[];
+  winteringHabitats: string[];
   sourceUrl?: string | null;
 }
 
