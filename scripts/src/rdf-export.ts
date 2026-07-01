@@ -31,6 +31,7 @@ import {
   traitSourceVocabQuads,
   wikidataToQuads,
   globiToQuads,
+  eunisToQuads,
   voidMetadataQuads,
 } from "./rdf/map.js";
 
@@ -44,6 +45,7 @@ interface Stats {
   traitRowCount: number;
   wikidataCount: number;
   globiCount: number;
+  eunisCount: number;
   triplesEmitted: number;
 }
 
@@ -96,13 +98,26 @@ async function main() {
   const statsPath = resolve(exportsDir, `ali-species-${sha}.stats.csv`);
 
   // Up-front counts → VOID metadata.
-  const [{ rows: tCount }, { rows: sCount }, { rows: trCount }, { rows: wdCount }, { rows: gbCount }] =
+  const [{ rows: tCount }, { rows: sCount }, { rows: trCount }, { rows: wdCount }, { rows: gbCount }, { rows: euCount }] =
     await Promise.all([
       pool.query<{ n: string }>("SELECT count(*)::text AS n FROM taxons"),
       pool.query<{ n: string }>("SELECT count(*)::text AS n FROM bdc_statuts"),
       pool.query<{ n: string }>("SELECT count(*)::text AS n FROM species_traits"),
       pool.query<{ n: string }>("SELECT count(*)::text AS n FROM wikidata_cache"),
       pool.query<{ n: string }>("SELECT count(*)::text AS n FROM globi_cache"),
+      pool.query<{ n: string }>(
+        `SELECT count(DISTINCT t.cd_nom)::text AS n
+           FROM taxons t
+           JOIN external_cache ec
+             ON ec.provider = 'eunis_habitats'
+            AND ec.status = 'ok'
+            AND ec.cache_key = lower(
+                  coalesce(
+                    nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''),
+                    t.lb_nom
+                  )
+                )`,
+      ),
     ]);
 
   const stats: Stats = {
@@ -111,6 +126,7 @@ async function main() {
     traitRowCount: parseInt(trCount[0]!.n, 10),
     wikidataCount: parseInt(wdCount[0]!.n, 10),
     globiCount: parseInt(gbCount[0]!.n, 10),
+    eunisCount: parseInt(euCount[0]!.n, 10),
     triplesEmitted: 0,
   };
 
@@ -208,6 +224,25 @@ async function main() {
       sql: `SELECT cd_nom AS "cdNom", payload FROM globi_cache`,
       map: (r: { cdNom: number; payload: any }) => globiToQuads(r.cdNom, r.payload),
     },
+    {
+      // EUNIS habitats live in external_cache keyed by the lowercased short
+      // scientific name (genus + species). Join back to every taxon whose
+      // pickShortName() resolves to that key. Only status='ok' rows carry real
+      // habitat data (empty/negative caches are skipped upstream).
+      label: "eunis_habitats",
+      sql: `SELECT t.cd_nom AS "cdNom", ec.payload AS "payload"
+              FROM taxons t
+              JOIN external_cache ec
+                ON ec.provider = 'eunis_habitats'
+               AND ec.status = 'ok'
+               AND ec.cache_key = lower(
+                     coalesce(
+                       nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''),
+                       t.lb_nom
+                     )
+                   )`,
+      map: (r: { cdNom: number; payload: any }) => eunisToQuads(r.cdNom, r.payload),
+    },
   ];
 
   for (const src of sources) {
@@ -255,6 +290,7 @@ async function main() {
     `trait_row_count,${stats.traitRowCount}`,
     `wikidata_link_count,${stats.wikidataCount}`,
     `globi_link_count,${stats.globiCount}`,
+    `eunis_habitat_taxon_count,${stats.eunisCount}`,
     `triples_emitted,${stats.triplesEmitted}`,
     `output_file,${outPath}`,
   ].join("\n");

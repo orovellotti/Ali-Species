@@ -69,6 +69,12 @@ export const vocab = {
   statusType: `${PREFIXES.alivocab}statusType`,
   /** Property: territorial scope of the status (FR, REU, NC, …). */
   territory: `${PREFIXES.alivocab}territory`,
+  /** Property: any habitat type associated with the taxon per EUNIS (EEA) — preferred + secondary. */
+  eunisHabitat: `${PREFIXES.alivocab}eunisHabitat`,
+  /** Property: a *preferred* habitat type per EUNIS (subset of eunisHabitat). */
+  eunisPreferredHabitat: `${PREFIXES.alivocab}eunisPreferredHabitat`,
+  /** Property: link to the EUNIS species factsheet (provenance). */
+  eunisFactsheet: `${PREFIXES.alivocab}eunisFactsheet`,
   /** Source (PanTHERIA, AVONET, …) as a vocab term. */
   source: (key: string) => `${PREFIXES.alivocab}source/${encodeURIComponent(key)}`,
   /** Status type as a SKOS concept. */

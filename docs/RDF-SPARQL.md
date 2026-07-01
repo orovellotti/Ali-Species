@@ -1,6 +1,8 @@
 # Linked Open Data — RDF / SPARQL
 
-The full graph (TAXREF v18 + BdC Statuts + traits + Wikidata mappings + GloBI interactions) is exported as gzipped Turtle and served via a SPARQL endpoint backed by **Oxigraph** (RocksDB-on-disk).
+The full graph (TAXREF v18 + BdC Statuts + traits + Wikidata mappings + GloBI interactions + EUNIS habitats) is exported as gzipped Turtle and served via a SPARQL endpoint backed by **Oxigraph** (RocksDB-on-disk).
+
+EUNIS species→habitat associations (from `external_cache`, provider `eunis_habitats`) are joined to taxons by lowercased short scientific name and emitted as `alivocab:eunisHabitat` (all habitats, `@en` literals), `alivocab:eunisPreferredHabitat` (preferred subset) and `alivocab:eunisFactsheet` (source URL). Only `status='ok'` cache rows carry real data.
 
 ## Components
 

@@ -697,7 +697,7 @@ function buildServer(): McpServer {
     {
       title: "Exécuter une requête SPARQL sur le graphe ALI Species",
       description:
-        "Exécute une requête SPARQL 1.1 (SELECT, ASK, CONSTRUCT, DESCRIBE) contre le triplestore Oxigraph qui héberge l'intégralité du graphe RDF (TAXREF v18, BdC Statuts, traits, mappings Wikidata, interactions GloBI). Vocabulaires : Darwin Core, SKOS, OWL, Relations Ontology, DCTERMS. Préfixes URI : `https://ali-species.app/id/` (instances) et `https://ali-species.app/vocab/` (propriétés). Note : si le serveur Oxigraph n'est pas disponible (déploiement autoscale sans triplestore), un message clair est retourné — le dump RDF reste téléchargeable pour exécution locale.",
+        "Exécute une requête SPARQL 1.1 (SELECT, ASK, CONSTRUCT, DESCRIBE) contre le triplestore Oxigraph qui héberge l'intégralité du graphe RDF (TAXREF v18, BdC Statuts, traits, mappings Wikidata, interactions GloBI, habitats EUNIS). Vocabulaires : Darwin Core, SKOS, OWL, Relations Ontology, DCTERMS. Préfixes URI : `https://ali-species.app/id/` (instances) et `https://ali-species.app/vocab/` (propriétés). Propriétés habitats EUNIS (préfixe `alivocab: <https://ali-species.app/vocab/>`) : `alivocab:eunisHabitat` (tout habitat, littéral@en), `alivocab:eunisPreferredHabitat` (habitats préférés), `alivocab:eunisFactsheet` (URL fiche source). Note : si le serveur Oxigraph n'est pas disponible (déploiement autoscale sans triplestore), un message clair est retourné — le dump RDF reste téléchargeable pour exécution locale.",
       inputSchema: {
         query: z.string().min(10).describe("Requête SPARQL complète (incluant les PREFIX nécessaires)"),
         format: z.enum(["json", "xml", "csv"]).optional().default("json")

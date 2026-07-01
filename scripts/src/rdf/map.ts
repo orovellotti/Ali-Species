@@ -265,6 +265,48 @@ function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 64);
 }
 
+/** -------- EUNIS HABITATS (external_cache envelope) -------- */
+interface EunisPayloadData {
+  displayName?: string | null;
+  preferredHabitats?: string[];
+  otherHabitats?: string[];
+  sourceUrl?: string | null;
+}
+
+/**
+ * Maps a cached EUNIS envelope (`{ ok, data }` from external_cache) to habitat
+ * quads on the taxon. Preferred habitats get both alivocab:eunisHabitat and
+ * alivocab:eunisPreferredHabitat; secondary ("may also occur in") habitats get
+ * only alivocab:eunisHabitat. Habitat labels are English literals.
+ */
+export function eunisToQuads(cdNom: number, envelope: unknown): N3.Quad[] {
+  const data = (envelope as { data?: EunisPayloadData } | null)?.data;
+  if (!data) return [];
+  const preferred = Array.isArray(data.preferredHabitats) ? data.preferredHabitats : [];
+  const other = Array.isArray(data.otherHabitats) ? data.otherHabitats : [];
+  if (preferred.length === 0 && other.length === 0) return [];
+  const subj = namedNode(id.taxon(cdNom));
+  const out: N3.Quad[] = [];
+  const EUNIS_HABITAT = namedNode(vocab.eunisHabitat);
+  const EUNIS_PREFERRED = namedNode(vocab.eunisPreferredHabitat);
+  const seen = new Set<string>();
+  for (const h of preferred) {
+    if (!h || seen.has(h)) continue;
+    seen.add(h);
+    out.push(quad(subj, EUNIS_HABITAT, literal(h, "en")));
+    out.push(quad(subj, EUNIS_PREFERRED, literal(h, "en")));
+  }
+  for (const h of other) {
+    if (!h || seen.has(h)) continue;
+    seen.add(h);
+    out.push(quad(subj, EUNIS_HABITAT, literal(h, "en")));
+  }
+  if (data.sourceUrl) {
+    out.push(quad(subj, namedNode(vocab.eunisFactsheet), namedNode(data.sourceUrl)));
+  }
+  return out;
+}
+
 /** -------- VOID DATASET METADATA -------- */
 export function voidMetadataQuads(stats: {
   taxonCount: number;
@@ -272,6 +314,7 @@ export function voidMetadataQuads(stats: {
   traitRowCount: number;
   wikidataCount: number;
   globiCount: number;
+  eunisCount: number;
   generatedAt: string;
 }): N3.Quad[] {
   const ds = namedNode(id.dataset());
@@ -281,7 +324,7 @@ export function voidMetadataQuads(stats: {
     quad(ds, DCTERMS_TITLE, literal("ALi species — TAXREF v18 + BdC Statuts + traits + LOD links", "en")),
     quad(ds, DCTERMS_DESCRIPTION,
       literal(
-        "RDF dump of the ALi species knowledge graph: TAXREF v18 taxonomy, BdC Statuts conservation/regulatory statuses, biological traits (PanTHERIA, AVONET, AmphiBIO) and pre-materialized links to Wikidata + GloBI biotic interactions.",
+        "RDF dump of the ALi species knowledge graph: TAXREF v18 taxonomy, BdC Statuts conservation/regulatory statuses, biological traits (PanTHERIA, AVONET, AmphiBIO), EUNIS (EEA) species-habitat associations and pre-materialized links to Wikidata + GloBI biotic interactions.",
         "en",
       )),
     quad(ds, DCTERMS_PUBLISHER, literal("ALi species")),
@@ -294,5 +337,6 @@ export function voidMetadataQuads(stats: {
     quad(ds, namedNode(`${PREFIXES.alivocab}traitRowCount`), literal(String(stats.traitRowCount))),
     quad(ds, namedNode(`${PREFIXES.alivocab}wikidataLinkCount`), literal(String(stats.wikidataCount))),
     quad(ds, namedNode(`${PREFIXES.alivocab}globiLinkCount`), literal(String(stats.globiCount))),
+    quad(ds, namedNode(`${PREFIXES.alivocab}eunisHabitatTaxonCount`), literal(String(stats.eunisCount))),
   ];
 }
