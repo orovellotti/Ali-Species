@@ -22,6 +22,12 @@ birds). Plants (Quercus, Fagus…) return empty. Treat empty as "not covered", n
 
 **Do NOT use the EUNIS RDF (`.rdf`) endpoints or its SPARQL** — they are dead/empty.
 
+**Purging the cache in prod:** the `executeSql` production target is a READ-ONLY
+replica, so you cannot DELETE prod cache rows from tooling. Use the in-app admin
+endpoint `POST /api/admin/cache/clear` (auth `ADMIN_TOKEN`, optional `{provider}`)
+which runs inside the deployed app and writes the live DB. Dev and prod are
+SEPARATE databases. Lazy entries also self-heal at their TTL (EUNIS = 7 days).
+
 **Why:** researched during the EUNIS integration; these are upstream realities that
 cannot be discovered by reading our code, and the RDF/SPARQL dead-ends waste time if retried.
 

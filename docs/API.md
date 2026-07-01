@@ -41,6 +41,14 @@
 - **Biodiversity Heritage Library (BHL)** — Historical publication references via `op=PublicationSearch` (requires `BHL_API_KEY`, free at https://www.biodiversitylibrary.org/getapikey.aspx). Cached per cd_nom 30 days in `bhl_cache` table.
 - Note: TAXREF LD (MNHN) is unavailable due to cyberattack since summer 2025
 
+## Admin / Ops
+
+- **`POST /api/admin/cache/clear`** — purge la table `external_cache` (EUNIS, Wikipedia, GBIF, Commons…) pour forcer un refetch à la prochaine consultation. Tourne dans l'app déployée → droits d'écriture sur la base live (l'outillage n'a qu'un réplica read-only en prod).
+  - Auth : header `Authorization: Bearer $ADMIN_TOKEN` ou `x-admin-token: $ADMIN_TOKEN` (comparaison timing-safe). `503` si `ADMIN_TOKEN` non configuré, `401` si invalide.
+  - Body optionnel `{ "provider": "eunis_habitats" }` pour cibler un provider ; sans body → purge **tous** les providers.
+  - Réponse : `{ ok, provider, deleted }`.
+  - Exemple : `curl -X POST https://alispecies.io/api/admin/cache/clear -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d '{"provider":"eunis_habitats"}'`
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
