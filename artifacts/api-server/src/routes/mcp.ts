@@ -11,6 +11,7 @@ import { runStatusBreakdown } from "../lib/breakdown.js";
 import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
+import { fetchEunis, fetchTaxonRow } from "../lib/profileFetchers.js";
 
 const SPARQL_UPSTREAM = process.env.OXIGRAPH_HTTP ?? "http://127.0.0.1:9000";
 
@@ -36,7 +37,7 @@ function notFound(message: string) {
 
 function buildServer(): McpServer {
   const server = new McpServer(
-    { name: "ali-species-mcp", version: "1.4.0" },
+    { name: "ali-species-mcp", version: "1.5.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -438,6 +439,22 @@ function buildServer(): McpServer {
       } catch {
         return toJson({ gbifKey: null, error: "GBIF unreachable" });
       }
+    },
+  );
+
+  server.registerTool(
+    "get_eunis_habitats",
+    {
+      title: "Habitats EUNIS",
+      description:
+        "Retourne les grands types d'habitats associés à une espèce d'après EUNIS (European Nature Information System, Agence européenne pour l'environnement) : habitats préférés et habitats secondaires (où l'espèce peut aussi être présente). Couverture partielle, essentiellement les vertébrés européens évalués (amphibiens, mammifères, oiseaux…) ; renvoie des listes vides si l'espèce n'est pas couverte par EUNIS.",
+      inputSchema: { cdNom: z.number().int().describe("Identifiant TAXREF (cdNom)") },
+    },
+    async ({ cdNom }) => {
+      const taxon = await fetchTaxonRow(cdNom);
+      if (!taxon) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
+      const data = await fetchEunis(taxon);
+      return toJson(data);
     },
   );
 

@@ -1,0 +1,1 @@
+- [EUNIS habitats source](eunis-habitats.md) — no API; scrape HTML factsheet by scientific name; RDF/SPARQL are dead; vertebrate-only coverage.

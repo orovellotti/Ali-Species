@@ -319,6 +319,68 @@ export async function fetchGbif(taxon: ProfileTaxonRow): Promise<GbifData> {
   return result.data ?? EMPTY_GBIF;
 }
 
+const TTL_EUNIS = 7 * 24 * 3600;
+
+export interface EunisData {
+  displayName: string | null;
+  preferredHabitats: string[];
+  otherHabitats: string[];
+  sourceUrl: string | null;
+}
+
+const EMPTY_EUNIS: EunisData = {
+  displayName: null,
+  preferredHabitats: [],
+  otherHabitats: [],
+  sourceUrl: null,
+};
+
+/** Extract the <li> items of the <ul> that follows a given table header label. */
+function parseEunisHabitatList(html: string, label: string): string[] {
+  const anchor = html.indexOf(">" + label + "<");
+  if (anchor < 0) return [];
+  const segment = html.slice(anchor, anchor + 1500);
+  const ul = segment.match(/<ul[^>]*>([\s\S]*?)<\/ul>/);
+  if (!ul) return [];
+  return [...ul[1].matchAll(/<li>([\s\S]*?)<\/li>/g)]
+    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+/**
+ * Real species → habitat associations from EUNIS (European Nature Information
+ * System, EEA). Resolves the species factsheet by scientific name and parses
+ * the "Most preferred habitats" / "May also occur in" sections. Coverage is
+ * partial (mainly assessed European vertebrates); non-covered taxa cache empty.
+ */
+export async function fetchEunis(taxon: ProfileTaxonRow): Promise<EunisData> {
+  const searchName = pickShortName(taxon);
+  const result = await getCachedOrFetch<EunisData>({
+    provider: "eunis_habitats",
+    cacheKey: searchName.toLowerCase(),
+    ttlSeconds: TTL_EUNIS,
+    fetcher: async (): Promise<FetchOutcome<EunisData>> => {
+      const sourceUrl = `https://eunis.eea.europa.eu/species/${encodeURIComponent(searchName)}`;
+      const r = await fetch(sourceUrl, {
+        headers: { "User-Agent": WIKI_UA, Accept: "text/html" },
+        redirect: "follow",
+      });
+      if (!r.ok) return { kind: "error", error: `eunis http ${r.status}` };
+      const html = await r.text();
+      const h1 = html.match(/<h1>([\s\S]*?)<\/h1>/);
+      const displayName = h1
+        ? h1[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()
+        : null;
+      if (!displayName || /no results found/i.test(displayName)) return { kind: "empty" };
+      const preferredHabitats = parseEunisHabitatList(html, "Most preferred habitats");
+      const otherHabitats = parseEunisHabitatList(html, "May also occur in");
+      if (preferredHabitats.length === 0 && otherHabitats.length === 0) return { kind: "empty" };
+      return { kind: "ok", data: { displayName, preferredHabitats, otherHabitats, sourceUrl } };
+    },
+  });
+  return result.data ?? EMPTY_EUNIS;
+}
+
 export interface TraitsSummary {
   hasStaticTraits: boolean;
   staticSourcesCount: number;

@@ -8,6 +8,7 @@
 import type { BdcStatut } from './bdcStatut';
 import type { BlockError } from './blockError';
 import type { ChildrenSummary } from './childrenSummary';
+import type { EunisInfo } from './eunisInfo';
 import type { GbifInfo } from './gbifInfo';
 import type { InteractionsSummary } from './interactionsSummary';
 import type { SensitivityResult } from './sensitivityResult';
@@ -27,6 +28,7 @@ export interface TaxonProfile {
   sensitivity: SensitivityResult;
   wikipedia: WikipediaInfo | BlockError;
   gbif: GbifInfo | BlockError;
+  eunis: EunisInfo | BlockError;
   traitsSummary: TraitsSummary;
   interactionsSummary?: InteractionsSummary | BlockError | null;
   shareSummary: ShareSummary;

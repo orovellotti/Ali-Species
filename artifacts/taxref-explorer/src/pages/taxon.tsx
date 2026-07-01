@@ -20,7 +20,7 @@ import {
   getGetTaxonBhlQueryKey,
   getRandomTaxon
 } from "@workspace/api-client-react";
-import type { BdcStatut, TaxonProfile, TaxonMedia, WikipediaInfo, GbifInfo, BlockError } from "@workspace/api-client-react";
+import type { BdcStatut, TaxonProfile, TaxonMedia, WikipediaInfo, GbifInfo, EunisInfo, BlockError } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -101,6 +101,7 @@ export default function TaxonDetail() {
   const wikiLoading = profileLoading && !profileFallback ? profileLoading : wikiFbLoading;
   const gbif = (safeBlock<GbifInfo>(profile?.gbif as GbifInfo | BlockError | undefined)) ?? gbifFb;
   const gbifLoading = profileLoading && !profileFallback ? profileLoading : gbifFbLoading;
+  const eunis = safeBlock<EunisInfo>(profile?.eunis as EunisInfo | BlockError | undefined);
   const statuts = (profile?.statuts as BdcStatut[] | undefined) ?? statutsFb;
   const statutsLoading = profileLoading && !profileFallback ? profileLoading : statutsFbLoading;
 
@@ -556,6 +557,51 @@ export default function TaxonDetail() {
                     className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline underline-offset-4"
                   >
                     Voir sur GBIF.org
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </CollapsibleSection>
+            ) : null}
+
+            {eunis && (eunis.preferredHabitats.length > 0 || eunis.otherHabitats.length > 0) ? (
+              <CollapsibleSection
+                icon={<Layers className="w-4 h-4 text-primary" />}
+                title="Habitats (EUNIS)"
+                defaultOpen={false}
+              >
+                <p className="text-xs text-muted-foreground mb-3">
+                  Grands types d'habitats associes a cette espece d'apres{" "}
+                  <a href="https://eunis.eea.europa.eu/" target="_blank" rel="noreferrer" className="text-primary hover:underline">EUNIS</a>{" "}
+                  (European Nature Information System, Agence europeenne pour l'environnement). Couverture partielle.
+                </p>
+                {eunis.preferredHabitats.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-foreground mb-1.5">Habitats preferes</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eunis.preferredHabitats.map((h) => (
+                        <Badge key={h} variant="secondary" className="capitalize">{h}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {eunis.otherHabitats.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-foreground mb-1.5">Peut aussi frequenter</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eunis.otherHabitats.map((h) => (
+                        <Badge key={h} variant="outline" className="capitalize">{h}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {eunis.sourceUrl && (
+                  <a
+                    href={eunis.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-1 text-sm text-primary hover:underline underline-offset-4"
+                  >
+                    Voir la fiche EUNIS
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}

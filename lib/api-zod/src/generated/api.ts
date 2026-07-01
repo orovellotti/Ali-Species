@@ -353,6 +353,15 @@ export const GetTaxonProfileResponse = zod.object({
   "error": zod.boolean(),
   "message": zod.string()
 })]),
+  "eunis": zod.union([zod.object({
+  "displayName": zod.string().nullish(),
+  "preferredHabitats": zod.array(zod.string()),
+  "otherHabitats": zod.array(zod.string()),
+  "sourceUrl": zod.string().nullish()
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+})]),
   "traitsSummary": zod.object({
   "hasStaticTraits": zod.boolean(),
   "staticSourcesCount": zod.number(),

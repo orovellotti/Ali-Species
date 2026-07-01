@@ -561,6 +561,26 @@ components:
           items:
             type: string
           nullable: true
+    EunisInfo:
+      type: object
+      properties:
+        displayName:
+          type: string
+          nullable: true
+        preferredHabitats:
+          type: array
+          items:
+            type: string
+        otherHabitats:
+          type: array
+          items:
+            type: string
+        sourceUrl:
+          type: string
+          nullable: true
+      required:
+        - preferredHabitats
+        - otherHabitats
     BhlReference:
       type: object
       properties:
@@ -777,6 +797,10 @@ components:
           oneOf:
             - $ref: "#/components/schemas/GbifInfo"
             - $ref: "#/components/schemas/BlockError"
+        eunis:
+          oneOf:
+            - $ref: "#/components/schemas/EunisInfo"
+            - $ref: "#/components/schemas/BlockError"
         traitsSummary:
           $ref: "#/components/schemas/TraitsSummary"
         interactionsSummary:
@@ -797,6 +821,7 @@ components:
         - sensitivity
         - wikipedia
         - gbif
+        - eunis
         - traitsSummary
         - shareSummary
         - generatedAt

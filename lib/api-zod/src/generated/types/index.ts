@@ -13,6 +13,7 @@ export * from './blockError';
 export * from './childrenSummary';
 export * from './childrenSummaryPreviewItem';
 export * from './error';
+export * from './eunisInfo';
 export * from './gbifInfo';
 export * from './healthStatus';
 export * from './interactionsSummary';

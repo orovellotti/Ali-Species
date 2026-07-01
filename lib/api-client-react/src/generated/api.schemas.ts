@@ -96,6 +96,13 @@ export interface GbifInfo {
   distributionCountries?: string[] | null;
 }
 
+export interface EunisInfo {
+  displayName?: string | null;
+  preferredHabitats: string[];
+  otherHabitats: string[];
+  sourceUrl?: string | null;
+}
+
 export interface BhlReference {
   itemId?: number | null;
   titleId?: number | null;
@@ -186,6 +193,7 @@ export interface TaxonProfile {
   sensitivity: SensitivityResult;
   wikipedia: WikipediaInfo | BlockError;
   gbif: GbifInfo | BlockError;
+  eunis: EunisInfo | BlockError;
   traitsSummary: TraitsSummary;
   interactionsSummary?: InteractionsSummary | BlockError | null;
   shareSummary: ShareSummary;
