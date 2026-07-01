@@ -25,3 +25,19 @@ cannot be discovered by reading our code, and the RDF/SPARQL dead-ends waste tim
 `getCachedOrFetch` (provider `eunis_habitats`, 7d TTL). It follows the "interactions"
 pattern: fetched live in BOTH branches of `/profile` (summary + live), no summary DB
 column, no write-through — the `external_cache` layer is the only persistence.
+
+## RDF export propagation
+
+EUNIS is the only RDF source that lives in `external_cache` (no `cd_nom` column,
+no materialisation script — populated lazily on page views). To include it in the
+RDF dump, the export **reconstructs the cache key in SQL** and joins to taxons:
+`lower(coalesce(nullif(array_to_string((string_to_array(nom_valide,' '))[1:2],' '),''), lb_nom))`
+— this must stay in lockstep with `pickShortName()` (first 2 words of nomValide, else lbNom).
+
+**Gotcha:** that join **fans out** — one cache entry (keyed by species short name)
+matches many `cd_nom` (synonyms + infraspecies sharing the name). So any "taxon
+count" metric over EUNIS must use `COUNT(DISTINCT t.cd_nom)`, not `count(*)` of cache rows.
+
+Predicates (namespace `alivocab: https://ali-species.app/vocab/`): `eunisHabitat`
+(all habitats, `@en` literals), `eunisPreferredHabitat` (preferred subset),
+`eunisFactsheet` (source URL). Only `status='ok'` cache rows carry real data.

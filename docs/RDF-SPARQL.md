@@ -8,8 +8,9 @@ EUNIS species→habitat associations (from `external_cache`, provider `eunis_hab
 
 - **Vocabulary lib** (`lib/rdf-vocab`): URI namespaces (`https://ali-species.app/id/`, `…/vocab/`) + DwC, SKOS, OWL, RO, DCTERMS, VOID prefixes; URI builders for taxons, statuts, traits, Wikidata/GloBI links.
 - **Cache tables** (`wikidata_cache`, `globi_cache`): `cd_nom` PK + `payload` jsonb + `fetched_at`, used by the materialisation scripts and read by the RDF export.
-- **Streaming dump CLI** (`scripts/src/rdf-export.ts`): pulls every taxon, statut, trait and pre-materialised Wikidata/GloBI row through pg cursors, serialises with N3 + manual gzip backpressure, writes to `exports/ali-species-<git-sha>.ttl.gz` (~103 MB compressed, **17.27M triples**) plus a stats CSV.
-- **Pre-materialisation** (`materialize-wikidata.ts`, `materialize-globi.ts`): batched fetch (50/req for Wikidata SPARQL, per-cd_nom for GloBI) into the cache tables, resumable by skipping rows fresher than 30 days. Long-running (~24h end-to-end) but only needed once per refresh.
+- **Generic cache** (`external_cache`): `(provider, cache_key)` PK + `payload` jsonb envelope `{ok,data}` + `status`. EUNIS habitats live here under `provider='eunis_habitats'`, keyed by lowercased short scientific name. Unlike Wikidata/GloBI there is **no materialisation script** — entries are fetched lazily on taxon page views and reused by the export.
+- **Streaming dump CLI** (`scripts/src/rdf-export.ts`): pulls every taxon, statut, trait, pre-materialised Wikidata/GloBI row and EUNIS `external_cache` row (joined to taxons by reconstructed short-name key) through pg cursors, serialises with N3 + manual gzip backpressure, writes to `exports/ali-species-<git-sha>.ttl.gz` plus a stats CSV. Stats include `eunis_habitat_taxon_count` (distinct taxons carrying EUNIS habitats).
+- **Pre-materialisation** (`materialize-wikidata.ts`, `materialize-globi.ts`): batched fetch (50/req for Wikidata SPARQL, per-cd_nom for GloBI) into the cache tables, resumable by skipping rows fresher than 30 days. Long-running (~24h end-to-end) but only needed once per refresh. EUNIS is **not** part of this step (lazy-cached, see above).
 
 ## SPARQL endpoint architecture
 

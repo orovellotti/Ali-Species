@@ -79,6 +79,19 @@ SELECT ?prey ?name WHERE {
 }
 LIMIT 30`,
   },
+  {
+    id: "eunis-habitats",
+    titleKey: "exportPage.sampleEunisHabitats",
+    query: `PREFIX dwc: <http://rs.tdwg.org/dwc/terms/>
+PREFIX ali: <https://ali-species.org/vocab#>
+
+SELECT ?name ?habitat WHERE {
+  ?taxon a dwc:Taxon ;
+         dwc:scientificName ?name ;
+         ali:eunisPreferredHabitat ?habitat .
+}
+LIMIT 25`,
+  },
 ];
 
 export default function ExportPage() {
