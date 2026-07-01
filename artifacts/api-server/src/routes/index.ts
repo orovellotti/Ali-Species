@@ -9,6 +9,7 @@ import exportsRouter from "./exports";
 import bhlRouter from "./bhl";
 import sitemapRouter from "./sitemap";
 import profileRouter from "./profile";
+import adminRouter from "./admin";
 import shareRouter, { registerOgRoute } from "./share";
 
 const router: IRouter = Router();
@@ -25,6 +26,7 @@ router.use(exportsRouter);
 router.use(bhlRouter);
 router.use(sitemapRouter);
 router.use(profileRouter);
+router.use(adminRouter);
 registerOgRoute(router);
 router.use(taxonsRouter);
 
