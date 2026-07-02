@@ -606,6 +606,7 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
       ON ec.provider = 'eunis_habitats'
      AND ec.status = 'ok'
      AND ec.cache_key = lower(coalesce(nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''), t.lb_nom))
+    WHERE t.cd_nom = t.cd_ref AND t.rang = ${TAXREF_RANK.SPECIES}
   `);
   const speciesWithHabitats = Number(habitatsResult.rows[0]?.n ?? 0);
 

@@ -28,6 +28,15 @@ endpoint `POST /api/admin/cache/clear` (auth `ADMIN_TOKEN`, optional `{provider}
 which runs inside the deployed app and writes the live DB. Dev and prod are
 SEPARATE databases. Lazy entries also self-heal at their TTL (EUNIS = 7 days).
 
+**Bulk crawl is impractical:** the EUNIS factsheet endpoint responds in ~10s per
+request AND throttles parallel requests (5 concurrent workers stalled to ~0 writes;
+a single serial curl still took 10s). A full pre-fetch of the ~3200 candidate
+vertebrate species (script `prefetch-eunis` in `@workspace/scripts`) therefore takes
+many hours and must run at low concurrency (1-2). Candidate scope = species-rank,
+cd_nom=cd_ref, classe in Aves/Mammalia/Amphibia or ordre in Squamata/Crocodylia
+(fish excluded — EUNIS is European habitats). Dashboard `speciesWithHabitats` count
+only reflects what's been cached, so it climbs as the crawl (or lazy views) progress.
+
 **Why:** researched during the EUNIS integration; these are upstream realities that
 cannot be discovered by reading our code, and the RDF/SPARQL dead-ends waste time if retried.
 
