@@ -595,12 +595,28 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
     .select({ count: sql<number>`count(*)::int` })
     .from(bdcStatutsTable);
 
+  const [traitsResult] = await db
+    .select({ count: sql<number>`count(distinct ${speciesTraitsTable.cdNom})::int` })
+    .from(speciesTraitsTable);
+
+  const habitatsResult = await db.execute<{ n: number }>(sql`
+    SELECT count(DISTINCT t.cd_nom)::int AS n
+    FROM taxons t
+    JOIN external_cache ec
+      ON ec.provider = 'eunis_habitats'
+     AND ec.status = 'ok'
+     AND ec.cache_key = lower(coalesce(nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''), t.lb_nom))
+  `);
+  const speciesWithHabitats = Number(habitatsResult.rows[0]?.n ?? 0);
+
   res.json({
     totalTaxons: totalResult?.count ?? 0,
     totalSpecies: speciesResult?.count ?? 0,
     totalGenera: generaResult?.count ?? 0,
     totalFamilies: familiesResult?.count ?? 0,
     totalStatuts: statutsResult?.count ?? 0,
+    speciesWithTraits: traitsResult?.count ?? 0,
+    speciesWithHabitats,
     kingdomCounts: kingdomCounts.map((k) => ({
       regne: k.regne || "Unknown",
       count: k.count,

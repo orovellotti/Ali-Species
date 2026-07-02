@@ -470,6 +470,10 @@ components:
           type: integer
         totalStatuts:
           type: integer
+        speciesWithTraits:
+          type: integer
+        speciesWithHabitats:
+          type: integer
         kingdomCounts:
           type: array
           items:
@@ -488,6 +492,8 @@ components:
         - totalGenera
         - totalFamilies
         - totalStatuts
+        - speciesWithTraits
+        - speciesWithHabitats
         - kingdomCounts
     BdcStatut:
       type: object

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Layout } from "@/components/Layout";
 import { ConversationalBar } from "@/components/ConversationalBar";
 import { useGetTaxonStats, getRandomTaxon } from "@workspace/api-client-react";
-import { Trees, Microscope, BookOpen, ScrollText, Shuffle, Layers } from "lucide-react";
+import { Trees, Microscope, BookOpen, ScrollText, Shuffle, Layers, Dna, Mountain } from "lucide-react";
 import aliLogo from "@/assets/images/ali-logo.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
@@ -85,9 +85,9 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
             {statsLoading || !stats ? (
-              Array(5).fill(0).map((_, i) => (
+              Array(7).fill(0).map((_, i) => (
                 <div key={i} className="bg-background rounded-2xl p-6 text-center border border-border/50">
                   <Skeleton className="w-16 h-10 mx-auto mb-2" />
                   <Skeleton className="w-24 h-4 mx-auto" />
@@ -100,6 +100,8 @@ export default function Home() {
                 <StatCard icon={<Layers className="w-4 h-4" />} value={localeNumber(stats.totalGenera, lang)} label={t("home.statCardGenera")} />
                 <StatCard icon={<BookOpen className="w-4 h-4" />} value={localeNumber(stats.totalFamilies, lang)} label={t("home.statCardFamilies")} />
                 <StatCard icon={<ScrollText className="w-4 h-4" />} value={localeNumber(stats.totalStatuts, lang)} label={t("home.statCardStatuses")} />
+                <StatCard icon={<Dna className="w-4 h-4" />} value={localeNumber(stats.speciesWithTraits, lang)} label={t("home.statCardTraits")} />
+                <StatCard icon={<Mountain className="w-4 h-4" />} value={localeNumber(stats.speciesWithHabitats, lang)} label={t("home.statCardHabitats")} />
               </>
             )}
           </div>

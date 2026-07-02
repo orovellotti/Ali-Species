@@ -46,6 +46,8 @@ export const en = {
     statCardGenera: "Genera",
     statCardFamilies: "Families",
     statCardStatuses: "Protection statuses",
+    statCardTraits: "Species with traits",
+    statCardHabitats: "Species with habitats",
     kingdomsTitle: "Explore the three great kingdoms",
     kingdomsSubtitle: "Click on a kingdom to browse the species it contains.",
     cardAnimaliaSubtitle: "Animals",
