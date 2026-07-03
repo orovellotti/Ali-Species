@@ -48,7 +48,15 @@ app.use(
   }),
 );
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "100kb" }));
+// The ops-only bulk HABREF import ships thousands of rows (~3MB) in one atomic
+// request; it parses its own large body *after* the admin auth check (see
+// admin.ts) so an unauthenticated caller can never force a big pre-auth parse.
+// Every other route keeps the tight global default below.
+const globalJson = express.json({ limit: "100kb" });
+app.use((req, res, next) => {
+  if (req.path === "/api/admin/habref/import") return next();
+  return globalJson(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 app.use("/api", router);

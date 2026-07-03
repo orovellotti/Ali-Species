@@ -49,6 +49,11 @@
   - Réponse : `{ ok, provider, deleted }`.
   - Exemple : `curl -X POST https://alispecies.io/api/admin/cache/clear -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d '{"provider":"eunis_habitats"}'`
 
+- **`POST /api/admin/habref/import`** — charge la table offline `habref_habitats` en prod. Les CSV HABREF sont parsés en dev (`scripts/src/import-habref.ts`) ; cet endpoint reçoit les lignes déjà agrégées et **remplace la table de façon atomique** (transaction, refus si `rows` vide → jamais de table vidée par erreur). Existe parce que la base prod n'est écrivable que depuis l'app déployée.
+  - Même auth que ci-dessus. Body : `{ "rows": [{ "cdRef": number, "habitats": [{ "code", "label" }] }] }`. `400` si `rows` vide/invalide. Réponse : `{ ok, rows }`.
+  - Body volumineux (~3 Mo pour ~6000 lignes) : limite JSON portée à 32 Mo pour cette route uniquement.
+  - Chargement prod : exporter les lignes dev puis POST vers `https://alispecies.io/api/admin/habref/import` (voir runbook ci-dessous).
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
