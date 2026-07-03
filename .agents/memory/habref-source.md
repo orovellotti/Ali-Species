@@ -21,3 +21,13 @@ Source: `https://assets.patrinat.fr/files/referentiel/HABREF.zip` (nested zip �
 - HABREF référence des cd_nom pouvant être synonymes ; joindre en tenant compte de `cd_ref`.
 
 **Why:** évaluer les sources bulk pour remplir les milieux sans crawler EUNIS (~10s/espèce, throttlé). HABREF évite le crawl pour les espèces couvertes mais ne remplace pas EUNIS sur la sémantique ni sur les vertébrés courants.
+
+## Décisions d'intégration (retenues)
+- Section UI **séparée** « Habitats associés (HABREF) », distincte de la section EUNIS scrapée : les deux coexistent car la relation diffère (caractéristique-de vs habitat-de-vie). Ne pas les fusionner.
+- On n'expose **que la typologie EUNIS** de HABREF (`CD_TYPO='7'` ; codes racine = lettres EUNIS A..J). Extensible aux autres typologies (CORINE = typo 4, etc.) plus tard sans re-import.
+- Stockage bulk offline dans table dédiée clé `cd_ref` (jsonb `habitats`), lecture directe en DB par le profile (pas de cache external). Jointure d'import cd_nom→cd_ref via `taxons`.
+- **Import atomique obligatoire** : le `DELETE` + réinsertion doit être dans une transaction (BEGIN/COMMIT/ROLLBACK) et refuser d'écrire si 0 ligne parsée — sinon un run échoué vide la table. Valider aussi la présence des colonnes CSV (fail-fast si l'en-tête HABREF change).
+- **Why:** un bloc de référence offline ne doit jamais tomber en état vide/partiel après un run raté, et une dérive du format HABREF amont doit planter explicitement, pas filtrer silencieusement.
+
+## PROD — pas encore fait
+Le déploiement prod nécessite : push du schéma (créer `habref_habitats` en prod), run de l'import contre la DB prod, puis purge cache (`POST /api/admin/cache/clear`, header `x-admin-token`). executeSql prod = READ-ONLY.

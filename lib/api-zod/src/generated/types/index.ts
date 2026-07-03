@@ -15,6 +15,8 @@ export * from './childrenSummaryPreviewItem';
 export * from './error';
 export * from './eunisInfo';
 export * from './gbifInfo';
+export * from './habrefHabitat';
+export * from './habrefInfo';
 export * from './healthStatus';
 export * from './interactionsSummary';
 export * from './interactionsSummaryGroupsItem';

@@ -1,5 +1,12 @@
 import { eq, asc, sql } from "drizzle-orm";
-import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable } from "@workspace/db";
+import {
+  db,
+  taxonsTable,
+  bdcStatutsTable,
+  speciesTraitsTable,
+  habrefHabitatsTable,
+  type HabrefHabitat,
+} from "@workspace/db";
 import { computeSensitivityServer, type ServerSensitivity } from "./sensitivityServer.js";
 import { getInteractionsForCdNom } from "../routes/interactions.js";
 import { getCachedOrFetch, type FetchOutcome } from "./externalCache.js";
@@ -418,6 +425,28 @@ export async function fetchEunis(taxon: ProfileTaxonRow): Promise<EunisData> {
     },
   });
   return result.data ?? EMPTY_EUNIS;
+}
+
+export interface HabrefData {
+  habitats: HabrefHabitat[];
+}
+
+const EMPTY_HABREF: HabrefData = { habitats: [] };
+
+/**
+ * Offline species → habitat associations from HABREF (PatriNat / MNHN),
+ * imported in bulk into `habref_habitats` and keyed by cd_ref. Distinct from the
+ * scraped EUNIS block: HABREF lists the EUNIS-classified habitats a species is
+ * characteristic of (mainly flora), whereas the EUNIS block scrapes per-species
+ * preferred/breeding/wintering habitats (mainly vertebrates).
+ */
+export async function fetchHabref(cdRef: number): Promise<HabrefData> {
+  const [row] = await db
+    .select({ habitats: habrefHabitatsTable.habitats })
+    .from(habrefHabitatsTable)
+    .where(eq(habrefHabitatsTable.cdRef, cdRef));
+  if (!row) return EMPTY_HABREF;
+  return { habitats: row.habitats as HabrefHabitat[] };
 }
 
 export interface TraitsSummary {

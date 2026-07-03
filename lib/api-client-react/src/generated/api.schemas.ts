@@ -98,6 +98,15 @@ export interface GbifInfo {
   distributionCountries?: string[] | null;
 }
 
+export interface HabrefHabitat {
+  code: string;
+  label: string;
+}
+
+export interface HabrefInfo {
+  habitats: HabrefHabitat[];
+}
+
 export interface EunisInfo {
   displayName?: string | null;
   preferredHabitats: string[];
@@ -198,6 +207,7 @@ export interface TaxonProfile {
   wikipedia: WikipediaInfo | BlockError;
   gbif: GbifInfo | BlockError;
   eunis: EunisInfo | BlockError;
+  habref: HabrefInfo | BlockError;
   traitsSummary: TraitsSummary;
   interactionsSummary?: InteractionsSummary | BlockError | null;
   shareSummary: ShareSummary;

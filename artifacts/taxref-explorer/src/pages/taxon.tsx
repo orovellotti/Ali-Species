@@ -20,11 +20,11 @@ import {
   getGetTaxonBhlQueryKey,
   getRandomTaxon
 } from "@workspace/api-client-react";
-import type { BdcStatut, TaxonProfile, TaxonMedia, WikipediaInfo, GbifInfo, EunisInfo, BlockError } from "@workspace/api-client-react";
+import type { BdcStatut, TaxonProfile, TaxonMedia, WikipediaInfo, GbifInfo, EunisInfo, HabrefInfo, BlockError } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { formatRank, formatHabitat, formatStatus, taxonUrl, parseCdNomFromParam } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, MapPin, Tag, Globe, FileText, Layers, Link2, BookOpen, BarChart3, ExternalLink, Shield, Users, X, Shuffle, Share2 } from "lucide-react";
+import { ChevronRight, MapPin, Tag, Globe, FileText, Layers, Sprout, Link2, BookOpen, BarChart3, ExternalLink, Shield, Users, X, Shuffle, Share2 } from "lucide-react";
 import { ShareDiscoveryModal } from "@/components/ShareDiscoveryModal";
 import type { ShareCardData } from "@/components/ShareDiscoveryCard";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -102,6 +102,7 @@ export default function TaxonDetail() {
   const gbif = (safeBlock<GbifInfo>(profile?.gbif as GbifInfo | BlockError | undefined)) ?? gbifFb;
   const gbifLoading = profileLoading && !profileFallback ? profileLoading : gbifFbLoading;
   const eunis = safeBlock<EunisInfo>(profile?.eunis as EunisInfo | BlockError | undefined);
+  const habref = safeBlock<HabrefInfo>(profile?.habref as HabrefInfo | BlockError | undefined);
   const statuts = (profile?.statuts as BdcStatut[] | undefined) ?? statutsFb;
   const statutsLoading = profileLoading && !profileFallback ? profileLoading : statutsFbLoading;
 
@@ -635,6 +636,31 @@ export default function TaxonDetail() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
+              </CollapsibleSection>
+            ) : null}
+
+            {habref && habref.habitats.length > 0 ? (
+              <CollapsibleSection
+                icon={<Sprout className="w-4 h-4 text-primary" />}
+                title="Habitats associes (HABREF)"
+                count={habref.habitats.length}
+                defaultOpen={false}
+              >
+                <p className="text-xs text-muted-foreground mb-3">
+                  Types d'habitats EUNIS dont cette espece est caracteristique,
+                  d'apres le referentiel{" "}
+                  <a href="https://inpn.mnhn.fr/habitat/list" target="_blank" rel="noreferrer" className="text-primary hover:underline">HABREF</a>{" "}
+                  (PatriNat / MNHN). Relation issue de la description des habitats,
+                  distincte des habitats de vie EUNIS ci-dessus.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {habref.habitats.map((h) => (
+                    <Badge key={h.code} variant="secondary" title={h.label}>
+                      <span className="font-mono text-[0.7rem] mr-1 opacity-70">{h.code}</span>
+                      {h.label}
+                    </Badge>
+                  ))}
+                </div>
               </CollapsibleSection>
             ) : null}
 

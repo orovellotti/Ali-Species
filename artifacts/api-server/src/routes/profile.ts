@@ -8,6 +8,7 @@ import {
   fetchWikipedia,
   fetchGbif,
   fetchEunis,
+  fetchHabref,
   fetchTraitsSummary,
   fetchInteractionsSummary,
   computeProfileSensitivity,
@@ -21,6 +22,7 @@ import {
   type WikipediaSummary,
   type GbifData,
   type EunisData,
+  type HabrefData,
   type TraitsSummary,
   type InteractionsSummary,
   type ShareSummary,
@@ -44,6 +46,7 @@ export interface ProfilePayload {
   wikipedia: WikipediaSummary | BlockError;
   gbif: GbifData | BlockError;
   eunis: EunisData | BlockError;
+  habref: HabrefData | BlockError;
   traitsSummary: TraitsSummary;
   interactionsSummary: InteractionsSummary | null | BlockError;
   shareSummary: ShareSummary;
@@ -86,13 +89,14 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
     // breakdown (ecological/regulatory/territorial/management) stays
     // internally consistent with the global score, regardless of what was
     // persisted in the summary row.
-    const [classificationR, childrenSummaryR, statutsR, interactionsSummaryR, eunisR] =
+    const [classificationR, childrenSummaryR, statutsR, interactionsSummaryR, eunisR, habrefR] =
       await Promise.allSettled([
         fetchClassification(cdNom),
         fetchChildrenSummary(cdNom),
         fetchStatuts(cdNom),
         fetchInteractionsSummary(cdNom),
         fetchEunis(taxon),
+        fetchHabref(taxon.cdRef),
       ]);
     const statuts = statutsR.status === "fulfilled" ? statutsR.value : [];
     const interactionsSummaryRaw = settledOrError(
@@ -116,6 +120,7 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
       wikipedia: summary.wikipedia,
       gbif: summary.gbif,
       eunis: settledOrError(eunisR, null, req.log, "eunis") as EunisData | BlockError,
+      habref: settledOrError(habrefR, null, req.log, "habref") as HabrefData | BlockError,
       traitsSummary: summary.traitsSummary,
       interactionsSummary,
       shareSummary: summary.shareSummary,
@@ -137,6 +142,7 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
     wikipediaR,
     gbifR,
     eunisR,
+    habrefR,
     traitsSummaryR,
     interactionsSummaryR,
   ] = await Promise.allSettled([
@@ -147,6 +153,7 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
     fetchWikipedia(taxon),
     fetchGbif(taxon),
     fetchEunis(taxon),
+    fetchHabref(taxon.cdRef),
     fetchTraitsSummary(cdNom),
     fetchInteractionsSummary(cdNom),
   ]);
@@ -171,6 +178,7 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
     | BlockError;
   const gbif = settledOrError(gbifR, null, req.log, "gbif") as GbifData | BlockError;
   const eunis = settledOrError(eunisR, null, req.log, "eunis") as EunisData | BlockError;
+  const habref = settledOrError(habrefR, null, req.log, "habref") as HabrefData | BlockError;
   const interactionsSummaryRaw = settledOrError(
     interactionsSummaryR,
     null,
@@ -209,6 +217,7 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
     wikipedia,
     gbif,
     eunis,
+    habref,
     traitsSummary,
     interactionsSummary,
     shareSummary,

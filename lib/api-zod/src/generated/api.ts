@@ -366,6 +366,15 @@ export const GetTaxonProfileResponse = zod.object({
   "error": zod.boolean(),
   "message": zod.string()
 })]),
+  "habref": zod.union([zod.object({
+  "habitats": zod.array(zod.object({
+  "code": zod.string(),
+  "label": zod.string()
+}))
+}),zod.object({
+  "error": zod.boolean(),
+  "message": zod.string()
+})]),
   "traitsSummary": zod.object({
   "hasStaticTraits": zod.boolean(),
   "staticSourcesCount": zod.number(),

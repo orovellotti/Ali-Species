@@ -567,6 +567,25 @@ components:
           items:
             type: string
           nullable: true
+    HabrefHabitat:
+      type: object
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+      required:
+        - code
+        - label
+    HabrefInfo:
+      type: object
+      properties:
+        habitats:
+          type: array
+          items:
+            $ref: "#/components/schemas/HabrefHabitat"
+      required:
+        - habitats
     EunisInfo:
       type: object
       properties:
@@ -817,6 +836,10 @@ components:
           oneOf:
             - $ref: "#/components/schemas/EunisInfo"
             - $ref: "#/components/schemas/BlockError"
+        habref:
+          oneOf:
+            - $ref: "#/components/schemas/HabrefInfo"
+            - $ref: "#/components/schemas/BlockError"
         traitsSummary:
           $ref: "#/components/schemas/TraitsSummary"
         interactionsSummary:
@@ -838,6 +861,7 @@ components:
         - wikipedia
         - gbif
         - eunis
+        - habref
         - traitsSummary
         - shareSummary
         - generatedAt

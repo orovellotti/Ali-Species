@@ -10,6 +10,7 @@ import type { BlockError } from './blockError';
 import type { ChildrenSummary } from './childrenSummary';
 import type { EunisInfo } from './eunisInfo';
 import type { GbifInfo } from './gbifInfo';
+import type { HabrefInfo } from './habrefInfo';
 import type { InteractionsSummary } from './interactionsSummary';
 import type { SensitivityResult } from './sensitivityResult';
 import type { ShareSummary } from './shareSummary';
@@ -29,6 +30,7 @@ export interface TaxonProfile {
   wikipedia: WikipediaInfo | BlockError;
   gbif: GbifInfo | BlockError;
   eunis: EunisInfo | BlockError;
+  habref: HabrefInfo | BlockError;
   traitsSummary: TraitsSummary;
   interactionsSummary?: InteractionsSummary | BlockError | null;
   shareSummary: ShareSummary;

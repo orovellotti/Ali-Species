@@ -13,6 +13,7 @@
     "materialize-wikidata": "tsx ./src/materialize-wikidata.ts",
     "materialize-globi": "tsx ./src/materialize-globi.ts",
     "prefetch-eunis": "tsx ./src/prefetch-eunis.ts",
+    "import-habref": "tsx ./src/import-habref.ts",
     "build-profile-summaries": "tsx ./src/build-profile-summaries.ts",
     "build-search-index": "tsx ./src/build-search-index.ts",
     "ensure-extensions": "tsx ./src/ensure-extensions.ts",
