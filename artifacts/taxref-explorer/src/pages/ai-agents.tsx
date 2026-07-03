@@ -43,7 +43,7 @@ const MCP_TOOLS: Array<{ family: string; tools: string[] }> = [
   },
   {
     family: "External enrichments",
-    tools: ["get_interactions", "get_wikipedia", "get_gbif", "get_bhl"],
+    tools: ["get_interactions", "get_wikipedia", "get_gbif", "get_bhl", "get_eunis_habitats", "get_habref_habitats"],
   },
   { family: "SPARQL", tools: ["run_sparql"] },
 ];
@@ -150,7 +150,7 @@ export default function AiAgentsPage() {
         <Section
           id="mcp"
           icon={<Server className="w-5 h-5" />}
-          title={fr ? "Serveur MCP — 22 outils typés" : "MCP server — 22 typed tools"}
+          title={fr ? "Serveur MCP — 24 outils typés" : "MCP server — 24 typed tools"}
         >
           <p>
             {fr
@@ -286,7 +286,7 @@ export default function AiAgentsPage() {
             <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
               <li>{fr ? "Ouvre Claude Desktop → Réglages → Développeur → Modifier la config" : "Open Claude Desktop → Settings → Developer → Edit Config"}</li>
               <li>{fr ? "Colle la configuration MCP ci-dessus" : "Paste the MCP configuration above"}</li>
-              <li>{fr ? "Redémarre Claude — les 22 outils apparaissent dans la barre d'outils" : "Restart Claude — the 22 tools appear in the tool bar"}</li>
+              <li>{fr ? "Redémarre Claude — les 24 outils apparaissent dans la barre d'outils" : "Restart Claude — the 24 tools appear in the tool bar"}</li>
               <li>{fr ? "Pour un Project Claude : ajoute des instructions du type \"Tu peux interroger ALi Species pour toute question sur la biodiversité française.\"" : "For a Claude Project: add instructions like \"You can query ALi Species for any French biodiversity question.\""}</li>
             </ol>
           </div>

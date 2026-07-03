@@ -29,5 +29,8 @@ Source: `https://assets.patrinat.fr/files/referentiel/HABREF.zip` (nested zip �
 - **Import atomique obligatoire** : le `DELETE` + réinsertion doit être dans une transaction (BEGIN/COMMIT/ROLLBACK) et refuser d'écrire si 0 ligne parsée — sinon un run échoué vide la table. Valider aussi la présence des colonnes CSV (fail-fast si l'en-tête HABREF change).
 - **Why:** un bloc de référence offline ne doit jamais tomber en état vide/partiel après un run raté, et une dérive du format HABREF amont doit planter explicitement, pas filtrer silencieusement.
 
-## PROD — pas encore fait
-Le déploiement prod nécessite : push du schéma (créer `habref_habitats` en prod), run de l'import contre la DB prod, puis purge cache (`POST /api/admin/cache/clear`, header `x-admin-token`). executeSql prod = READ-ONLY.
+## PROD — chemin de déploiement (vérifié)
+Base prod **séparée** de la dev, mais peuplée (708 685 taxons). L'outillage n'a qu'un **réplica read-only** en prod → impossible d'y écrire depuis le sandbox.
+- **Schéma** : migré automatiquement au **Publish** (Replit diffe dev→prod). Ne PAS écrire de script de migration prod. Le Publish crée donc `habref_habitats` (vide).
+- **Données** : le Publish ne migre QUE le schéma, pas les lignes. Les tables bulk (taxons, statuts, et maintenant `habref_habitats`) sont peuplées en lançant les scripts d'import **contre la DATABASE_URL de prod** (opération manuelle du mainteneur, hors sandbox). Tant que ce n'est pas fait, la section/tool HABREF renvoie vide en prod.
+- **Why:** un webapp Replit à data lourde ne charge pas ses données via le Publish ; toute nouvelle source bulk exige une étape d'import prod séparée après publication.

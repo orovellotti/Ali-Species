@@ -59,7 +59,7 @@ export const en = {
   },
   aiAgents: {
     title: "AI & API – ALI Species",
-    metaDescription: "Plug Claude, ChatGPT or any AI agent into French biodiversity: MCP server (22 tools), public REST API, SPARQL endpoint and RDF dump. Documentation and configuration examples.",
+    metaDescription: "Plug Claude, ChatGPT or any AI agent into French biodiversity: MCP server (24 tools), public REST API, SPARQL endpoint and RDF dump. Documentation and configuration examples.",
   },
   about: {
     title: "About – ALI Species",

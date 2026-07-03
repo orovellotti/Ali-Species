@@ -11,7 +11,7 @@ import { runStatusBreakdown } from "../lib/breakdown.js";
 import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
-import { fetchEunis, fetchTaxonRow } from "../lib/profileFetchers.js";
+import { fetchEunis, fetchTaxonRow, fetchHabref } from "../lib/profileFetchers.js";
 
 const SPARQL_UPSTREAM = process.env.OXIGRAPH_HTTP ?? "http://127.0.0.1:9000";
 
@@ -454,6 +454,22 @@ function buildServer(): McpServer {
       const taxon = await fetchTaxonRow(cdNom);
       if (!taxon) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
       const data = await fetchEunis(taxon);
+      return toJson(data);
+    },
+  );
+
+  server.registerTool(
+    "get_habref_habitats",
+    {
+      title: "Habitats associés (HABREF)",
+      description:
+        "Retourne les types d'habitats EUNIS dont le taxon est considéré comme caractéristique d'après le référentiel HABREF (PatriNat / MNHN), avec code EUNIS et libellé français. Relation issue de la description des habitats (surtout la flore), distincte des habitats de vie renvoyés par get_eunis_habitats. Couverture partielle ; renvoie une liste vide si le taxon n'est pas couvert.",
+      inputSchema: { cdNom: z.number().int().describe("Identifiant TAXREF (cdNom)") },
+    },
+    async ({ cdNom }) => {
+      const taxon = await fetchTaxonRow(cdNom);
+      if (!taxon) return notFound(`Aucun taxon trouvé pour cdNom=${cdNom}`);
+      const data = await fetchHabref(taxon.cdRef);
       return toJson(data);
     },
   );

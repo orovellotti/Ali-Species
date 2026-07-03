@@ -42,6 +42,10 @@
 
 Table `external_cache` (PK = `provider` + `cache_key`, payload jsonb, status, expires_at). Helper `artifacts/api-server/src/lib/externalCache.ts` → `getCachedOrFetch({provider, cacheKey, ttlSeconds, fetcher, allowStaleOnError})` avec negative-cache 5 min sur erreur. Routes `/wikipedia`, `/gbif`, `/media` y délèguent. Les caches dédiés `wikidata_cache`, `globi_cache`, `bhl_cache` restent (couplés aux scripts de matérialisation RDF).
 
+### Habitats associés HABREF (`habref_habitats`)
+
+Table bulk offline (PK `cd_ref`, `habitats` jsonb `[{code,label}]`, `updated_at`). Source : référentiel **HABREF** (PatriNat / MNHN), typologie EUNIS uniquement (`CD_TYPO='7'`). Alimentée par `scripts/src/import-habref.ts` (download HABREF.zip → parse RFC4180 → jointure `cd_nom`→`cd_ref` via `taxons` → upsert atomique en transaction, refus d'écrire si 0 ligne). ~6 000 taxons couverts (surtout la flore). Lue directement en DB par `fetchHabref` (bloc `habref` du profil, tool MCP `get_habref_habitats`). Sémantique « espèce caractéristique d'un habitat », **distincte** de la feature EUNIS lazy-cachée (habitats de vie). Réimport requis pour rafraîchir ; extensible aux autres typologies (CORINE = typo 4) sans changement de schéma.
+
 ### Index recherche dédié (`taxon_search_index`)
 
 Table dénormalisée (1 row/cd_nom) folded : `scientific_name` + `vernacular_fr/en` + `synonyms[]` (autres rows même cd_ref) → `normalized_text` lower+unaccent. `rank_boost` (ES=100 > GN=70 > FM=50 > … > KD=10, +5 si `is_reference`). `/api/taxons/search` : exact → prefix mot → prefix middle → trigram, ordonné par `rank_boost` puis `is_reference` puis `similarity`. Index GIN `gin_trgm_ops` sur `normalized_text` créé manuellement par le script (drizzle ne sait pas pousser l'opclass). Fallback automatique sur l'ancienne logique ILIKE si la table est vide.

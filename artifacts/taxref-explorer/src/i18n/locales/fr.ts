@@ -59,7 +59,7 @@ export const fr = {
   },
   aiAgents: {
     title: "IA & API – ALI Species",
-    metaDescription: "Branchez Claude, ChatGPT ou tout agent IA sur la biodiversité française : serveur MCP (22 outils), API REST publique, endpoint SPARQL et dump RDF. Documentation et exemples de configuration.",
+    metaDescription: "Branchez Claude, ChatGPT ou tout agent IA sur la biodiversité française : serveur MCP (24 outils), API REST publique, endpoint SPARQL et dump RDF. Documentation et exemples de configuration.",
   },
   about: {
     title: "A propos – ALI Species",
