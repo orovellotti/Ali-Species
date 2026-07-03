@@ -1,1 +1,2 @@
 - [EUNIS habitats source](eunis-habitats.md) — no API; scrape HTML factsheet by scientific name; RDF/SPARQL are dead; vertebrate-only coverage.
+- [HABREF source espèce↔habitat](habref-source.md) — source bulk offline PatriNat : jointe cd_nom TAXREF, couvre flore + partiellement vertébrés, sémantique ≠ EUNIS.
