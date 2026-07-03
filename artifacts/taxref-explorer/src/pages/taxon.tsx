@@ -571,6 +571,12 @@ export default function TaxonDetail() {
               <CollapsibleSection
                 icon={<Layers className="w-4 h-4 text-primary" />}
                 title="Habitats (EUNIS)"
+                count={
+                  eunis.preferredHabitats.length +
+                  eunis.otherHabitats.length +
+                  eunis.breedingHabitats.length +
+                  eunis.winteringHabitats.length
+                }
                 defaultOpen={false}
               >
                 <p className="text-xs text-muted-foreground mb-3">
