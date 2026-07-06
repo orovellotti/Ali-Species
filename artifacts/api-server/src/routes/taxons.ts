@@ -599,14 +599,24 @@ router.get("/taxons/stats", async (_req, res): Promise<void> => {
     .select({ count: sql<number>`count(distinct ${speciesTraitsTable.cdNom})::int` })
     .from(speciesTraitsTable);
 
+  // Species with at least one habitat, from either source: EUNIS (lazily
+  // cached, matched on scientific name) OR HABREF (offline bulk, keyed on
+  // cd_ref). DISTINCT so a species present in both is counted once.
   const habitatsResult = await db.execute<{ n: number }>(sql`
     SELECT count(DISTINCT t.cd_nom)::int AS n
     FROM taxons t
-    JOIN external_cache ec
-      ON ec.provider = 'eunis_habitats'
-     AND ec.status = 'ok'
-     AND ec.cache_key = lower(coalesce(nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''), t.lb_nom))
     WHERE t.cd_nom = t.cd_ref AND t.rang = ${TAXREF_RANK.SPECIES}
+      AND (
+        EXISTS (
+          SELECT 1 FROM external_cache ec
+          WHERE ec.provider = 'eunis_habitats'
+            AND ec.status = 'ok'
+            AND ec.cache_key = lower(coalesce(nullif(array_to_string((string_to_array(t.nom_valide, ' '))[1:2], ' '), ''), t.lb_nom))
+        )
+        OR EXISTS (
+          SELECT 1 FROM habref_habitats hh WHERE hh.cd_ref = t.cd_ref
+        )
+      )
   `);
   const speciesWithHabitats = Number(habitatsResult.rows[0]?.n ?? 0);
 
