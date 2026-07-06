@@ -125,6 +125,7 @@ export const fr = {
     supportP1: "ALI Species est un projet open source dedie a la valorisation de la biodiversite francaise. Pour continuer a developper de nouvelles fonctionnalites, ameliorer l'experience utilisateur et enrichir les donnees disponibles, nous avons besoin de votre soutien.",
     supportP2: "Que vous soyez une institution publique, une collectivite, une association naturaliste ou une entreprise engagee pour l'environnement, vous pouvez participer au financement et au developpement d'ALI Species.",
     supportCta: "Contactez Natural Solutions",
+    githubCta: "Code source sur GitHub",
     sourcesHeading: "Sources des donnees",
     sourcesTaxonomy: "Taxonomie :",
     sourcesTaxonomyBody: " TAXREF v18, produit par PatriNat, diffuse par l'",

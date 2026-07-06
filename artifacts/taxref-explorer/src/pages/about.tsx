@@ -1,5 +1,5 @@
 import { Layout } from "@/components/Layout";
-import { ExternalLink, Database, Globe, Sparkles, Network, Server, Layers } from "lucide-react";
+import { ExternalLink, Database, Globe, Sparkles, Network, Server, Layers, Github } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Trans, useTranslation } from "react-i18next";
 import patrinatLogo from "@/assets/images/logo-patrinat-official.png";
@@ -102,15 +102,26 @@ export default function About() {
             <h2 className="text-2xl font-serif font-semibold text-foreground">{t("about.supportHeading")}</h2>
             <p className="text-muted-foreground leading-relaxed">{t("about.supportP1")}</p>
             <p className="text-muted-foreground leading-relaxed">{t("about.supportP2")}</p>
-            <a
-              href="https://www.natural-solutions.eu/contact"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors mt-2"
-            >
-              {t("about.supportCta")}
-              <ExternalLink className="w-4 h-4" />
-            </a>
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              <a
+                href="https://www.natural-solutions.eu/contact"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
+              >
+                {t("about.supportCta")}
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <a
+                href="https://github.com/orovellotti/Ali-Species"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-border rounded-full font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                <Github className="w-4 h-4" />
+                {t("about.githubCta")}
+              </a>
+            </div>
           </section>
         </div>
       </div>

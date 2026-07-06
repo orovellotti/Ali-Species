@@ -125,6 +125,7 @@ export const en = {
     supportP1: "ALI Species is an open source project dedicated to promoting French biodiversity. To keep developing new features, improve the user experience and enrich the available data, we need your support.",
     supportP2: "Whether you are a public institution, a local authority, a naturalist association or a company committed to the environment, you can take part in funding and developing ALI Species.",
     supportCta: "Contact Natural Solutions",
+    githubCta: "Source code on GitHub",
     sourcesHeading: "Data sources",
     sourcesTaxonomy: "Taxonomy:",
     sourcesTaxonomyBody: " TAXREF v18, produced by PatriNat, distributed by ",
