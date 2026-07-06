@@ -152,11 +152,11 @@ export default function Home() {
 
 function StatCard({ icon, value, label }: { icon: React.ReactNode, value: string, label: string }) {
   return (
-    <div className="bg-background rounded-2xl p-6 text-center border border-border/50 shadow-sm hover:shadow-md transition-shadow group">
+    <div className="bg-background rounded-2xl p-4 lg:p-5 text-center border border-border/50 shadow-sm hover:shadow-md transition-shadow group">
       <div className="mx-auto w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
         {icon}
       </div>
-      <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 font-serif tracking-tight">{value}</div>
+      <div className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-1 font-serif tracking-tight tabular-nums leading-tight break-words">{value}</div>
       <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
     </div>
   );
