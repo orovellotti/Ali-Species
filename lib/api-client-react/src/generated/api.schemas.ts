@@ -214,6 +214,53 @@ export interface TaxonProfile {
   generatedAt: string;
 }
 
+export type GraphNodeType = typeof GraphNodeType[keyof typeof GraphNodeType];
+
+
+export const GraphNodeType = {
+  species: 'species',
+  ancestor: 'ancestor',
+  statut: 'statut',
+  habitat: 'habitat',
+  trait: 'trait',
+  partner: 'partner',
+} as const;
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  sub: string | null;
+  cdNom: number | null;
+  rang: string | null;
+  group: string | null;
+}
+
+export type GraphLinkKind = typeof GraphLinkKind[keyof typeof GraphLinkKind];
+
+
+export const GraphLinkKind = {
+  species: 'species',
+  ancestor: 'ancestor',
+  statut: 'statut',
+  habitat: 'habitat',
+  trait: 'trait',
+  partner: 'partner',
+} as const;
+
+export interface GraphLink {
+  source: string;
+  target: string;
+  label: string | null;
+  kind: GraphLinkKind;
+}
+
+export interface SpeciesGraph {
+  center: string;
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
+
 export type ListStatusTypes200Item = {
   code: string;
   label: string;

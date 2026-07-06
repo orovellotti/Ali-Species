@@ -7,6 +7,7 @@ export const fr = {
   nav: {
     home: "Accueil",
     statuses: "Statuts",
+    network: "Réseau",
     sources: "Sources",
     export: "Export",
     aiAgents: "IA & API",
@@ -14,6 +15,24 @@ export const fr = {
     about: "A propos",
     beta: "Beta",
     tagline: "All Life Intelligence",
+  },
+  reseau: {
+    title: "Réseau du vivant — ALI Species",
+    metaDescription: "Explorez le réseau du vivant : taxonomie, statuts de conservation, habitats, traits et interactions trophiques d'une espèce, en un seul graphe interactif.",
+    searchPlaceholder: "Chercher une espèce…",
+    loading: "Construction du réseau…",
+    empty: "Aucune donnée pour cette espèce.",
+    hintLine: "Clic sur une espèce pour l'explorer · double-clic pour ouvrir sa fiche",
+    suggestionsLabel: "Suggestions",
+    reset: "Recentrer",
+    legend: {
+      species: "Espèce",
+      ancestor: "Lignée",
+      statut: "Statut",
+      habitat: "Habitat",
+      trait: "Trait",
+      partner: "Réseau trophique",
+    },
   },
   footer: {
     dataFromIntro: "Donnees issues du referentiel taxonomique national ",

@@ -36,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
   const navLinks = (
     <>
       <Link href="/" className="hover:text-foreground transition-colors">{t("nav.home")}</Link>
-      <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">{t("nav.statuses")}</Link>
+      <Link href="/reseau" className="hover:text-foreground transition-colors" data-testid="link-reseau">{t("nav.network")}</Link>
       <Link href="/sources" className="hover:text-foreground transition-colors" data-testid="link-sources">{t("nav.sources")}</Link>
       <Link href="/developpeurs" className="hover:text-foreground transition-colors" data-testid="link-developers">{t("nav.developers")}</Link>
       <Link href="/a-propos" className="hover:text-foreground transition-colors">{t("nav.about")}</Link>
@@ -108,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
             >
               <div className="container mx-auto px-4 py-4 flex flex-col gap-1 text-base font-medium text-muted-foreground">
                 <Link href="/" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors">{t("nav.home")}</Link>
-                <Link href="/taxonomie" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-taxonomie-mobile">{t("nav.statuses")}</Link>
+                <Link href="/reseau" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-reseau-mobile">{t("nav.network")}</Link>
                 <Link href="/sources" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-sources-mobile">{t("nav.sources")}</Link>
                 <Link href="/developpeurs" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-developers-mobile">{t("nav.developers")}</Link>
                 <Link href="/a-propos" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors">{t("nav.about")}</Link>

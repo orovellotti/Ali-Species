@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TaxonDetail from "@/pages/taxon";
 import About from "@/pages/about";
-import Taxonomie from "@/pages/taxonomie";
+import Reseau from "@/pages/reseau";
 import Sources from "@/pages/sources";
 import DeveloppeursPage from "@/pages/developpeurs";
 
@@ -24,7 +24,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/taxonomie" component={Taxonomie} />
+      <Route path="/reseau" component={Reseau} />
+      <Route path="/taxonomie">{() => <Redirect to="/reseau" replace />}</Route>
       <Route path="/sources" component={Sources} />
       <Route path="/developpeurs" component={DeveloppeursPage} />
       <Route path="/export">{() => <Redirect to="/developpeurs" replace />}</Route>

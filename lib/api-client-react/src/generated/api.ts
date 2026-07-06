@@ -24,6 +24,7 @@ import type {
   ListStatusTypes200Item,
   ListTerritoires200Item,
   SearchTaxonsParams,
+  SpeciesGraph,
   TaxonDetail,
   TaxonMedia,
   TaxonProfile,
@@ -1200,6 +1201,88 @@ export function useGetTaxonMedia<TData = Awaited<ReturnType<typeof getTaxonMedia
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTaxonMediaQueryOptions(cdNom,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+/**
+ * Returns a force-directed-ready graph centred on a single taxon. Nodes are
+namespaced by type so several neighbourhoods can be merged client-side when
+the user expands a partner species. External blocks (EUNIS, GloBI) degrade
+gracefully and are simply omitted when unavailable.
+
+ * @summary Typed neighbourhood graph for a taxon (lineage, statuts, habitats, traits, trophic partners)
+ */
+export const getGetSpeciesGraphUrl = (cdNom: number,) => {
+
+
+
+
+  return `/api/graph/${cdNom}`
+}
+
+export const getSpeciesGraph = async (cdNom: number, options?: RequestInit): Promise<SpeciesGraph> => {
+
+  return customFetch<SpeciesGraph>(getGetSpeciesGraphUrl(cdNom),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSpeciesGraphQueryKey = (cdNom: number,) => {
+    return [
+    `/api/graph/${cdNom}`
+    ] as const;
+    }
+
+
+export const getGetSpeciesGraphQueryOptions = <TData = Awaited<ReturnType<typeof getSpeciesGraph>>, TError = ErrorType<Error>>(cdNom: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpeciesGraph>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSpeciesGraphQueryKey(cdNom);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpeciesGraph>>> = ({ signal }) => getSpeciesGraph(cdNom, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(cdNom), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSpeciesGraph>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSpeciesGraphQueryResult = NonNullable<Awaited<ReturnType<typeof getSpeciesGraph>>>
+export type GetSpeciesGraphQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Typed neighbourhood graph for a taxon (lineage, statuts, habitats, traits, trophic partners)
+ */
+
+export function useGetSpeciesGraph<TData = Awaited<ReturnType<typeof getSpeciesGraph>>, TError = ErrorType<Error>>(
+ cdNom: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpeciesGraph>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSpeciesGraphQueryOptions(cdNom,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

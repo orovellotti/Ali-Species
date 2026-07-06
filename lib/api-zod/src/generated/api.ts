@@ -417,3 +417,35 @@ export const GetTaxonMediaResponse = zod.object({
 })
 
 
+/**
+ * Returns a force-directed-ready graph centred on a single taxon. Nodes are
+namespaced by type so several neighbourhoods can be merged client-side when
+the user expands a partner species. External blocks (EUNIS, GloBI) degrade
+gracefully and are simply omitted when unavailable.
+
+ * @summary Typed neighbourhood graph for a taxon (lineage, statuts, habitats, traits, trophic partners)
+ */
+export const GetSpeciesGraphParams = zod.object({
+  "cdNom": zod.coerce.number().describe('CD_NOM identifier')
+})
+
+export const GetSpeciesGraphResponse = zod.object({
+  "center": zod.string(),
+  "nodes": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['species', 'ancestor', 'statut', 'habitat', 'trait', 'partner']),
+  "label": zod.string(),
+  "sub": zod.string().nullable(),
+  "cdNom": zod.number().nullable(),
+  "rang": zod.string().nullable(),
+  "group": zod.string().nullable()
+})),
+  "links": zod.array(zod.object({
+  "source": zod.string(),
+  "target": zod.string(),
+  "label": zod.string().nullable(),
+  "kind": zod.enum(['species', 'ancestor', 'statut', 'habitat', 'trait', 'partner'])
+}))
+})
+
+

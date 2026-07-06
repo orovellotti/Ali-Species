@@ -281,7 +281,7 @@ export default function Sources() {
           <p className="text-sm text-muted-foreground leading-relaxed">
             {t("sources.crossRefIntro")}
             <Link
-              href="/taxonomie"
+              href="/reseau"
               className="underline decoration-dotted hover:text-foreground"
             >
               {t("sources.crossRefStatuses")}

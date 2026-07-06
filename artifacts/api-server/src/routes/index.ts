@@ -4,6 +4,7 @@ import taxonsRouter from "./taxons";
 import mcpRouter from "./mcp";
 import askRouter from "./ask";
 import interactionsRouter from "./interactions";
+import graphRouter from "./graph";
 import sparqlRouter from "./sparql";
 import exportsRouter from "./exports";
 import bhlRouter from "./bhl";
@@ -18,6 +19,7 @@ router.use(healthRouter);
 router.use(mcpRouter);
 router.use(askRouter);
 router.use(interactionsRouter);
+router.use(graphRouter);
 // SPARQL endpoint accepts urlencoded forms and raw application/sparql-query bodies.
 router.use("/sparql", express.urlencoded({ extended: false, limit: "1mb" }));
 router.use("/sparql", express.text({ type: "application/sparql-query", limit: "1mb" }));

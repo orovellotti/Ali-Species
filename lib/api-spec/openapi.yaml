@@ -336,6 +336,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaxonMedia"
+  /graph/{cdNom}:
+    get:
+      operationId: getSpeciesGraph
+      tags: [taxons]
+      summary: Typed neighbourhood graph for a taxon (lineage, statuts, habitats, traits, trophic partners)
+      description: |
+        Returns a force-directed-ready graph centred on a single taxon. Nodes are
+        namespaced by type so several neighbourhoods can be merged client-side when
+        the user expands a partner species. External blocks (EUNIS, GloBI) degrade
+        gracefully and are simply omitted when unavailable.
+      parameters:
+        - name: cdNom
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: CD_NOM identifier
+      responses:
+        "200":
+          description: Species neighbourhood graph
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeciesGraph"
+        "404":
+          description: Taxon not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     HealthStatus:
@@ -865,3 +895,68 @@ components:
         - traitsSummary
         - shareSummary
         - generatedAt
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [species, ancestor, statut, habitat, trait, partner]
+        label:
+          type: string
+        sub:
+          type: string
+          nullable: true
+        cdNom:
+          type: integer
+          nullable: true
+        rang:
+          type: string
+          nullable: true
+        group:
+          type: string
+          nullable: true
+      required:
+        - id
+        - type
+        - label
+        - sub
+        - cdNom
+        - rang
+        - group
+    GraphLink:
+      type: object
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        label:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          enum: [species, ancestor, statut, habitat, trait, partner]
+      required:
+        - source
+        - target
+        - label
+        - kind
+    SpeciesGraph:
+      type: object
+      properties:
+        center:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphLink"
+      required:
+        - center
+        - nodes
+        - links

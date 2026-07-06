@@ -7,6 +7,7 @@ export const en = {
   nav: {
     home: "Home",
     statuses: "Statuses",
+    network: "Network",
     sources: "Sources",
     export: "Export",
     aiAgents: "AI & API",
@@ -14,6 +15,24 @@ export const en = {
     about: "About",
     beta: "Beta",
     tagline: "All Life Intelligence",
+  },
+  reseau: {
+    title: "Web of life — ALI Species",
+    metaDescription: "Explore the web of life: taxonomy, conservation status, habitats, traits and trophic interactions of a species, in a single interactive graph.",
+    searchPlaceholder: "Search a species…",
+    loading: "Building the network…",
+    empty: "No data for this species.",
+    hintLine: "Click a species to explore it · double-click to open its page",
+    suggestionsLabel: "Suggestions",
+    reset: "Recenter",
+    legend: {
+      species: "Species",
+      ancestor: "Lineage",
+      statut: "Status",
+      habitat: "Habitat",
+      trait: "Trait",
+      partner: "Trophic web",
+    },
   },
   footer: {
     dataFromIntro: "Data from the French national taxonomic reference ",
