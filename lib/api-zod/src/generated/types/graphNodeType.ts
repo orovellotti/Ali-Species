@@ -11,6 +11,7 @@ export type GraphNodeType = typeof GraphNodeType[keyof typeof GraphNodeType];
 
 export const GraphNodeType = {
   species: 'species',
+  hub: 'hub',
   ancestor: 'ancestor',
   statut: 'statut',
   habitat: 'habitat',

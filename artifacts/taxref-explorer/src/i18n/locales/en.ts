@@ -25,6 +25,13 @@ export const en = {
     hintLine: "Click a species to explore it · double-click to open its page",
     suggestionsLabel: "Suggestions",
     reset: "Recenter",
+    hub: {
+      ancestor: "Taxonomy",
+      statut: "Statuses",
+      habitat: "Habitats",
+      trait: "Traits",
+      partner: "Trophic web",
+    },
     legend: {
       species: "Species",
       ancestor: "Lineage",

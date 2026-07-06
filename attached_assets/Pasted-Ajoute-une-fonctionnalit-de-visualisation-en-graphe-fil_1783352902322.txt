@@ -1,0 +1,171 @@
+Ajoute une fonctionnalité de visualisation en graphe filtrable pour ALI Species.
+
+Objectif : créer une interface de type “graphe de connaissance biodiversité” où l’utilisateur peut afficher ou masquer des familles de nœuds grâce à des boutons en haut de l’écran.
+
+Principe UX :
+
+* En haut de la page, afficher une barre de filtres sous forme de boutons.
+* Chaque bouton correspond à une couche thématique du graphe.
+* Quand un bouton est actif, les nœuds de cette catégorie sont visibles.
+* Quand un bouton est désactivé, les nœuds de cette catégorie disparaissent du graphe.
+* Le graphe doit rester lisible, fluide et centré sur l’espèce ou le taxon consulté.
+
+Catégories de boutons :
+
+1. Taxonomie
+2. Écologie
+3. Conservation
+4. Traits biologiques
+5. Distribution
+6. Interactions
+7. Sources & preuves
+8. Raisonnement IA
+
+Types de nœuds associés :
+
+Taxonomie :
+
+* TAXREF
+* Nom scientifique
+* Nom vernaculaire
+* Synonymes
+* Classification
+* Rang taxonomique
+
+Écologie :
+
+* Habitat
+* Habitat EUNIS
+* Niche écologique
+* Milieu terrestre
+* Milieu marin
+* Milieu aquatique
+* Milieu urbain
+
+Conservation :
+
+* Statut UICN
+* Protection nationale
+* Directive Habitats
+* Directive Oiseaux
+* Convention de Berne
+* Convention de Bonn
+* ZNIEFF
+* Espèce exotique envahissante
+
+Traits biologiques :
+
+* Masse
+* Taille
+* Longévité
+* Régime alimentaire
+* Reproduction
+* PanTHERIA
+* AVONET
+* AmphiBIO
+* SquamBase
+* Wikidata
+
+Distribution :
+
+* Présence France
+* Présence régionale
+* INPN
+* GBIF
+* iNaturalist
+* Aire de répartition
+
+Interactions :
+
+* GloBI
+* Prédation
+* Proie
+* Pollinisation
+* Parasitisme
+* Herbivorie
+* Symbiose
+
+Sources & preuves :
+
+* Source
+* Dataset
+* Publication
+* DOI
+* Licence
+* Producteur de donnée
+* Citation
+* Date de mise à jour
+* Niveau de confiance
+
+Raisonnement IA :
+
+* Réponse générée
+* Synthèse
+* Hypothèse
+* Incertitude
+* Conflit entre sources
+* Explication
+* Prompt / trace de raisonnement visible uniquement sous forme synthétique
+
+Comportement attendu :
+
+* Le graphe affiche au départ toutes les catégories activées.
+* L’utilisateur peut désactiver une catégorie en cliquant sur son bouton.
+* L’utilisateur peut réactiver une catégorie en recliquant.
+* Un double-clic ou un mode “focus” permet d’afficher uniquement une catégorie.
+* Les nœuds masqués doivent aussi masquer les liens associés.
+* Le nœud central, représentant l’espèce ou le taxon, doit toujours rester visible.
+* Chaque catégorie doit avoir une couleur distincte.
+* Chaque nœud doit afficher un label court.
+* Au clic sur un nœud, ouvrir un panneau latéral avec les détails :
+
+  * nom du nœud
+  * type
+  * source
+  * description
+  * citation ou URL si disponible
+  * niveau de confiance si disponible
+
+Style attendu :
+
+* Interface claire, moderne, sobre.
+* Inspiration : SIG avec calques, Obsidian Graph View, Palantir, carte de métro.
+* Ne pas afficher un graphe trop dense au chargement.
+* Grouper visuellement les nœuds par thème.
+* Prévoir une légende des couleurs.
+* Prévoir un bouton “Tout afficher”.
+* Prévoir un bouton “Tout masquer sauf taxon central”.
+* Prévoir un bouton “Sources & preuves” très visible.
+
+Implémentation :
+
+* Utiliser React.
+* Utiliser une librairie de graphe adaptée, par exemple React Flow, Cytoscape.js ou Sigma.js.
+* Créer une structure de données simple avec :
+
+  * nodes: id, label, type, category, source, description, confidence
+  * edges: id, source, target, label, category, evidenceSource
+* Ajouter un état React selectedCategories pour gérer les filtres.
+* Filtrer les nodes et edges avant de les passer au composant graphe.
+* Garder le taxon central toujours visible même si toutes les catégories sont désactivées.
+* Ajouter un SidePanel pour afficher les détails du nœud sélectionné.
+
+Exemple de catégories :
+const categories = [
+"Taxonomie",
+"Écologie",
+"Conservation",
+"Traits biologiques",
+"Distribution",
+"Interactions",
+"Sources & preuves",
+"Raisonnement IA"
+];
+
+Exemple de logique :
+
+* filteredNodes = nodes.filter(node => node.isCentral || selectedCategories.includes(node.category))
+* filteredEdges = edges.filter(edge => sourceNodeVisible && targetNodeVisible)
+
+Résultat attendu :
+Une page fonctionnelle de démonstration permettant d’explorer une espèce ALI Species sous forme de graphe thématique filtrable, avec boutons de calques en haut, graphe au centre et panneau de détails à droite.

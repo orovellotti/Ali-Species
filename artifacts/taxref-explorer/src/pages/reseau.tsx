@@ -23,6 +23,8 @@ interface GNode extends ApiGraphNode {
   y?: number;
   vx?: number;
   vy?: number;
+  fx?: number;
+  fy?: number;
 }
 
 interface GLink {
@@ -34,12 +36,20 @@ interface GLink {
 
 const TYPE_COLORS: Record<NodeType, string> = {
   species: "#38bdf8",
+  hub: "#94a3b8",
   ancestor: "#a78bfa",
   statut: "#fb7185",
   habitat: "#34d399",
   trait: "#fbbf24",
   partner: "#f472b6",
 };
+
+function nodeColor(n: GNode): string {
+  if (n.type === "hub" && n.group && n.group in TYPE_COLORS) {
+    return TYPE_COLORS[n.group as NodeType];
+  }
+  return TYPE_COLORS[n.type];
+}
 
 const TYPE_ORDER: NodeType[] = [
   "species",
@@ -96,6 +106,10 @@ export default function Reseau() {
   // Track ids present so we can merge neighbourhoods without duplicates.
   const nodeIds = useRef<Set<string>>(new Set());
   const linkIds = useRef<Set<string>>(new Set());
+  // Live handle on the current nodes for the engine-tick anchor enforcement
+  // (react-force-graph binds onEngineTick once, so a captured array goes stale).
+  const nodesRef = useRef<GNode[]>([]);
+  nodesRef.current = nodes;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -112,7 +126,10 @@ export default function Reseau() {
     async (cdNom: number, mode: "replace" | "merge") => {
       setLoading(true);
       try {
-        const data = await getSpeciesGraph(cdNom);
+        const data = await getSpeciesGraph(
+          cdNom,
+          import.meta.env.DEV ? { cache: "no-store" } : undefined,
+        );
         if (mode === "replace") {
           nodeIds.current = new Set();
           linkIds.current = new Set();
@@ -181,20 +198,74 @@ export default function Reseau() {
     void loadGraph(DEFAULT_CD_NOM, "replace");
   }, [loadGraph]);
 
-  // Tune the force simulation for an airy, spread-out layout.
+  // Lay the graph out as themed sectors. Rather than fight react-force-graph's
+  // force resets, we pin the centre and each thematic hub to a fixed angle
+  // around it; leaves then settle naturally into a tight cluster around their
+  // own pinned hub, so each theme reads as its own region.
   useEffect(() => {
+    if (!centerId || nodes.length === 0) return;
+    // Spread the five hubs evenly (72° apart) around the centre so each theme
+    // owns a distinct sector and their leaf clusters never overlap. Lineage
+    // sits on the left, where its chain trails off.
+    const DEG = Math.PI / 180;
+    const HUB_ANGLE: Record<string, number> = {
+      ancestor: 180 * DEG,
+      statut: 252 * DEG,
+      habitat: 324 * DEG,
+      trait: 36 * DEG,
+      partner: 108 * DEG,
+    };
+    const R = 230;
+    // Hubs are namespaced per centre (`hub:<cdNom>:<theme>`), so only pin the
+    // ones belonging to the active centre.
+    const hubPrefix = `hub:${centerId.replace(/^taxon:/, "")}:`;
+    for (const n of nodes) {
+      // Clear any anchor left over from a previous centre before re-pinning,
+      // otherwise merged-in old centres/hubs stay frozen via onEngineTick.
+      n.fx = undefined;
+      n.fy = undefined;
+      if (n.id === centerId) {
+        n.fx = 0;
+        n.fy = 0;
+      } else if (
+        n.id.startsWith(hubPrefix) &&
+        n.group &&
+        n.group in HUB_ANGLE
+      ) {
+        const a = HUB_ANGLE[n.group];
+        n.fx = Math.cos(a) * R;
+        n.fy = Math.sin(a) * R;
+      }
+    }
     const fg = graphRef.current;
     if (!fg) return;
-    fg.d3Force("charge")?.strength(-180);
-    const link = fg.d3Force("link") as unknown as
-      | { distance: (fn: (l: GLink) => number) => void }
-      | undefined;
-    if (link && typeof link.distance === "function") {
-      link.distance((l) =>
-        l.kind === "ancestor" ? 55 : l.kind === "partner" ? 42 : 34,
-      );
-    }
-  }, [size.width, nodes.length]);
+    const idOf = (e: string | GNode): string =>
+      typeof e === "object" ? e.id : e;
+    const raf = requestAnimationFrame(() => {
+      const g = graphRef.current;
+      if (!g) return;
+      const charge = g.d3Force("charge") as unknown as
+        | { strength: (fn: (n: GNode) => number) => void }
+        | undefined;
+      // Light repulsion keeps leaves from overlapping without blowing clusters
+      // apart; the pinned hubs already guarantee separation.
+      charge?.strength((n) => (n.id.startsWith("hub:") ? -60 : -22));
+      const link = g.d3Force("link") as unknown as
+        | { distance: (fn: (l: GLink) => number) => void }
+        | undefined;
+      if (link && typeof link.distance === "function") {
+        link.distance((l) =>
+          idOf(l.source).startsWith("hub:") || idOf(l.target).startsWith("hub:")
+            ? l.kind === "ancestor"
+              ? 30
+              : 18
+            : 18,
+        );
+      }
+      g.d3ReheatSimulation();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [size.width, nodes.length, centerId]);
 
   // Neighbours of the hovered node, for subtle highlight.
   const neighbours = useMemo(() => {
@@ -281,6 +352,17 @@ export default function Reseau() {
             backgroundColor="#05070d"
             nodeId="id"
             cooldownTicks={120}
+            onEngineTick={() => {
+              // react-force-graph ignores fx/fy set after graphData ingest, so
+              // we hard-enforce the centre and hub anchor points every tick.
+              for (const n of nodesRef.current) {
+                if (n.fx === undefined || n.fy === undefined) continue;
+                n.x = n.fx;
+                n.y = n.fy;
+                n.vx = 0;
+                n.vy = 0;
+              }
+            }}
             onEngineStop={() => graphRef.current?.zoomToFit(400, 60)}
             linkColor={(l) => {
               const link = l as GLink;
@@ -300,15 +382,18 @@ export default function Reseau() {
             nodeCanvasObject={(node, ctx, globalScale) => {
               const n = node as GNode;
               const isCenter = n.id === centerId;
+              const isHub = n.type === "hub";
               const dimmed =
                 neighbours && !neighbours.ids.has(n.id);
-              const color = TYPE_COLORS[n.type];
+              const color = nodeColor(n);
               const base =
                 n.type === "species"
                   ? 7
-                  : n.type === "ancestor" || n.type === "partner"
-                    ? 5
-                    : 4;
+                  : isHub
+                    ? 6
+                    : n.type === "ancestor" || n.type === "partner"
+                      ? 5
+                      : 4;
               const r = isCenter ? 9 : base;
 
               // Glow
@@ -331,6 +416,7 @@ export default function Reseau() {
               // their neighbourhood, to keep dense clusters legible.
               const showLabel =
                 isCenter ||
+                isHub ||
                 globalScale > 2.2 ||
                 (!!neighbours && neighbours.ids.has(n.id));
               if (showLabel && !dimmed) {
@@ -339,10 +425,12 @@ export default function Reseau() {
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
                 ctx.fillStyle = "rgba(226,232,240,0.9)";
-                const label =
-                  n.label.length > 28
-                    ? `${n.label.slice(0, 27)}…`
-                    : n.label;
+                const raw = isHub ? t(`reseau.hub.${n.group}`) : n.label;
+                const label = raw.length > 28 ? `${raw.slice(0, 27)}…` : raw;
+                if (isHub) {
+                  ctx.fillStyle = "rgba(226,232,240,0.75)";
+                  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+                }
                 ctx.fillText(label, n.x!, n.y! + r + 1.5);
               }
             }}

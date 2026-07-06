@@ -902,7 +902,7 @@ components:
           type: string
         type:
           type: string
-          enum: [species, ancestor, statut, habitat, trait, partner]
+          enum: [species, hub, ancestor, statut, habitat, trait, partner]
         label:
           type: string
         sub:

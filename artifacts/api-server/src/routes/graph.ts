@@ -13,11 +13,37 @@ const router: IRouter = Router();
 
 export type GraphNodeType =
   | "species"
+  | "hub"
   | "ancestor"
   | "statut"
   | "habitat"
   | "trait"
   | "partner";
+
+export type GraphTheme = "ancestor" | "statut" | "habitat" | "trait" | "partner";
+
+const HUB_LABELS: Record<GraphTheme, string> = {
+  ancestor: "Taxonomie",
+  statut: "Statuts",
+  habitat: "Habitats",
+  trait: "Traits",
+  partner: "Réseau trophique",
+};
+
+// Only surface the well-known ranks so the lineage reads as a short branch
+// instead of dumping every intermediate clade at once.
+const MAJOR_RANKS = new Set([
+  "GN",
+  "FM",
+  "OR",
+  "CL",
+  "PH",
+  "KD",
+  "RG",
+  "EM",
+  "REG",
+]);
+const MAX_ANCESTORS = 6;
 
 export interface GraphNode {
   id: string;
@@ -83,26 +109,54 @@ export async function buildSpeciesGraph(cdNom: number): Promise<SpeciesGraph | n
   };
   const addLink = (link: GraphLink) => links.push(link);
 
+  // Thematic hub nodes group each family of neighbours (statuts, habitats,
+  // traits, partners, lineage) under one labelled pivot so the graph reads as
+  // clusters rather than one dense star. Created lazily on first child.
+  const hubIds = new Map<GraphTheme, string>();
+  const hubFor = (theme: GraphTheme): string => {
+    const existing = hubIds.get(theme);
+    if (existing) return existing;
+    const id = `hub:${taxon.cdNom}:${theme}`;
+    addNode({
+      id,
+      type: "hub",
+      label: HUB_LABELS[theme],
+      sub: null,
+      cdNom: null,
+      rang: null,
+      group: theme,
+    });
+    addLink({ source: centerId, target: id, label: null, kind: theme });
+    hubIds.set(theme, id);
+    return id;
+  };
+
   // --- Taxonomic lineage -----------------------------------------------------
   try {
     const lineage = await fetchClassification(cdNom);
     const ancestors = lineage.filter((step) => step.cdNom !== taxon.cdNom);
-    let prevId = centerId;
-    // Walk from the closest ancestor up to the kingdom so links chain nicely.
-    for (let i = ancestors.length - 1; i >= 0; i--) {
-      const step = ancestors[i];
-      const id = `taxon:${step.cdNom}`;
-      addNode({
-        id,
-        type: "ancestor",
-        label: step.nomVern || step.lbNom,
-        sub: step.rang,
-        cdNom: step.cdNom,
-        rang: step.rang,
-        group: step.regne,
-      });
-      addLink({ source: prevId, target: id, label: step.rang, kind: "ancestor" });
-      prevId = id;
+    // Prefer the classic ranks; fall back to the closest few if the lineage is
+    // clade-heavy (common for plants) and no major rank matched.
+    let shown = ancestors.filter((s) => s.rang && MAJOR_RANKS.has(s.rang));
+    shown = shown.length > 0 ? shown.slice(-MAX_ANCESTORS) : ancestors.slice(-5);
+    if (shown.length > 0) {
+      let prevId = hubFor("ancestor");
+      // Walk from the closest ancestor up to the kingdom so links chain nicely.
+      for (let i = shown.length - 1; i >= 0; i--) {
+        const step = shown[i];
+        const id = `taxon:${step.cdNom}`;
+        addNode({
+          id,
+          type: "ancestor",
+          label: step.nomVern || step.lbNom,
+          sub: step.rang,
+          cdNom: step.cdNom,
+          rang: step.rang,
+          group: step.regne,
+        });
+        addLink({ source: prevId, target: id, label: step.rang, kind: "ancestor" });
+        prevId = id;
+      }
     }
   } catch {
     /* lineage optional */
@@ -130,7 +184,7 @@ export async function buildSpeciesGraph(cdNom: number): Promise<SpeciesGraph | n
         rang: null,
         group: s.regroupementType || s.cdTypeStatut,
       });
-      addLink({ source: centerId, target: id, label: s.cdTypeStatut, kind: "statut" });
+      addLink({ source: hubFor("statut"), target: id, label: s.cdTypeStatut, kind: "statut" });
       count++;
     }
   } catch {
@@ -158,7 +212,7 @@ export async function buildSpeciesGraph(cdNom: number): Promise<SpeciesGraph | n
         rang: null,
         group,
       });
-      addLink({ source: centerId, target: id, label: null, kind: "habitat" });
+      addLink({ source: hubFor("habitat"), target: id, label: null, kind: "habitat" });
       count++;
     };
 
@@ -199,7 +253,7 @@ export async function buildSpeciesGraph(cdNom: number): Promise<SpeciesGraph | n
             rang: null,
             group: src.source,
           });
-          addLink({ source: centerId, target: id, label: null, kind: "trait" });
+          addLink({ source: hubFor("trait"), target: id, label: null, kind: "trait" });
           count++;
         }
       }
@@ -226,7 +280,7 @@ export async function buildSpeciesGraph(cdNom: number): Promise<SpeciesGraph | n
             rang: partner.rang,
             group: group.label,
           });
-          addLink({ source: centerId, target: id, label: group.label, kind: "partner" });
+          addLink({ source: hubFor("partner"), target: id, label: group.label, kind: "partner" });
           count++;
         }
       }
@@ -254,7 +308,12 @@ router.get("/graph/:cdNom", async (req, res): Promise<void> => {
       res.status(404).json({ error: "taxon not found" });
       return;
     }
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader(
+      "Cache-Control",
+      process.env.NODE_ENV === "production"
+        ? "public, max-age=3600"
+        : "no-store",
+    );
     res.json(graph);
   } catch (err) {
     req.log.error({ err, cdNom }, "graph build failed");

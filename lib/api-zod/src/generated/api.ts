@@ -433,7 +433,7 @@ export const GetSpeciesGraphResponse = zod.object({
   "center": zod.string(),
   "nodes": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['species', 'ancestor', 'statut', 'habitat', 'trait', 'partner']),
+  "type": zod.enum(['species', 'hub', 'ancestor', 'statut', 'habitat', 'trait', 'partner']),
   "label": zod.string(),
   "sub": zod.string().nullable(),
   "cdNom": zod.number().nullable(),

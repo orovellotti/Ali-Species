@@ -25,6 +25,13 @@ export const fr = {
     hintLine: "Clic sur une espèce pour l'explorer · double-clic pour ouvrir sa fiche",
     suggestionsLabel: "Suggestions",
     reset: "Recentrer",
+    hub: {
+      ancestor: "Taxonomie",
+      statut: "Statuts",
+      habitat: "Habitats",
+      trait: "Traits",
+      partner: "Réseau trophique",
+    },
     legend: {
       species: "Espèce",
       ancestor: "Lignée",
