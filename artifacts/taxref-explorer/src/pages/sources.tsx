@@ -143,6 +143,19 @@ const SOURCES: Source[] = [
       "European Environment Agency (EEA). EUNIS — the European Nature Information System. Copenhague. https://eunis.eea.europa.eu/ (fiches espèces consultées en ligne).",
   },
   {
+    id: "habref",
+    name: "HABREF — Référentiel des habitats et végétations de France",
+    description:
+      "Référentiel national des typologies d'habitats et de végétations pour la France métropolitaine et d'outre-mer, maintenu par PatriNat. Fournit les correspondances entre espèces (cd_nom TAXREF) et grands types de milieux qu'elles fréquentent, complétant la couverture d'EUNIS notamment pour la flore et une partie des vertébrés. Source du panneau « Habitats » des fiches espèces et des triples habitats du graphe RDF/SPARQL.",
+    publisher: "UMS PatriNat (OFB / MNHN / CNRS / IRD) — diffusion via INPN",
+    license:
+      "Licence Ouverte Etalab 2.0 (usage libre, y compris commercial, attribution requise).",
+    url: "https://inpn.mnhn.fr/programme/referentiel-habitats/presentation",
+    urlLabel: "inpn.mnhn.fr/…/referentiel-habitats",
+    citation:
+      "Louvel J., Gaudillat V. & Poncet L. (2013). HABREF v5.0, référentiel des habitats terrestres et marins pour la France. UMS PatriNat (OFB-MNHN-CNRS-IRD), Muséum national d'Histoire naturelle, Paris. Diffusion : INPN.",
+  },
+  {
     id: "inpn",
     name: "INPN — Inventaire National du Patrimoine Naturel",
     description:
