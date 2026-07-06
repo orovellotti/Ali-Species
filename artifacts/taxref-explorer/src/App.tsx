@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Redirect, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,8 +9,7 @@ import TaxonDetail from "@/pages/taxon";
 import About from "@/pages/about";
 import Taxonomie from "@/pages/taxonomie";
 import Sources from "@/pages/sources";
-import ExportPage from "@/pages/export";
-import AiAgentsPage from "@/pages/ai-agents";
+import DeveloppeursPage from "@/pages/developpeurs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,8 +26,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/taxonomie" component={Taxonomie} />
       <Route path="/sources" component={Sources} />
-      <Route path="/export" component={ExportPage} />
-      <Route path="/ai-agents" component={AiAgentsPage} />
+      <Route path="/developpeurs" component={DeveloppeursPage} />
+      <Route path="/export">{() => <Redirect to="/developpeurs" replace />}</Route>
+      <Route path="/ai-agents">{() => <Redirect to="/developpeurs" replace />}</Route>
       <Route path="/a-propos" component={About} />
       <Route path="/taxon/:slug" component={TaxonDetail} />
       <Route component={NotFound} />

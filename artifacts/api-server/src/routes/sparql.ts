@@ -80,7 +80,7 @@ const UNAVAILABLE_MSG =
   "L'endpoint SPARQL public n'est pas disponible dans cet environnement. " +
   "Téléchargez le dump RDF depuis /api/exports/rdf.ttl.gz et lancez Oxigraph en local : " +
   "`oxigraph_server load -l ./store --file ali-species.ttl.gz --format ttl` puis " +
-  "`oxigraph_server serve -l ./store --bind 127.0.0.1:7878`. Voir /export pour les détails.";
+  "`oxigraph_server serve -l ./store --bind 127.0.0.1:7878`. Voir /developpeurs pour les détails.";
 
 router.get("/sparql", async (req, res): Promise<void> => {
   const query = (req.query.query ?? req.query.q) as string | undefined;
@@ -175,7 +175,7 @@ oxigraph_server load -l ./store --file ali-species-*.ttl.gz --format ttl
 # 3. Servir l'endpoint
 oxigraph_server serve -l ./store --bind 127.0.0.1:7878
 # → SPARQL dispo sur http://127.0.0.1:7878/query</pre>
-    <p>Voir <a href="/export">/export</a> pour la documentation complète.</p>
+    <p>Voir <a href="/developpeurs">/developpeurs</a> pour la documentation complète.</p>
   </div>
 </body>
 </html>`);

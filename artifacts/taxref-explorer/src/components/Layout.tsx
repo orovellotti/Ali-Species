@@ -38,8 +38,7 @@ export function Layout({ children }: LayoutProps) {
       <Link href="/" className="hover:text-foreground transition-colors">{t("nav.home")}</Link>
       <Link href="/taxonomie" className="hover:text-foreground transition-colors" data-testid="link-taxonomie">{t("nav.statuses")}</Link>
       <Link href="/sources" className="hover:text-foreground transition-colors" data-testid="link-sources">{t("nav.sources")}</Link>
-      <Link href="/export" className="hover:text-foreground transition-colors" data-testid="link-export">{t("nav.export")}</Link>
-      <Link href="/ai-agents" className="hover:text-foreground transition-colors" data-testid="link-ai-agents">{t("nav.aiAgents")}</Link>
+      <Link href="/developpeurs" className="hover:text-foreground transition-colors" data-testid="link-developers">{t("nav.developers")}</Link>
       <Link href="/a-propos" className="hover:text-foreground transition-colors">{t("nav.about")}</Link>
     </>
   );
@@ -68,7 +67,7 @@ export function Layout({ children }: LayoutProps) {
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             {navLinks}
             <Link
-              href="/ai-agents"
+              href="/developpeurs"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
               data-testid="link-mcp-header"
             >
@@ -111,11 +110,10 @@ export function Layout({ children }: LayoutProps) {
                 <Link href="/" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors">{t("nav.home")}</Link>
                 <Link href="/taxonomie" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-taxonomie-mobile">{t("nav.statuses")}</Link>
                 <Link href="/sources" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-sources-mobile">{t("nav.sources")}</Link>
-                <Link href="/export" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-export-mobile">{t("nav.export")}</Link>
-                <Link href="/ai-agents" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-ai-agents-mobile">{t("nav.aiAgents")}</Link>
+                <Link href="/developpeurs" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors" data-testid="link-developers-mobile">{t("nav.developers")}</Link>
                 <Link href="/a-propos" className="px-3 py-3 rounded-md hover:bg-muted hover:text-foreground transition-colors">{t("nav.about")}</Link>
                 <Link
-                  href="/ai-agents"
+                  href="/developpeurs"
                   className="mt-2 inline-flex items-center gap-1.5 px-3 py-2.5 rounded-full bg-primary/10 text-primary hover:bg-primary/15 transition-colors self-start"
                   data-testid="link-mcp-header-mobile"
                 >
