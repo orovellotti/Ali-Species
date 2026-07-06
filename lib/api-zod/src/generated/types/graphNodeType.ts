@@ -17,4 +17,6 @@ export const GraphNodeType = {
   habitat: 'habitat',
   trait: 'trait',
   partner: 'partner',
+  distribution: 'distribution',
+  evidence: 'evidence',
 } as const;

@@ -225,16 +225,36 @@ export const GraphNodeType = {
   habitat: 'habitat',
   trait: 'trait',
   partner: 'partner',
+  distribution: 'distribution',
+  evidence: 'evidence',
+} as const;
+
+export type GraphNodeCategory = typeof GraphNodeCategory[keyof typeof GraphNodeCategory];
+
+
+export const GraphNodeCategory = {
+  taxonomie: 'taxonomie',
+  conservation: 'conservation',
+  ecologie: 'ecologie',
+  traits: 'traits',
+  distribution: 'distribution',
+  interactions: 'interactions',
+  sources: 'sources',
 } as const;
 
 export interface GraphNode {
   id: string;
   type: GraphNodeType;
+  category: GraphNodeCategory;
   label: string;
   sub: string | null;
   cdNom: number | null;
   rang: string | null;
   group: string | null;
+  source: string | null;
+  description: string | null;
+  confidence: string | null;
+  url: string | null;
 }
 
 export type GraphLinkKind = typeof GraphLinkKind[keyof typeof GraphLinkKind];
@@ -242,11 +262,15 @@ export type GraphLinkKind = typeof GraphLinkKind[keyof typeof GraphLinkKind];
 
 export const GraphLinkKind = {
   species: 'species',
+  hub: 'hub',
   ancestor: 'ancestor',
   statut: 'statut',
   habitat: 'habitat',
   trait: 'trait',
   partner: 'partner',
+  distribution: 'distribution',
+  evidence: 'evidence',
+  sources: 'sources',
 } as const;
 
 export interface GraphLink {

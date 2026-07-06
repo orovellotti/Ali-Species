@@ -18,6 +18,7 @@ export * from './gbifInfo';
 export * from './graphLink';
 export * from './graphLinkKind';
 export * from './graphNode';
+export * from './graphNodeCategory';
 export * from './graphNodeType';
 export * from './habrefHabitat';
 export * from './habrefInfo';

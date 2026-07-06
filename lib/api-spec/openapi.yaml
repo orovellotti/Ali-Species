@@ -902,7 +902,10 @@ components:
           type: string
         type:
           type: string
-          enum: [species, hub, ancestor, statut, habitat, trait, partner]
+          enum: [species, hub, ancestor, statut, habitat, trait, partner, distribution, evidence]
+        category:
+          type: string
+          enum: [taxonomie, conservation, ecologie, traits, distribution, interactions, sources]
         label:
           type: string
         sub:
@@ -917,14 +920,31 @@ components:
         group:
           type: string
           nullable: true
+        source:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        confidence:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
       required:
         - id
         - type
+        - category
         - label
         - sub
         - cdNom
         - rang
         - group
+        - source
+        - description
+        - confidence
+        - url
     GraphLink:
       type: object
       properties:
@@ -937,7 +957,7 @@ components:
           nullable: true
         kind:
           type: string
-          enum: [species, ancestor, statut, habitat, trait, partner]
+          enum: [species, hub, ancestor, statut, habitat, trait, partner, distribution, evidence, sources]
       required:
         - source
         - target

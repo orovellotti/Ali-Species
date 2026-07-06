@@ -3,7 +3,16 @@ import { Layout } from "@/components/Layout";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { Search, X, Crosshair, Loader2 } from "lucide-react";
+import {
+  Search,
+  X,
+  Crosshair,
+  Loader2,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
 import {
   useSearchTaxons,
@@ -17,6 +26,15 @@ import type {
 import { taxonUrl } from "@/lib/constants";
 
 type NodeType = ApiGraphNode["type"];
+type Category =
+  | "taxonomie"
+  | "ecologie"
+  | "conservation"
+  | "traits"
+  | "distribution"
+  | "interactions"
+  | "sources"
+  | "ia";
 
 interface GNode extends ApiGraphNode {
   x?: number;
@@ -34,31 +52,39 @@ interface GLink {
   kind: ApiGraphLink["kind"];
 }
 
-const TYPE_COLORS: Record<NodeType, string> = {
-  species: "#38bdf8",
-  hub: "#94a3b8",
-  ancestor: "#a78bfa",
-  statut: "#fb7185",
-  habitat: "#34d399",
-  trait: "#fbbf24",
-  partner: "#f472b6",
+// Real data layers, in display order, plus the "ia" placeholder (disabled).
+const LAYER_ORDER: Category[] = [
+  "taxonomie",
+  "ecologie",
+  "conservation",
+  "traits",
+  "distribution",
+  "interactions",
+  "sources",
+  "ia",
+];
+const REAL_CATEGORIES: Category[] = LAYER_ORDER.filter((c) => c !== "ia");
+
+const CATEGORY_COLORS: Record<Category, string> = {
+  taxonomie: "#a78bfa",
+  ecologie: "#34d399",
+  conservation: "#fb7185",
+  traits: "#fbbf24",
+  distribution: "#38bdf8",
+  interactions: "#f472b6",
+  sources: "#f97316",
+  ia: "#64748b",
 };
 
-function nodeColor(n: GNode): string {
-  if (n.type === "hub" && n.group && n.group in TYPE_COLORS) {
-    return TYPE_COLORS[n.group as NodeType];
-  }
-  return TYPE_COLORS[n.type];
+function nodeColor(n: GNode, centerId: string | null): string {
+  if (n.id === centerId) return "#ffffff";
+  const cat = n.category as Category;
+  return CATEGORY_COLORS[cat] ?? "#94a3b8";
 }
 
-const TYPE_ORDER: NodeType[] = [
-  "species",
-  "ancestor",
-  "statut",
-  "habitat",
-  "trait",
-  "partner",
-];
+function idOf(e: string | GNode): string {
+  return typeof e === "object" ? e.id : e;
+}
 
 const SUGGESTIONS: { cdNom: number; label: string }[] = [
   { cdNom: 60585, label: "Renard roux" },
@@ -89,6 +115,12 @@ export default function Reseau() {
   const [centerId, setCenterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Layer visibility. All real layers on by default.
+  const [activeLayers, setActiveLayers] = useState<Set<Category>>(
+    () => new Set(REAL_CATEGORIES),
+  );
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -150,6 +182,7 @@ export default function Reseau() {
           }
           setNodes(freshNodes);
           setLinks(freshLinks);
+          setSelectedId(null);
         } else {
           setNodes((prev) => {
             const byId = new Map(prev.map((n) => [n.id, n]));
@@ -159,11 +192,16 @@ export default function Reseau() {
                 // Upsert payload fields but keep live simulation coords so
                 // an expanded partner correctly upgrades to species/center.
                 existing.type = n.type;
+                existing.category = n.category;
                 existing.label = n.label;
                 existing.sub = n.sub;
                 existing.cdNom = n.cdNom;
                 existing.rang = n.rang;
                 existing.group = n.group;
+                existing.source = n.source;
+                existing.description = n.description;
+                existing.confidence = n.confidence;
+                existing.url = n.url;
               } else {
                 nodeIds.current.add(n.id);
                 const created = { ...n };
@@ -204,18 +242,20 @@ export default function Reseau() {
   // own pinned hub, so each theme reads as its own region.
   useEffect(() => {
     if (!centerId || nodes.length === 0) return;
-    // Spread the five hubs evenly (72° apart) around the centre so each theme
+    // Spread the seven hubs evenly (~51° apart) around the centre so each theme
     // owns a distinct sector and their leaf clusters never overlap. Lineage
     // sits on the left, where its chain trails off.
     const DEG = Math.PI / 180;
     const HUB_ANGLE: Record<string, number> = {
       ancestor: 180 * DEG,
-      statut: 252 * DEG,
-      habitat: 324 * DEG,
-      trait: 36 * DEG,
-      partner: 108 * DEG,
+      statut: 231 * DEG,
+      habitat: 283 * DEG,
+      distribution: 334 * DEG,
+      trait: 26 * DEG,
+      partner: 77 * DEG,
+      sources: 129 * DEG,
     };
-    const R = 230;
+    const R = 240;
     // Hubs are namespaced per centre (`hub:<cdNom>:<theme>`), so only pin the
     // ones belonging to the active centre.
     const hubPrefix = `hub:${centerId.replace(/^taxon:/, "")}:`;
@@ -239,8 +279,6 @@ export default function Reseau() {
     }
     const fg = graphRef.current;
     if (!fg) return;
-    const idOf = (e: string | GNode): string =>
-      typeof e === "object" ? e.id : e;
     const raf = requestAnimationFrame(() => {
       const g = graphRef.current;
       if (!g) return;
@@ -267,14 +305,38 @@ export default function Reseau() {
     return () => cancelAnimationFrame(raf);
   }, [size.width, nodes.length, centerId]);
 
+  // --- Layer filtering -------------------------------------------------------
+  const visibleNodes = useMemo(
+    () =>
+      nodes.filter(
+        (n) => n.id === centerId || activeLayers.has(n.category as Category),
+      ),
+    [nodes, centerId, activeLayers],
+  );
+  const visibleIds = useMemo(
+    () => new Set(visibleNodes.map((n) => n.id)),
+    [visibleNodes],
+  );
+  const visibleLinks = useMemo(
+    () =>
+      links.filter(
+        (l) => visibleIds.has(idOf(l.source)) && visibleIds.has(idOf(l.target)),
+      ),
+    [links, visibleIds],
+  );
+  const graphData = useMemo(
+    () => ({ nodes: visibleNodes, links: visibleLinks }),
+    [visibleNodes, visibleLinks],
+  );
+
   // Neighbours of the hovered node, for subtle highlight.
   const neighbours = useMemo(() => {
     if (!hoverId) return null;
     const ids = new Set<string>([hoverId]);
     const linkSet = new Set<GLink>();
-    for (const l of links) {
-      const s = typeof l.source === "string" ? l.source : l.source.id;
-      const tg = typeof l.target === "string" ? l.target : l.target.id;
+    for (const l of visibleLinks) {
+      const s = idOf(l.source);
+      const tg = idOf(l.target);
       if (s === hoverId || tg === hoverId) {
         ids.add(s);
         ids.add(tg);
@@ -282,16 +344,16 @@ export default function Reseau() {
       }
     }
     return { ids, linkSet };
-  }, [hoverId, links]);
+  }, [hoverId, visibleLinks]);
 
-  const handleNodeClick = useCallback(
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedId) ?? null,
+    [nodes, selectedId],
+  );
+
+  const expandNode = useCallback(
     (node: GNode) => {
-      if (
-        (node.type === "species" ||
-          node.type === "partner" ||
-          node.type === "ancestor") &&
-        node.cdNom
-      ) {
+      if (node.cdNom) {
         void loadGraph(node.cdNom, "merge");
         graphRef.current?.centerAt(node.x, node.y, 600);
         graphRef.current?.zoom(2, 600);
@@ -300,13 +362,17 @@ export default function Reseau() {
     [loadGraph],
   );
 
-  const handleNodeDblClick = useCallback(
+  const handleNodeClick = useCallback((node: GNode) => {
+    setSelectedId(node.id);
+  }, []);
+
+  // Right-click stays a power-user shortcut to expand a taxon in place.
+  const handleNodeRightClick = useCallback(
     (node: GNode) => {
-      if (node.cdNom) {
-        navigate(taxonUrl(node.cdNom, node.label));
-      }
+      if (node.type === "hub") return;
+      expandNode(node);
     },
-    [navigate],
+    [expandNode],
   );
 
   const pickTaxon = useCallback(
@@ -319,7 +385,41 @@ export default function Reseau() {
     [loadGraph],
   );
 
-  const graphData = useMemo(() => ({ nodes, links }), [nodes, links]);
+  // Single click on a layer button toggles it; double click focuses on it
+  // (hides every other layer). We debounce the single click to tell them apart.
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toggleLayer = useCallback((c: Category) => {
+    setActiveLayers((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  }, []);
+  const focusLayer = useCallback((c: Category) => {
+    setActiveLayers(new Set([c]));
+  }, []);
+  const onLayerButton = useCallback(
+    (c: Category) => {
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+        focusLayer(c);
+        return;
+      }
+      clickTimer.current = setTimeout(() => {
+        clickTimer.current = null;
+        toggleLayer(c);
+      }, 220);
+    },
+    [focusLayer, toggleLayer],
+  );
+
+  const showAll = useCallback(
+    () => setActiveLayers(new Set(REAL_CATEGORIES)),
+    [],
+  );
+  const hideAll = useCallback(() => setActiveLayers(new Set()), []);
 
   return (
     <Layout>
@@ -366,8 +466,7 @@ export default function Reseau() {
             onEngineStop={() => graphRef.current?.zoomToFit(400, 60)}
             linkColor={(l) => {
               const link = l as GLink;
-              const active =
-                !neighbours || neighbours.linkSet.has(link);
+              const active = !neighbours || neighbours.linkSet.has(link);
               return active
                 ? "rgba(148,163,184,0.35)"
                 : "rgba(148,163,184,0.06)";
@@ -377,15 +476,18 @@ export default function Reseau() {
             }
             onNodeHover={(n) => setHoverId(n ? (n as GNode).id : null)}
             onNodeClick={(n) => handleNodeClick(n as GNode)}
-            onNodeRightClick={(n) => handleNodeDblClick(n as GNode)}
-            onBackgroundClick={() => setHoverId(null)}
+            onNodeRightClick={(n) => handleNodeRightClick(n as GNode)}
+            onBackgroundClick={() => {
+              setHoverId(null);
+              setSelectedId(null);
+            }}
             nodeCanvasObject={(node, ctx, globalScale) => {
               const n = node as GNode;
               const isCenter = n.id === centerId;
               const isHub = n.type === "hub";
-              const dimmed =
-                neighbours && !neighbours.ids.has(n.id);
-              const color = nodeColor(n);
+              const isSelected = n.id === selectedId;
+              const dimmed = neighbours && !neighbours.ids.has(n.id);
+              const color = nodeColor(n, centerId);
               const base =
                 n.type === "species"
                   ? 7
@@ -405,8 +507,8 @@ export default function Reseau() {
               ctx.arc(n.x!, n.y!, r, 0, 2 * Math.PI);
               ctx.fillStyle = color;
               ctx.fill();
-              if (isCenter) {
-                ctx.lineWidth = 2 / globalScale;
+              if (isCenter || isSelected) {
+                ctx.lineWidth = (isSelected ? 2.5 : 2) / globalScale;
                 ctx.strokeStyle = "#ffffff";
                 ctx.stroke();
               }
@@ -417,6 +519,7 @@ export default function Reseau() {
               const showLabel =
                 isCenter ||
                 isHub ||
+                isSelected ||
                 globalScale > 2.2 ||
                 (!!neighbours && neighbours.ids.has(n.id));
               if (showLabel && !dimmed) {
@@ -437,8 +540,198 @@ export default function Reseau() {
           />
         )}
 
+        {/* Top-center: layer filter bar */}
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4 md:pr-40">
+          <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-black/60 px-2 py-2 backdrop-blur-md shadow-xl">
+            {LAYER_ORDER.map((c) => {
+              const disabled = c === "ia";
+              const active = !disabled && activeLayers.has(c);
+              const color = CATEGORY_COLORS[c];
+              return (
+                <button
+                  key={c}
+                  disabled={disabled}
+                  onClick={() => !disabled && onLayerButton(c)}
+                  title={
+                    disabled
+                      ? t("reseau.soon")
+                      : t("reseau.controls.focusHint")
+                  }
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    disabled
+                      ? "cursor-not-allowed border-white/5 bg-white/5 text-slate-500"
+                      : active
+                        ? "border-transparent text-slate-900"
+                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                  }`}
+                  style={
+                    active && !disabled
+                      ? { background: color, boxShadow: `0 0 10px ${color}66` }
+                      : undefined
+                  }
+                  data-testid={`layer-${c}`}
+                >
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      background: active && !disabled ? "#0f172a" : color,
+                    }}
+                  />
+                  {t(`reseau.layers.${c}`)}
+                  {disabled && (
+                    <span className="ml-1 rounded bg-white/10 px-1 text-[9px] uppercase tracking-wide text-slate-400">
+                      {t("reseau.soon")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+
+            <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
+
+            <button
+              onClick={showAll}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10"
+              data-testid="button-show-all"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              {t("reseau.controls.showAll")}
+            </button>
+            <button
+              onClick={hideAll}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10"
+              data-testid="button-hide-all"
+            >
+              <EyeOff className="h-3.5 w-3.5" />
+              {t("reseau.controls.hideAll")}
+            </button>
+          </div>
+        </div>
+
+        {/* Top-right: recenter */}
+        <button
+          onClick={() => graphRef.current?.zoomToFit(500, 60)}
+          className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 text-xs text-slate-200 backdrop-blur-md hover:bg-black/80"
+          data-testid="button-recenter"
+        >
+          <Crosshair className="h-4 w-4" />
+          {t("reseau.reset")}
+        </button>
+
+        {/* Right: detail panel */}
+        {selectedNode && (
+          <aside
+            className="absolute right-4 top-16 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-md shadow-2xl"
+            data-testid="node-panel"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-3 w-3 rounded-full"
+                  style={{
+                    background: nodeColor(selectedNode, centerId),
+                    boxShadow: `0 0 8px ${nodeColor(selectedNode, centerId)}`,
+                  }}
+                />
+                <h2 className="text-sm font-semibold text-slate-100">
+                  {selectedNode.label}
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedId(null)}
+                className="text-slate-400 hover:text-slate-200"
+                aria-label={t("reseau.panel.close")}
+                data-testid="button-close-panel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-slate-300">
+                {t(`reseau.nodeType.${selectedNode.type}`)}
+              </span>
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-900"
+                style={{
+                  background:
+                    CATEGORY_COLORS[selectedNode.category as Category] ??
+                    "#94a3b8",
+                }}
+              >
+                {t(`reseau.layers.${selectedNode.category}`)}
+              </span>
+            </div>
+
+            <dl className="mt-3 space-y-2 text-xs">
+              {selectedNode.description && (
+                <div>
+                  <dt className="text-slate-500">
+                    {t("reseau.panel.descriptionLabel")}
+                  </dt>
+                  <dd className="text-slate-200">{selectedNode.description}</dd>
+                </div>
+              )}
+              {selectedNode.source && (
+                <div>
+                  <dt className="text-slate-500">
+                    {t("reseau.panel.sourceLabel")}
+                  </dt>
+                  <dd className="text-slate-200">{selectedNode.source}</dd>
+                </div>
+              )}
+              {selectedNode.confidence && (
+                <div>
+                  <dt className="text-slate-500">
+                    {t("reseau.panel.confidenceLabel")}
+                  </dt>
+                  <dd className="text-slate-200">{selectedNode.confidence}</dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="mt-4 flex flex-col gap-2">
+              {selectedNode.cdNom && selectedNode.type !== "hub" && (
+                <>
+                  <button
+                    onClick={() => expandNode(selectedNode)}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-sky-500/90 px-3 py-2 text-xs font-medium text-white hover:bg-sky-500"
+                    data-testid="button-explore-node"
+                  >
+                    <Crosshair className="h-3.5 w-3.5" />
+                    {t("reseau.panel.explore")}
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigate(
+                        taxonUrl(selectedNode.cdNom!, selectedNode.label),
+                      )
+                    }
+                    className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200 hover:bg-white/10"
+                    data-testid="button-open-sheet"
+                  >
+                    {t("reseau.panel.openSheet")}
+                  </button>
+                </>
+              )}
+              {selectedNode.url && (
+                <a
+                  href={selectedNode.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200 hover:bg-white/10"
+                  data-testid="link-source"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("reseau.panel.sourceLink")}
+                </a>
+              )}
+            </div>
+          </aside>
+        )}
+
         {/* Top-left: search */}
-        <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
+        <div className="absolute left-4 top-16 z-10 flex flex-col gap-2">
           {searchOpen ? (
             <div className="w-72 rounded-xl border border-white/10 bg-black/60 backdrop-blur-md shadow-2xl">
               <div className="flex items-center gap-2 px-3 py-2">
@@ -511,34 +804,36 @@ export default function Reseau() {
           )}
         </div>
 
-        {/* Top-right: recenter */}
-        <button
-          onClick={() => graphRef.current?.zoomToFit(500, 60)}
-          className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 text-xs text-slate-200 backdrop-blur-md hover:bg-black/80"
-          data-testid="button-recenter"
-        >
-          <Crosshair className="h-4 w-4" />
-          {t("reseau.reset")}
-        </button>
-
         {/* Bottom-left: legend */}
         <div className="absolute bottom-4 left-4 z-10 flex flex-wrap gap-x-4 gap-y-1 rounded-xl border border-white/10 bg-black/50 px-4 py-2 backdrop-blur-md">
-          {TYPE_ORDER.map((type) => (
-            <span key={type} className="flex items-center gap-1.5 text-xs text-slate-300">
+          <span className="flex items-center gap-1.5 text-xs text-slate-300">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ background: "#ffffff", boxShadow: "0 0 6px #ffffff" }}
+            />
+            {t("reseau.legend.species")}
+          </span>
+          {REAL_CATEGORIES.map((c) => (
+            <span
+              key={c}
+              className="flex items-center gap-1.5 text-xs text-slate-300"
+            >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{
-                  background: TYPE_COLORS[type],
-                  boxShadow: `0 0 6px ${TYPE_COLORS[type]}`,
+                  background: CATEGORY_COLORS[c],
+                  boxShadow: `0 0 6px ${CATEGORY_COLORS[c]}`,
+                  opacity: activeLayers.has(c) ? 1 : 0.3,
                 }}
               />
-              {t(`reseau.legend.${type}`)}
+              {t(`reseau.layers.${c}`)}
             </span>
           ))}
         </div>
 
         {/* Bottom-right: hint */}
-        <p className="absolute bottom-4 right-4 z-10 max-w-xs text-right text-xs text-slate-500">
+        <p className="absolute bottom-4 right-4 z-10 flex max-w-xs items-center gap-1.5 text-right text-xs text-slate-500">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
           {t("reseau.hintLine")}
         </p>
 
@@ -552,7 +847,7 @@ export default function Reseau() {
           </div>
         )}
         {loading && nodes.length > 0 && (
-          <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-20 z-10 -translate-x-1/2">
             <Loader2 className="h-5 w-5 animate-spin text-sky-400" />
           </div>
         )}

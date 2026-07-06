@@ -5,14 +5,20 @@
  * TAXREF taxonomy browser API
  * OpenAPI spec version: 0.1.0
  */
+import type { GraphNodeCategory } from './graphNodeCategory';
 import type { GraphNodeType } from './graphNodeType';
 
 export interface GraphNode {
   id: string;
   type: GraphNodeType;
+  category: GraphNodeCategory;
   label: string;
   sub: string | null;
   cdNom: number | null;
   rang: string | null;
   group: string | null;
+  source: string | null;
+  description: string | null;
+  confidence: string | null;
+  url: string | null;
 }

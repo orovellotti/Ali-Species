@@ -11,9 +11,13 @@ export type GraphLinkKind = typeof GraphLinkKind[keyof typeof GraphLinkKind];
 
 export const GraphLinkKind = {
   species: 'species',
+  hub: 'hub',
   ancestor: 'ancestor',
   statut: 'statut',
   habitat: 'habitat',
   trait: 'trait',
   partner: 'partner',
+  distribution: 'distribution',
+  evidence: 'evidence',
+  sources: 'sources',
 } as const;

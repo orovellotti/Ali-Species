@@ -433,18 +433,23 @@ export const GetSpeciesGraphResponse = zod.object({
   "center": zod.string(),
   "nodes": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['species', 'hub', 'ancestor', 'statut', 'habitat', 'trait', 'partner']),
+  "type": zod.enum(['species', 'hub', 'ancestor', 'statut', 'habitat', 'trait', 'partner', 'distribution', 'evidence']),
+  "category": zod.enum(['taxonomie', 'conservation', 'ecologie', 'traits', 'distribution', 'interactions', 'sources']),
   "label": zod.string(),
   "sub": zod.string().nullable(),
   "cdNom": zod.number().nullable(),
   "rang": zod.string().nullable(),
-  "group": zod.string().nullable()
+  "group": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "confidence": zod.string().nullable(),
+  "url": zod.string().nullable()
 })),
   "links": zod.array(zod.object({
   "source": zod.string(),
   "target": zod.string(),
   "label": zod.string().nullable(),
-  "kind": zod.enum(['species', 'ancestor', 'statut', 'habitat', 'trait', 'partner'])
+  "kind": zod.enum(['species', 'hub', 'ancestor', 'statut', 'habitat', 'trait', 'partner', 'distribution', 'evidence', 'sources'])
 }))
 })
 
