@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
 import ForceGraph3D from "react-force-graph-3d";
+import SpriteText from "three-spritetext";
 import {
   useSearchTaxons,
   getSearchTaxonsQueryKey,
@@ -508,6 +509,33 @@ export default function Reseau() {
               const g = n as GNode;
               const label = g.type === "hub" ? t(`reseau.hub.${g.group}`) : g.label;
               return `<div style="padding:2px 6px;border-radius:6px;background:rgba(5,7,13,0.85);color:#e2e8f0;font:12px Inter,system-ui,sans-serif">${label}</div>`;
+            }}
+            nodeThreeObjectExtend
+            nodeThreeObject={(n) => {
+              const g = n as GNode;
+              const raw =
+                g.type === "hub" ? t(`reseau.hub.${g.group}`) : g.label;
+              const label = raw.length > 28 ? `${raw.slice(0, 27)}…` : raw;
+              const sprite = new SpriteText(label);
+              sprite.color =
+                g.id === centerId ? "#ffffff" : "rgba(226,232,240,0.9)";
+              sprite.textHeight =
+                g.id === centerId ? 5 : g.type === "hub" ? 4 : 3;
+              sprite.fontFace = "Inter, system-ui, sans-serif";
+              sprite.fontWeight = g.type === "hub" || g.id === centerId ? "600" : "400";
+              const nodeVal =
+                g.id === centerId
+                  ? 14
+                  : g.type === "species"
+                    ? 8
+                    : g.type === "hub"
+                      ? 6
+                      : g.type === "ancestor" || g.type === "partner"
+                        ? 4
+                        : 2.5;
+              // Lift the label just above the sphere (radius ~ cbrt(val)*4).
+              sprite.position.set(0, Math.cbrt(nodeVal) * 4 + 2.5, 0);
+              return sprite;
             }}
             linkColor={() => "rgba(148,163,184,0.28)"}
             linkOpacity={0.28}
