@@ -395,9 +395,17 @@ export default function Reseau() {
     [loadGraph, viewMode],
   );
 
-  const handleNodeClick = useCallback((node: GNode) => {
-    setSelectedId(node.id);
-  }, []);
+  const handleNodeClick = useCallback(
+    (node: GNode) => {
+      setSelectedId(node.id);
+      // Clicking a taxon reveals its connected nodes (its own neighbourhood).
+      // Hubs have no taxon, and the centre is already expanded.
+      if (node.type !== "hub" && node.cdNom && node.id !== centerId) {
+        expandNode(node);
+      }
+    },
+    [expandNode, centerId],
+  );
 
   // Right-click stays a power-user shortcut to expand a taxon in place.
   const handleNodeRightClick = useCallback(
