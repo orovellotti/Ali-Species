@@ -65,6 +65,16 @@ const LAYER_ORDER: Category[] = [
 ];
 const REAL_CATEGORIES: Category[] = LAYER_ORDER.filter((c) => c !== "ia");
 
+// Layer groups: species-own attributes vs interspecific relations vs meta.
+const LAYER_GROUPS: { key: "attributs" | "relations" | "meta"; layers: Category[] }[] = [
+  {
+    key: "attributs",
+    layers: ["taxonomie", "ecologie", "conservation", "traits", "distribution"],
+  },
+  { key: "relations", layers: ["interactions"] },
+  { key: "meta", layers: ["sources", "ia"] },
+];
+
 const CATEGORY_COLORS: Record<Category, string> = {
   taxonomie: "#a78bfa",
   ecologie: "#34d399",
@@ -541,87 +551,102 @@ export default function Reseau() {
         )}
 
         {/* Top-center: layer filter bar */}
-        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4 md:pr-40">
-          <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-black/60 px-2 py-2 backdrop-blur-md shadow-xl">
-            {LAYER_ORDER.map((c) => {
-              const disabled = c === "ia";
-              const active = !disabled && activeLayers.has(c);
-              const color = CATEGORY_COLORS[c];
-              return (
-                <button
-                  key={c}
-                  disabled={disabled}
-                  onClick={() => !disabled && onLayerButton(c)}
-                  title={
-                    disabled
-                      ? t("reseau.soon")
-                      : t("reseau.controls.focusHint")
-                  }
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    disabled
-                      ? "cursor-not-allowed border-white/5 bg-white/5 text-slate-500"
-                      : active
-                        ? "border-transparent text-slate-900"
-                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-                  }`}
-                  style={
-                    active && !disabled
-                      ? { background: color, boxShadow: `0 0 10px ${color}66` }
-                      : undefined
-                  }
-                  data-testid={`layer-${c}`}
-                >
-                  <span
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{
-                      background: active && !disabled ? "#0f172a" : color,
-                    }}
-                  />
-                  {t(`reseau.layers.${c}`)}
-                  {disabled && (
-                    <span className="ml-1 rounded bg-white/10 px-1 text-[9px] uppercase tracking-wide text-slate-400">
-                      {t("reseau.soon")}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4">
+          <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-2 rounded-2xl border border-white/10 bg-black/60 px-2 py-2 backdrop-blur-md shadow-xl">
+            {LAYER_GROUPS.map((group, gi) => (
+              <div key={group.key} className="flex items-center gap-1.5">
+                {gi > 0 && (
+                  <span className="mx-0.5 hidden h-6 w-px bg-white/15 sm:block" />
+                )}
+                {group.key !== "meta" && (
+                  <span className="mr-0.5 hidden text-[10px] font-semibold uppercase tracking-wide text-slate-500 lg:block">
+                    {t(`reseau.groups.${group.key}`)}
+                  </span>
+                )}
+                {group.layers.map((c) => {
+                  const disabled = c === "ia";
+                  const active = !disabled && activeLayers.has(c);
+                  const color = CATEGORY_COLORS[c];
+                  return (
+                    <button
+                      key={c}
+                      disabled={disabled}
+                      onClick={() => !disabled && onLayerButton(c)}
+                      title={
+                        disabled
+                          ? t("reseau.soon")
+                          : t("reseau.controls.focusHint")
+                      }
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        disabled
+                          ? "cursor-not-allowed border-white/5 bg-white/5 text-slate-500"
+                          : active
+                            ? "border-transparent text-slate-900"
+                            : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      }`}
+                      style={
+                        active && !disabled
+                          ? { background: color, boxShadow: `0 0 10px ${color}66` }
+                          : undefined
+                      }
+                      data-testid={`layer-${c}`}
+                    >
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{
+                          background: active && !disabled ? "#0f172a" : color,
+                        }}
+                      />
+                      {t(`reseau.layers.${c}`)}
+                      {disabled && (
+                        <span className="ml-1 rounded bg-white/10 px-1 text-[9px] uppercase tracking-wide text-slate-400">
+                          {t("reseau.soon")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
 
-            <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
-
-            <button
-              onClick={showAll}
-              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10"
-              data-testid="button-show-all"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              {t("reseau.controls.showAll")}
-            </button>
-            <button
-              onClick={hideAll}
-              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10"
-              data-testid="button-hide-all"
-            >
-              <EyeOff className="h-3.5 w-3.5" />
-              {t("reseau.controls.hideAll")}
-            </button>
           </div>
         </div>
 
-        {/* Top-right: recenter */}
-        <button
-          onClick={() => graphRef.current?.zoomToFit(500, 60)}
-          className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 text-xs text-slate-200 backdrop-blur-md hover:bg-black/80"
-          data-testid="button-recenter"
-        >
-          <Crosshair className="h-4 w-4" />
-          {t("reseau.reset")}
-        </button>
+        {/* Bottom-right: show/hide + recenter */}
+        <div className="absolute right-4 bottom-16 z-10 flex items-center gap-1.5">
+          <button
+            onClick={showAll}
+            title={t("reseau.controls.showAll")}
+            aria-label={t("reseau.controls.showAll")}
+            className="flex items-center justify-center rounded-full border border-white/10 bg-black/60 p-2 text-slate-200 backdrop-blur-md hover:bg-black/80"
+            data-testid="button-show-all"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
+            onClick={hideAll}
+            title={t("reseau.controls.hideAll")}
+            aria-label={t("reseau.controls.hideAll")}
+            className="flex items-center justify-center rounded-full border border-white/10 bg-black/60 p-2 text-slate-200 backdrop-blur-md hover:bg-black/80"
+            data-testid="button-hide-all"
+          >
+            <EyeOff className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => graphRef.current?.zoomToFit(500, 60)}
+            title={t("reseau.reset")}
+            aria-label={t("reseau.reset")}
+            className="flex items-center justify-center rounded-full border border-white/10 bg-black/60 p-2 text-slate-200 backdrop-blur-md hover:bg-black/80"
+            data-testid="button-recenter"
+          >
+            <Crosshair className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* Right: detail panel */}
         {selectedNode && (
           <aside
-            className="absolute right-4 top-16 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-md shadow-2xl"
+            className="absolute right-4 top-28 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-md shadow-2xl"
             data-testid="node-panel"
           >
             <div className="flex items-start justify-between gap-2">
@@ -731,7 +756,7 @@ export default function Reseau() {
         )}
 
         {/* Top-left: search */}
-        <div className="absolute left-4 top-16 z-10 flex flex-col gap-2">
+        <div className="absolute left-4 top-28 z-10 flex flex-col gap-2">
           {searchOpen ? (
             <div className="w-72 rounded-xl border border-white/10 bg-black/60 backdrop-blur-md shadow-2xl">
               <div className="flex items-center gap-2 px-3 py-2">

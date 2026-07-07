@@ -42,8 +42,13 @@ export const fr = {
       traits: "Traits",
       distribution: "Distribution",
       interactions: "Interactions",
-      sources: "Sources & preuves",
+      sources: "Sources",
       ia: "Raisonnement IA",
+    },
+    groups: {
+      attributs: "Attributs de l'espèce",
+      relations: "Relations interspécifiques",
+      meta: "Sources & IA",
     },
     controls: {
       showAll: "Tout afficher",

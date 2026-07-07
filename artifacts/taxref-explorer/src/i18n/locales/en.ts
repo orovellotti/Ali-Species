@@ -42,8 +42,13 @@ export const en = {
       traits: "Traits",
       distribution: "Distribution",
       interactions: "Interactions",
-      sources: "Sources & evidence",
+      sources: "Sources",
       ia: "AI reasoning",
+    },
+    groups: {
+      attributs: "Species attributes",
+      relations: "Interspecific relations",
+      meta: "Sources & AI",
     },
     controls: {
       showAll: "Show all",
