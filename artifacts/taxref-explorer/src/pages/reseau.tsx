@@ -137,9 +137,9 @@ export default function Reseau() {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Layer visibility. All real layers on by default.
+  // Layer visibility. All real layers on by default, except taxonomy.
   const [activeLayers, setActiveLayers] = useState<Set<Category>>(
-    () => new Set(REAL_CATEGORIES),
+    () => new Set(REAL_CATEGORIES.filter((c) => c !== "taxonomie")),
   );
 
   const [searchOpen, setSearchOpen] = useState(false);
