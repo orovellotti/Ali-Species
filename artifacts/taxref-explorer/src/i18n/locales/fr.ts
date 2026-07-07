@@ -54,6 +54,9 @@ export const fr = {
       showAll: "Tout afficher",
       hideAll: "Tout masquer",
       focusHint: "Clic : afficher/masquer · double-clic : isoler ce calque",
+      view2D: "Vue 2D",
+      view3D: "Vue 3D",
+      no3d: "Vue 3D indisponible sur cet appareil (WebGL requis).",
     },
     panel: {
       close: "Fermer",

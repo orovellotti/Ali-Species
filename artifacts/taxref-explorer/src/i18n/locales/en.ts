@@ -54,6 +54,9 @@ export const en = {
       showAll: "Show all",
       hideAll: "Hide all",
       focusHint: "Click: show/hide · double-click: isolate this layer",
+      view2D: "2D view",
+      view3D: "3D view",
+      no3d: "3D view unavailable on this device (WebGL required).",
     },
     panel: {
       close: "Close",

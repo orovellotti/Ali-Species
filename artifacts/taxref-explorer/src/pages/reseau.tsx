@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
+import ForceGraph3D from "react-force-graph-3d";
 import {
   useSearchTaxons,
   getSearchTaxonsQueryKey,
@@ -24,6 +25,7 @@ import type {
   GraphLink as ApiGraphLink,
 } from "@workspace/api-client-react";
 import { taxonUrl } from "@/lib/constants";
+import { GraphErrorBoundary } from "@/components/GraphErrorBoundary";
 
 type NodeType = ApiGraphNode["type"];
 type Category =
@@ -50,6 +52,11 @@ interface GLink {
   target: string | GNode;
   label: string | null;
   kind: ApiGraphLink["kind"];
+}
+
+// Minimal handle on the 3D graph methods we actually call.
+interface Graph3DMethods {
+  zoomToFit: (ms?: number, px?: number) => void;
 }
 
 // Real data layers, in display order, plus the "ia" placeholder (disabled).
@@ -118,6 +125,8 @@ export default function Reseau() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<ForceGraphMethods<GNode, GLink> | undefined>(undefined);
+  const graph3dRef = useRef<Graph3DMethods | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   const [nodes, setNodes] = useState<GNode[]>([]);
@@ -252,6 +261,15 @@ export default function Reseau() {
   // own pinned hub, so each theme reads as its own region.
   useEffect(() => {
     if (!centerId || nodes.length === 0) return;
+    // In 3D we let the simulation settle naturally in space (no plane pinning),
+    // which reads as depth across the multi-level hierarchy.
+    if (viewMode === "3d") {
+      for (const n of nodes) {
+        n.fx = undefined;
+        n.fy = undefined;
+      }
+      return;
+    }
     // Spread the seven hubs evenly (~51° apart) around the centre so each theme
     // owns a distinct sector and their leaf clusters never overlap. Lineage
     // sits on the left, where its chain trails off.
@@ -313,7 +331,7 @@ export default function Reseau() {
       g.d3ReheatSimulation();
     });
     return () => cancelAnimationFrame(raf);
-  }, [size.width, nodes.length, centerId]);
+  }, [size.width, nodes.length, centerId, viewMode]);
 
   // --- Layer filtering -------------------------------------------------------
   const visibleNodes = useMemo(
@@ -365,11 +383,15 @@ export default function Reseau() {
     (node: GNode) => {
       if (node.cdNom) {
         void loadGraph(node.cdNom, "merge");
-        graphRef.current?.centerAt(node.x, node.y, 600);
-        graphRef.current?.zoom(2, 600);
+        if (viewMode === "2d") {
+          graphRef.current?.centerAt(node.x, node.y, 600);
+          graphRef.current?.zoom(2, 600);
+        } else {
+          graph3dRef.current?.zoomToFit(600, 80);
+        }
       }
     },
-    [loadGraph],
+    [loadGraph, viewMode],
   );
 
   const handleNodeClick = useCallback((node: GNode) => {
@@ -390,9 +412,10 @@ export default function Reseau() {
       setSearchOpen(false);
       setQuery("");
       void loadGraph(cdNom, "replace");
-      graphRef.current?.zoomToFit(600, 60);
+      if (viewMode === "2d") graphRef.current?.zoomToFit(600, 60);
+      else graph3dRef.current?.zoomToFit(600, 80);
     },
-    [loadGraph],
+    [loadGraph, viewMode],
   );
 
   // Single click on a layer button toggles it; double click focuses on it
@@ -453,7 +476,71 @@ export default function Reseau() {
           }}
         />
 
-        {size.width > 0 && (
+        {size.width > 0 && viewMode === "3d" && (
+          <GraphErrorBoundary
+            onError={() => setViewMode("2d")}
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-slate-400">
+                {t("reseau.controls.no3d")}
+              </div>
+            }
+          >
+          <ForceGraph3D
+            ref={graph3dRef as never}
+            graphData={graphData}
+            width={size.width}
+            height={size.height}
+            backgroundColor="#05070d"
+            nodeId="id"
+            showNavInfo={false}
+            nodeColor={(n) => nodeColor(n as GNode, centerId)}
+            nodeVal={(n) => {
+              const g = n as GNode;
+              if (g.id === centerId) return 14;
+              if (g.type === "species") return 8;
+              if (g.type === "hub") return 6;
+              if (g.type === "ancestor" || g.type === "partner") return 4;
+              return 2.5;
+            }}
+            nodeOpacity={0.95}
+            nodeResolution={14}
+            nodeLabel={(n) => {
+              const g = n as GNode;
+              const label = g.type === "hub" ? t(`reseau.hub.${g.group}`) : g.label;
+              return `<div style="padding:2px 6px;border-radius:6px;background:rgba(5,7,13,0.85);color:#e2e8f0;font:12px Inter,system-ui,sans-serif">${label}</div>`;
+            }}
+            linkColor={() => "rgba(148,163,184,0.28)"}
+            linkOpacity={0.28}
+            linkWidth={0.4}
+            linkDirectionalParticles={2}
+            linkDirectionalParticleWidth={1.4}
+            linkDirectionalParticleSpeed={0.006}
+            linkDirectionalParticleColor={(l) => {
+              const s = idOf((l as GLink).source);
+              const tg = idOf((l as GLink).target);
+              const hub = s.startsWith("hub:")
+                ? s
+                : tg.startsWith("hub:")
+                  ? tg
+                  : null;
+              const cat = hub
+                ? (nodes.find((n) => n.id === hub)?.category as Category)
+                : undefined;
+              return (cat && CATEGORY_COLORS[cat]) || "#94a3b8";
+            }}
+            onNodeHover={(n) => setHoverId(n ? (n as GNode).id : null)}
+            onNodeClick={(n) => handleNodeClick(n as GNode)}
+            onNodeRightClick={(n) => handleNodeRightClick(n as GNode)}
+            onBackgroundClick={() => {
+              setHoverId(null);
+              setSelectedId(null);
+            }}
+            onEngineStop={() => graph3dRef.current?.zoomToFit(600, 80)}
+          />
+          </GraphErrorBoundary>
+        )}
+
+        {size.width > 0 && viewMode === "2d" && (
           <ForceGraph2D
             ref={graphRef as never}
             graphData={graphData}
@@ -614,6 +701,25 @@ export default function Reseau() {
 
         {/* Bottom-right: show/hide + recenter */}
         <div className="absolute right-4 bottom-16 z-10 flex items-center gap-1.5">
+          <div className="mr-1 flex overflow-hidden rounded-full border border-white/10 bg-black/60 backdrop-blur-md">
+            {(["2d", "3d"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setViewMode(m)}
+                title={t(`reseau.controls.view${m === "2d" ? "2D" : "3D"}`)}
+                aria-label={t(`reseau.controls.view${m === "2d" ? "2D" : "3D"}`)}
+                aria-pressed={viewMode === m}
+                className={`px-3 py-2 text-xs font-semibold uppercase transition ${
+                  viewMode === m
+                    ? "bg-sky-500 text-white"
+                    : "text-slate-300 hover:bg-white/10"
+                }`}
+                data-testid={`button-view-${m}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           <button
             onClick={showAll}
             title={t("reseau.controls.showAll")}
@@ -633,7 +739,11 @@ export default function Reseau() {
             <EyeOff className="h-4 w-4" />
           </button>
           <button
-            onClick={() => graphRef.current?.zoomToFit(500, 60)}
+            onClick={() =>
+              viewMode === "2d"
+                ? graphRef.current?.zoomToFit(500, 60)
+                : graph3dRef.current?.zoomToFit(500, 80)
+            }
             title={t("reseau.reset")}
             aria-label={t("reseau.reset")}
             className="flex items-center justify-center rounded-full border border-white/10 bg-black/60 p-2 text-slate-200 backdrop-blur-md hover:bg-black/80"
