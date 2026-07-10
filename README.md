@@ -1,77 +1,77 @@
 # ALi Species
 
-Webapp pour explorer le référentiel taxonomique français **TAXREF v18** (~708 000 espèces) : recherche, statuts de conservation BdC, traits biologiques, interactions trophiques, agent conversationnel, MCP et SPARQL.
+Webapp for exploring the French taxonomic reference **TAXREF v18** (~708,000 species): search, BdC conservation statuses, biological traits, trophic interactions, conversational agent, MCP and SPARQL.
 
-**Production** : <https://alispecies.io>
-
----
-
-## C'est quoi
-
-ALi Species agrège plusieurs sources de données sur la biodiversité française et les rend explorables au même endroit :
-
-- **TAXREF v18** (MNHN) — le référentiel taxonomique national, 708 685 taxons.
-- **BDC Statuts v18** — 447 664 statuts de conservation (Listes rouges, protections, directives, conventions).
-- **Traits biologiques** — PanTHERIA (mammifères), AVONET (oiseaux), AmphiBIO (amphibiens) + Wikidata.
-- **Interactions trophiques** — GloBI (qui mange qui).
-- **Enrichissements externes** — Wikipedia, GBIF, Wikimedia Commons, Biodiversity Heritage Library.
-
-Le tout est requêtable de plusieurs façons : interface web, API REST, agent en langage naturel, serveur MCP (pour assistants IA), et endpoint SPARQL.
+**Production**: <https://alispecies.io>
 
 ---
 
-## Stack en bref
+## What it is
 
-pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · React + Vite + Tailwind + shadcn/ui · PostgreSQL + Drizzle · Zod (`zod/v4`) · Orval (codegen depuis OpenAPI) · esbuild · wouter (front) + Express (back).
+ALi Species aggregates several French biodiversity data sources and makes them explorable in one place:
 
-Monorepo organisé en `artifacts/` (apps déployables) et `lib/` (libs partagées). Voir la skill `pnpm-workspace` pour la structure et la config TypeScript.
+- **TAXREF v18** (MNHN) — the national taxonomic reference, 708,685 taxa.
+- **BDC Statuts v18** — 447,664 conservation statuses (Red Lists, protections, directives, conventions).
+- **Biological traits** — PanTHERIA (mammals), AVONET (birds), AmphiBIO (amphibians) + Wikidata.
+- **Trophic interactions** — GloBI (who eats whom).
+- **External enrichments** — Wikipedia, GBIF, Wikimedia Commons, Biodiversity Heritage Library.
+
+Everything is queryable in several ways: web interface, REST API, natural-language agent, MCP server (for AI assistants), and SPARQL endpoint.
 
 ---
 
-## Démarrage rapide
+## Stack at a glance
 
-Prérequis : Node 24, pnpm, une base PostgreSQL (`DATABASE_URL`).
+pnpm workspaces · Node 24 · TypeScript 5.9 · Express 5 · React + Vite + Tailwind + shadcn/ui · PostgreSQL + Drizzle · Zod (`zod/v4`) · Orval (codegen from OpenAPI) · esbuild · wouter (front) + Express (back).
+
+Monorepo organized into `artifacts/` (deployable apps) and `lib/` (shared libraries). See the `pnpm-workspace` skill for the structure and TypeScript setup.
+
+---
+
+## Quick start
+
+Prerequisites: Node 24, pnpm, a PostgreSQL database (`DATABASE_URL`).
 
 ```bash
-pnpm install                                          # installe les dépendances
-pnpm --filter @workspace/db run push                  # crée le schéma (dev)
-pnpm --filter @workspace/scripts run import-taxref     # importe les données TAXREF + BdC
-pnpm --filter @workspace/api-server run dev            # lance l'API
-pnpm --filter @workspace/taxref-explorer run dev       # lance le front
+pnpm install                                          # install dependencies
+pnpm --filter @workspace/db run push                  # create the schema (dev)
+pnpm --filter @workspace/scripts run import-taxref     # import TAXREF + BdC data
+pnpm --filter @workspace/api-server run dev            # start the API
+pnpm --filter @workspace/taxref-explorer run dev       # start the front end
 ```
 
-> Sur Replit, les apps tournent via les workflows configurés — pas besoin de lancer `pnpm dev` à la main.
+> On Replit, apps run via the configured workflows — no need to run `pnpm dev` manually.
 
-Données source attendues : `data/TAXREFv18.txt`, `data/bdc_18_01.csv`.
+Expected source data: `data/TAXREFv18.txt`, `data/bdc_18_01.csv`.
 
 ---
 
-## Commandes utiles
+## Useful commands
 
 ```bash
-pnpm run typecheck                                     # typecheck complet (tous les packages)
+pnpm run typecheck                                     # full typecheck (all packages)
 pnpm run build                                         # typecheck + build
-pnpm --filter @workspace/api-spec run codegen          # régénère hooks + schémas Zod depuis l'OpenAPI
+pnpm --filter @workspace/api-spec run codegen          # regenerate hooks + Zod schemas from OpenAPI
 ```
 
-La liste complète (ingestion des traits, export RDF, matérialisation Wikidata/GloBI, build des index) est dans [`docs/API.md`](docs/API.md#key-commands).
+The full list (trait ingestion, RDF export, Wikidata/GloBI materialization, index builds) is in [`docs/API.md`](docs/API.md#key-commands).
 
 ---
 
 ## Documentation
 
-La doc technique est éclatée par thème dans `docs/` :
+The technical docs are split by topic under `docs/`:
 
-- [`docs/STACK.md`](docs/STACK.md) — Stack, pipeline de données, schéma DB, tables annexes (`external_cache`, `taxon_search_index`).
-- [`docs/API.md`](docs/API.md) — Endpoints REST, agent `/api/ask`, MCP, APIs externes, commandes pnpm.
-- [`docs/FRONTEND.md`](docs/FRONTEND.md) — Pages, URLs canoniques (`/taxon/:slug`), UX taxon, SEO, layout responsive.
-- [`docs/SHARE.md`](docs/SHARE.md) — Share answer (chat), Share discovery (carte virale), routes serveur `/share` + `/api/og`.
-- [`docs/RDF-SPARQL.md`](docs/RDF-SPARQL.md) — Vocabulaires RDF, dump TTL, Oxigraph, runbook de refresh.
-- [`docs/TRAITS.md`](docs/TRAITS.md) — Sources de traits (PanTHERIA, AVONET, AmphiBIO), exposition MCP.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Vue d'ensemble grand public (non technique).
+- [`docs/STACK.md`](docs/STACK.md) — Stack, data pipeline, DB schema, auxiliary tables (`external_cache`, `taxon_search_index`).
+- [`docs/API.md`](docs/API.md) — REST endpoints, `/api/ask` agent, MCP, external APIs, pnpm commands.
+- [`docs/FRONTEND.md`](docs/FRONTEND.md) — Pages, canonical URLs (`/taxon/:slug`), taxon UX, SEO, responsive layout.
+- [`docs/SHARE.md`](docs/SHARE.md) — Share answer (chat), Share discovery (viral card), server routes `/share` + `/api/og`.
+- [`docs/RDF-SPARQL.md`](docs/RDF-SPARQL.md) — RDF vocabularies, TTL dump, Oxigraph, refresh runbook.
+- [`docs/TRAITS.md`](docs/TRAITS.md) — Trait sources (PanTHERIA, AVONET, AmphiBIO), MCP exposure.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — General-audience overview (non-technical).
 
 ---
 
-## Licence & données
+## License & data
 
-Les données proviennent de TAXREF / BDC Statuts (MNHN — INPN), GBIF, GloBI, Wikidata, Wikipedia et de la Biodiversity Heritage Library. Merci de respecter les licences et conditions de réutilisation de chaque source.
+Data comes from TAXREF / BDC Statuts (MNHN — INPN), GBIF, GloBI, Wikidata, Wikipedia, and the Biodiversity Heritage Library. Please respect each source's licenses and reuse conditions.
