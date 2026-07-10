@@ -4,6 +4,8 @@ Webapp for exploring the French taxonomic reference **TAXREF v18** (~708,000 spe
 
 **Production**: <https://alispecies.io>
 
+Built by [Natural Solutions](https://www.natural-solutions.eu/).
+
 ---
 
 ## What it is
