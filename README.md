@@ -1,6 +1,6 @@
 # ALi Species
 
-Webapp for exploring the French taxonomic reference **TAXREF v18** (~708,000 species): search, BdC conservation statuses, biological traits, trophic interactions, conversational agent, MCP and SPARQL.
+A **biodiversity knowledge graph** for France, built on the taxonomic reference **TAXREF v18** (~708,000 species): search, BdC conservation statuses, biological traits, trophic interactions, conversational agent, MCP and SPARQL.
 
 **Production**: <https://alispecies.io>
 
@@ -10,15 +10,17 @@ Built by [Natural Solutions](https://www.natural-solutions.eu/).
 
 ## What it is
 
-ALi Species aggregates several French biodiversity data sources and makes them explorable in one place:
+ALi Species is a **biodiversity knowledge graph**: instead of keeping each dataset in its own silo, it connects species, their conservation statuses, their traits, and their ecological interactions into a single, navigable graph. Every taxon becomes a node linked to the others through shared lineage, habitats, and trophic relationships — so you can move from one species to the next by following real ecological connections, not just by browsing a flat list.
 
-- **TAXREF v18** (MNHN) — the national taxonomic reference, 708,685 taxa.
+It weaves together several French biodiversity data sources:
+
+- **TAXREF v18** (MNHN) — the national taxonomic reference, 708,685 taxa (the graph's backbone).
 - **BDC Statuts v18** — 447,664 conservation statuses (Red Lists, protections, directives, conventions).
 - **Biological traits** — PanTHERIA (mammals), AVONET (birds), AmphiBIO (amphibians) + Wikidata.
-- **Trophic interactions** — GloBI (who eats whom).
+- **Trophic interactions** — GloBI (who eats whom), the edges that link species together.
 - **External enrichments** — Wikipedia, GBIF, Wikimedia Commons, Biodiversity Heritage Library.
 
-Everything is queryable in several ways: web interface, REST API, natural-language agent, MCP server (for AI assistants), and SPARQL endpoint.
+The graph is queryable in several ways: an interactive web explorer, a REST API, a natural-language agent, an MCP server (for AI assistants), and a SPARQL endpoint over the RDF representation.
 
 ---
 
