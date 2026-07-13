@@ -47,3 +47,9 @@ id = "nH1v5dRUi52htNku92xB8"
 uri = "file://exports/email-richard-ali-species.md"
 type = "text"
 title = "Email to Richard — ALi Species & Abu Dhabi adaptation"
+
+[[outputs]]
+id = "2uniG6omYM3omMfD67zFo"
+uri = "file://content/blog/intelligence-artificielle-et-biodiversite.md"
+type = "text"
+title = "Article SEO — IA et biodiversité (blog Natural Solutions)"
