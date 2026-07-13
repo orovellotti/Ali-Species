@@ -85,10 +85,10 @@ router.get("/taxons/:cdNom/profile", async (req, res): Promise<void> => {
   const summary = await readProfileSummary(cdNom);
   if (summary) {
     // Cheap DB blocks always run live (classification, children, statuts,
-    // interactions). Sensitivity is recomputed from statuts so the full
-    // breakdown (ecological/regulatory/territorial/management) stays
-    // internally consistent with the global score, regardless of what was
-    // persisted in the summary row.
+    // interactions). Patrimonialité is recomputed from statuts so the full
+    // breakdown (ecological/regulatory/territorial) stays internally
+    // consistent with the global score, regardless of what was persisted in
+    // the summary row.
     const [classificationR, childrenSummaryR, statutsR, interactionsSummaryR, eunisR, habrefR] =
       await Promise.allSettled([
         fetchClassification(cdNom),

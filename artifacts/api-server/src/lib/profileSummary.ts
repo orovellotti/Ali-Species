@@ -34,11 +34,10 @@ export async function readProfileSummary(cdNom: number): Promise<ProfileSummaryR
   const drivers = (row.sensitivityDrivers as SensitivityResult["drivers"] | null) ?? [];
   const sensitivity: SensitivityResult = {
     score: row.sensitivityScore ?? 0,
-    label: row.sensitivityLabel ?? "Sensibilité non évaluée",
+    label: row.sensitivityLabel ?? "Patrimonialité non évaluée",
     ecological: 0,
     regulatory: 0,
     territorial: 0,
-    management: 0,
     drivers,
   };
   const media: MediaResult = row.bestImageUrl

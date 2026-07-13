@@ -739,8 +739,6 @@ components:
           type: number
         territorial:
           type: number
-        management:
-          type: number
         drivers:
           type: array
           items:
@@ -751,7 +749,6 @@ components:
         - ecological
         - regulatory
         - territorial
-        - management
         - drivers
     ChildrenSummary:
       type: object

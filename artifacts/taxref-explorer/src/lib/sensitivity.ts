@@ -22,7 +22,6 @@ export interface SensitivityResult {
   ecological: number;
   regulatory: number;
   territorial: number;
-  management: number;
   label: string;
   color: string;
   bgColor: string;
@@ -113,7 +112,6 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
   const ecological = bestRedList;
   const regulatory = Math.max(protectionScore, directiveScore, conventionScore);
   const territorial = (hasZnieff || hasPna) ? (znieffScore + pnaScore) / ((hasZnieff ? 1 : 0) + (hasPna ? 1 : 0)) : 0;
-  const management = invasiveScore;
 
   // Patrimonialité = valeur de conservation d'un taxon. On n'agrège que les axes
   // qui font la valeur patrimoniale (menace écologique, protection réglementaire,
@@ -272,5 +270,5 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
     ringColor = "stroke-green-500";
   }
 
-  return { score, ecological, regulatory, territorial, management, label, color, bgColor, borderColor, ringColor, drivers, explanations, inconsistencies, missingData };
+  return { score, ecological, regulatory, territorial, label, color, bgColor, borderColor, ringColor, drivers, explanations, inconsistencies, missingData };
 }

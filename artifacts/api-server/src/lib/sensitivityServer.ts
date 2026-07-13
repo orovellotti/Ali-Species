@@ -1,8 +1,8 @@
-// Server-side sensitivity computation (subset of taxon.tsx computeSensitivity).
+// Server-side patrimonialité (conservation value) computation.
 // Returns score + label + drivers (no Tailwind classes — those stay client-side).
 // Kept in sync with the canonical computeSensitivity in
-// artifacts/taxref-explorer/src/pages/taxon.tsx — when you change the algorithm
-// there, update this file too.
+// artifacts/taxref-explorer/src/lib/sensitivity.ts — when you change the
+// algorithm or the barème there, update this file too.
 
 export interface ServerStatut {
   cdTypeStatut: string | null;
@@ -25,7 +25,6 @@ export interface ServerSensitivity {
   ecological: number;
   regulatory: number;
   territorial: number;
-  management: number;
   drivers: ServerSensitivityDriver[];
 }
 
@@ -124,7 +123,6 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
   const territorial = (hasZnieff || hasPna)
     ? (znieffScore + pnaScore) / ((hasZnieff ? 1 : 0) + (hasPna ? 1 : 0))
     : 0;
-  const management = invasiveScore;
 
   // Patrimonialité (valeur de conservation) : la gestion/EEE n'est pas
   // patrimoniale et reste hors du score. Doit rester synchronisé avec le calcul
@@ -200,5 +198,5 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
   else if (score >= 25) label = "Patrimonialité modérée";
   else label = "Patrimonialité faible";
 
-  return { score, label, ecological, regulatory, territorial, management, drivers };
+  return { score, label, ecological, regulatory, territorial, drivers };
 }
