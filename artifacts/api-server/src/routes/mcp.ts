@@ -12,6 +12,7 @@ import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
 import { fetchEunis, fetchTaxonRow, fetchHabref } from "../lib/profileFetchers.js";
+import { computeSensitivityServer } from "../lib/sensitivityServer.js";
 
 const SPARQL_UPSTREAM = process.env.OXIGRAPH_HTTP ?? "http://127.0.0.1:9000";
 
@@ -37,7 +38,7 @@ function notFound(message: string) {
 
 function buildServer(): McpServer {
   const server = new McpServer(
-    { name: "ali-species-mcp", version: "1.5.0" },
+    { name: "ali-species-mcp", version: "1.6.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -218,7 +219,8 @@ function buildServer(): McpServer {
     "get_statuts",
     {
       title: "Statuts de conservation d'un taxon",
-      description: "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon.",
+      description:
+        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Le caractère envahissant (EEE) est signalé dans les drivers mais n'entre pas dans le score.",
       inputSchema: { cdNom: z.number().int() },
     },
     async ({ cdNom }) => {
@@ -235,7 +237,8 @@ function buildServer(): McpServer {
         })
         .from(bdcStatutsTable)
         .where(eq(bdcStatutsTable.cdNom, cdNom));
-      return toJson(rows);
+      const patrimonialite = computeSensitivityServer(rows);
+      return toJson({ patrimonialite, statuts: rows });
     },
   );
 

@@ -328,7 +328,6 @@ export const GetTaxonProfileResponse = zod.object({
   "ecological": zod.number(),
   "regulatory": zod.number(),
   "territorial": zod.number(),
-  "management": zod.number(),
   "drivers": zod.array(zod.object({
   "label": zod.string(),
   "code": zod.string().nullish(),

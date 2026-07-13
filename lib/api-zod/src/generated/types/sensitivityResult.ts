@@ -13,6 +13,5 @@ export interface SensitivityResult {
   ecological: number;
   regulatory: number;
   territorial: number;
-  management: number;
   drivers: SensitivityDriver[];
 }

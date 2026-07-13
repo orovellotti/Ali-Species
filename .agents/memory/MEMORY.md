@@ -1,5 +1,6 @@
 - [react-force-graph pinning](react-force-graph-pinning.md) — fx/fy set after graphData ingest are ignored; hard-set x/y in onEngineTick, clear stale anchors on centre change.
 - [Dev preview API cache](dev-preview-api-cache.md) — route Cache-Control max-age serves stale data in preview; gate on prod + client cache:"no-store" in dev.
+- [Patrimonialité scoring](sensitivity-scoring.md) — conservation-value score (éco/régl/territorial, EEE hors score) dupliqué client+serveur ; barème Liste rouge diverge entre les deux.
 - [EUNIS habitats source](eunis-habitats.md) — no API; scrape HTML factsheet by scientific name; RDF/SPARQL are dead; vertebrate-only coverage.
 - [HABREF source espèce↔habitat](habref-source.md) — source bulk offline PatriNat : jointe cd_nom TAXREF, couvre flore + partiellement vertébrés, sémantique ≠ EUNIS.
 - [Vite react-babel + JSX generics](vite-babel-jsx-generics.md) — génériques sur un élément JSX (`<Comp<T>>`) crashent le parser react-babel (HTTP 500) même si tsc passe ; retirer les args de type du JSX.
