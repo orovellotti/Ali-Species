@@ -11,20 +11,21 @@ export function ScoreRing({ score, ringColor, size = 80 }: { score: number; ring
 }
 
 export function SensitivityRadar({
-  ecological, regulatory, territorial, management, fillClass, strokeClass,
+  ecological, regulatory, territorial, fillClass, strokeClass,
 }: {
-  ecological: number; regulatory: number; territorial: number; management: number;
+  ecological: number; regulatory: number; territorial: number;
   fillClass: string; strokeClass: string;
 }) {
   const size = 180;
   const cx = size / 2;
   const cy = size / 2;
   const r = 62;
+  // Patrimonialité : trois axes de valeur de conservation (la gestion/EEE n'en
+  // fait pas partie).
   const axes = [
     { label: "Ecologique", value: ecological, angle: -Math.PI / 2 },
-    { label: "Reglementaire", value: regulatory, angle: 0 },
-    { label: "Territorial", value: territorial, angle: Math.PI / 2 },
-    { label: "Gestion", value: management, angle: Math.PI },
+    { label: "Reglementaire", value: regulatory, angle: Math.PI / 6 },
+    { label: "Territorial", value: territorial, angle: (5 * Math.PI) / 6 },
   ];
   const point = (v: number, angle: number) => [cx + Math.cos(angle) * r * v, cy + Math.sin(angle) * r * v] as const;
   const polygon = axes.map(a => point(Math.max(0.02, a.value), a.angle).join(",")).join(" ");
@@ -74,10 +75,11 @@ export function SensitivityRadar({
 }
 
 export function dimensionColors(label: string): { fill: string; stroke: string } {
-  if (label === "tres-eleve" || label === "Tres elevee") return { fill: "fill-red-400/30", stroke: "stroke-red-500" };
-  if (label === "elevee" || label === "Elevee") return { fill: "fill-orange-400/30", stroke: "stroke-orange-500" };
-  if (label === "moderee" || label === "Moderee") return { fill: "fill-amber-400/30", stroke: "stroke-amber-500" };
-  if (label === "faible" || label === "Faible") return { fill: "fill-emerald-400/25", stroke: "stroke-emerald-500" };
+  const l = label.toLowerCase();
+  if (l.includes("majeure") || l.includes("critique")) return { fill: "fill-red-400/30", stroke: "stroke-red-500" };
+  if (l.includes("forte") || l.includes("élevée") || l.includes("elevee")) return { fill: "fill-orange-400/30", stroke: "stroke-orange-500" };
+  if (l.includes("modérée") || l.includes("moderee")) return { fill: "fill-amber-400/30", stroke: "stroke-amber-500" };
+  if (l.includes("faible")) return { fill: "fill-emerald-400/25", stroke: "stroke-emerald-500" };
   return { fill: "fill-primary/25", stroke: "stroke-primary" };
 }
 

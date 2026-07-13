@@ -93,12 +93,11 @@ export function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
   if (sensitivity.ecological >= 0.6) summaryParts.push("statut menace");
   if (sensitivity.regulatory >= 0.7) summaryParts.push("protection reglementaire");
   if (sensitivity.territorial >= 0.5) summaryParts.push("enjeu territorial");
-  if (sensitivity.management >= 0.5) summaryParts.push("pression de gestion");
   const scoreSummary = summaryParts.length > 0
     ? `${sensitivity.label} en raison de : ${summaryParts.join(", ")}.`
     : sensitivity.missingData.length > 0
       ? `Donnees insuffisantes pour une evaluation complete.`
-      : `Aucune sensibilite particuliere identifiee.`;
+      : `Aucune valeur patrimoniale particulière identifiée.`;
 
   return (
     <CollapsibleSection
@@ -120,7 +119,7 @@ export function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                   <Activity className="w-3.5 h-3.5" />
-                  Synthese des statuts
+                  Patrimonialité
                 </div>
                 <div className={`text-lg font-semibold ${sensitivity.color}`}>{sensitivity.label}</div>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{scoreSummary}</p>
@@ -139,7 +138,6 @@ export function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                   ecological={sensitivity.ecological}
                   regulatory={sensitivity.regulatory}
                   territorial={sensitivity.territorial}
-                  management={sensitivity.management}
                   fillClass={dimensionColors(sensitivity.label).fill}
                   strokeClass={dimensionColors(sensitivity.label).stroke}
                 />
@@ -175,7 +173,6 @@ export function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                   <DimensionBar label="Ecologique" value={sensitivity.ecological} color="bg-red-400" />
                   <DimensionBar label="Reglementaire" value={sensitivity.regulatory} color="bg-blue-400" />
                   <DimensionBar label="Territorial" value={sensitivity.territorial} color="bg-emerald-400" />
-                  <DimensionBar label="Gestion" value={sensitivity.management} color="bg-orange-400" />
                 </div>
                 {sensitivity.explanations.length > 0 && (
                   <div>
@@ -191,7 +188,7 @@ export function StatutsSection({ statuts }: { statuts: BdcStatut[] }) {
                   </div>
                 )}
                 <div className="text-[10px] text-muted-foreground/60 pt-2 border-t border-border/30">
-                  Score = 0.4 × ecologique + 0.3 × reglementaire + 0.2 × territorial + 0.1 × gestion
+                  Patrimonialité = 0.5 × écologique + 0.3 × réglementaire + 0.2 × territorial (l'EEE/gestion est hors score)
                 </div>
               </div>
             )}

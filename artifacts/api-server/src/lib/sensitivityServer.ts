@@ -126,7 +126,10 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
     : 0;
   const management = invasiveScore;
 
-  const global = 0.4 * ecological + 0.3 * regulatory + 0.2 * territorial + 0.1 * management;
+  // Patrimonialité (valeur de conservation) : la gestion/EEE n'est pas
+  // patrimoniale et reste hors du score. Doit rester synchronisé avec le calcul
+  // client dans artifacts/taxref-explorer/src/lib/sensitivity.ts.
+  const global = 0.5 * ecological + 0.3 * regulatory + 0.2 * territorial;
   const score = Math.round(global * 100);
 
   const drivers: ServerSensitivityDriver[] = [];
@@ -192,10 +195,10 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
   }
 
   let label: string;
-  if (score >= 75) label = "Sensibilité critique";
-  else if (score >= 50) label = "Sensibilité élevée";
-  else if (score >= 25) label = "Sensibilité modérée";
-  else label = "Sensibilité faible";
+  if (score >= 75) label = "Patrimonialité majeure";
+  else if (score >= 50) label = "Patrimonialité forte";
+  else if (score >= 25) label = "Patrimonialité modérée";
+  else label = "Patrimonialité faible";
 
   return { score, label, ecological, regulatory, territorial, management, drivers };
 }

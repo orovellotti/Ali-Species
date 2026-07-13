@@ -115,7 +115,11 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
   const territorial = (hasZnieff || hasPna) ? (znieffScore + pnaScore) / ((hasZnieff ? 1 : 0) + (hasPna ? 1 : 0)) : 0;
   const management = invasiveScore;
 
-  const global = 0.4 * ecological + 0.3 * regulatory + 0.2 * territorial + 0.1 * management;
+  // Patrimonialité = valeur de conservation d'un taxon. On n'agrège que les axes
+  // qui font la valeur patrimoniale (menace écologique, protection réglementaire,
+  // enjeu territorial). Le caractère envahissant (gestion/EEE) n'est PAS
+  // patrimonial : il reste un badge informatif séparé, hors du score.
+  const global = 0.5 * ecological + 0.3 * regulatory + 0.2 * territorial;
   const score = Math.round(global * 100);
 
   // Liste rouge — one badge per (type × territoire) above the VU threshold.
@@ -151,9 +155,9 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
     });
   }
   if (bestRedListCode && bestRedList >= 0.6) {
-    explanations.push(`Statut Liste rouge ${bestRedListCode} : augmente la sensibilite ecologique`);
+    explanations.push(`Statut Liste rouge ${bestRedListCode} : forte valeur patrimoniale (menace écologique)`);
   } else if (bestRedListCode && bestRedList >= 0.3) {
-    explanations.push(`Statut Liste rouge ${bestRedListCode} : sensibilite ecologique moderee`);
+    explanations.push(`Statut Liste rouge ${bestRedListCode} : valeur patrimoniale écologique modérée`);
   }
 
   if (hasProtection) {
@@ -175,7 +179,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       });
     }
     const level = protectionScore >= 1.0 ? "nationale" : protectionScore >= 0.8 ? "regionale" : "departementale";
-    explanations.push(`Protection ${level} : augmente la sensibilite reglementaire`);
+    explanations.push(`Protection ${level} : renforce la valeur patrimoniale (réglementaire)`);
   }
 
   if (hasDirective) {
@@ -190,7 +194,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
         title: dirLabel[d.type] || `Directive européenne ${d.type}`,
       });
     }
-    explanations.push("Directive europeenne Habitat/Oiseaux : augmente la sensibilite reglementaire");
+    explanations.push("Directive européenne Habitat/Oiseaux : renforce la valeur patrimoniale (réglementaire)");
   }
 
   if (hasConvention) {
@@ -199,7 +203,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       badgeClass: "bg-violet-100 text-violet-800",
       title: "Convention internationale (Berne, Bonn, Barcelone, OSPAR, CITES…)",
     });
-    explanations.push("Convention internationale : renforce le cadre reglementaire");
+    explanations.push("Convention internationale : renforce la valeur patrimoniale (réglementaire)");
   }
 
   if (hasZnieff) {
@@ -209,7 +213,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       badgeClass: "bg-emerald-100 text-emerald-800",
       title: uniq.length > 0 ? `Déterminante ZNIEFF — ${uniq.join(", ")}` : "Déterminante ZNIEFF",
     });
-    explanations.push("Determinante ZNIEFF : augmente la sensibilite territoriale");
+    explanations.push("Déterminante ZNIEFF : renforce la valeur patrimoniale (territoriale)");
   }
 
   if (hasPna) {
@@ -219,7 +223,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       badgeClass: "bg-teal-100 text-teal-800",
       title: isActive ? "Plan national d'actions (en cours)" : "Plan national d'actions (terminé)",
     });
-    explanations.push("Plan national d'actions : augmente la sensibilite territoriale");
+    explanations.push("Plan national d'actions : renforce la valeur patrimoniale (territoriale)");
   }
 
   if (invasiveScore > 0) {
@@ -228,7 +232,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
       badgeClass: "bg-rose-100 text-rose-800",
       title: "Réglementation d'introduction ou de lutte (espèce exotique envahissante)",
     });
-    explanations.push("Reglementation d'introduction/lutte : pression de gestion identifiee");
+    explanations.push("Espèce exotique envahissante : enjeu de gestion (hors valeur patrimoniale)");
   }
 
   if (ecological >= 0.6 && regulatory < 0.3) {
@@ -243,25 +247,25 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
 
   let label: string, color: string, bgColor: string, borderColor: string, ringColor: string;
   if (score >= 75) {
-    label = "Sensibilite critique";
+    label = "Patrimonialité majeure";
     color = "text-red-700";
     bgColor = "bg-red-50";
     borderColor = "border-red-200";
     ringColor = "stroke-red-500";
   } else if (score >= 50) {
-    label = "Sensibilite elevee";
+    label = "Patrimonialité forte";
     color = "text-orange-700";
     bgColor = "bg-orange-50";
     borderColor = "border-orange-200";
     ringColor = "stroke-orange-500";
   } else if (score >= 25) {
-    label = "Sensibilite moderee";
+    label = "Patrimonialité modérée";
     color = "text-yellow-700";
     bgColor = "bg-yellow-50";
     borderColor = "border-yellow-200";
     ringColor = "stroke-yellow-500";
   } else {
-    label = "Sensibilite faible";
+    label = "Patrimonialité faible";
     color = "text-green-700";
     bgColor = "bg-green-50";
     borderColor = "border-green-200";
