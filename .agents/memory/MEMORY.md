@@ -2,5 +2,6 @@
 - [Dev preview API cache](dev-preview-api-cache.md) — route Cache-Control max-age serves stale data in preview; gate on prod + client cache:"no-store" in dev.
 - [Patrimonialité scoring](sensitivity-scoring.md) — conservation-value score (éco/régl/territorial, EEE hors score) dupliqué client+serveur ; barème Liste rouge diverge entre les deux.
 - [EUNIS habitats source](eunis-habitats.md) — no API; scrape HTML factsheet by scientific name; RDF/SPARQL are dead; vertebrate-only coverage.
+- [Search trigram index](search-index-trigram.md) — /api/taxons/search needs a GIN gin_trgm_ops index or it seq-scans 708k rows (8-21s); prod gets it only via republish.
 - [HABREF source espèce↔habitat](habref-source.md) — source bulk offline PatriNat : jointe cd_nom TAXREF, couvre flore + partiellement vertébrés, sémantique ≠ EUNIS.
 - [Vite react-babel + JSX generics](vite-babel-jsx-generics.md) — génériques sur un élément JSX (`<Comp<T>>`) crashent le parser react-babel (HTTP 500) même si tsc passe ; retirer les args de type du JSX.

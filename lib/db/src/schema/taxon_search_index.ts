@@ -33,7 +33,10 @@ export const taxonSearchIndexTable = pgTable(
     rang: text("rang"),
   },
   (t) => [
-    // GIN trigram index created manually by build-search-index.ts (needs gin_trgm_ops)
+    // GIN trigram index powering the fuzzy/substring search in /api/taxons/search.
+    // Without it, every query does a full seq scan over ~708k rows (8-21s).
+    // build-search-index.ts also creates it explicitly so a rebuilt DB is never missing it.
+    index("idx_taxon_search_normalized_trgm").using("gin", t.normalizedText.op("gin_trgm_ops")),
     index("idx_taxon_search_regne_rank").on(t.regne, t.rankBoost),
     index("idx_taxon_search_cdref").on(t.cdRef),
   ],
