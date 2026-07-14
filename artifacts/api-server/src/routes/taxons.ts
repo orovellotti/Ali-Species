@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { sql, eq, and, ilike, or, desc, asc } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable, speciesTraitsTable, TAXREF_RANK } from "@workspace/db";
 import { fetchWikipedia, fetchGbif, fetchMedia, fetchTaxonRow } from "../lib/profileFetchers.js";
+import { getCachedOrFetch } from "../lib/externalCache.js";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -952,9 +953,9 @@ export async function getTraitsForCdNom(
   log?: MinimalLogger,
 ): Promise<TraitsPayload | null> {
   const now = Date.now();
-  const cached = TRAITS_CACHE.get(cdNom);
-  if (cached && now - cached.ts < TRAITS_TTL_MS) {
-    return cached.data;
+  const cachedL1 = TRAITS_CACHE.get(cdNom);
+  if (cachedL1 && now - cachedL1.ts < TRAITS_TTL_MS) {
+    return cachedL1.data;
   }
 
   const [taxon] = await db
@@ -964,10 +965,9 @@ export async function getTraitsForCdNom(
   if (!taxon) return null;
 
   const rawName = taxon.lbNom.trim();
-  const scientificName = escapeSparqlLiteral(rawName);
   const staticSources = await fetchStaticTraits(cdNom);
   if (!rawName) {
-    return {
+    const emptyName: TraitsPayload = {
       scientificName: "",
       wikidataQid: null,
       wikidataUrl: null,
@@ -980,8 +980,51 @@ export async function getTraitsForCdNom(
       staticSources,
       wikidataAvailable: true,
     };
+    setTraitsCache(cdNom, emptyName);
+    return emptyName;
   }
 
+  // L2: persistent DB cache so Wikidata traits survive restarts / autoscale.
+  const result = await getCachedOrFetch<TraitsPayload>({
+    provider: "wikidata-traits",
+    cacheKey: String(cdNom),
+    ttlSeconds: 7 * 24 * 60 * 60,
+    errorTtlSeconds: 300,
+    allowStaleOnError: true,
+    fetcher: async () => {
+      const live = await fetchWikidataTraits(rawName, staticSources, log);
+      return live.wikidataAvailable
+        ? { kind: "ok", data: live }
+        : { kind: "error", error: "Wikidata unavailable" };
+    },
+  });
+
+  const payload: TraitsPayload = result.data
+    ? { ...result.data, staticSources }
+    : {
+        scientificName: rawName,
+        wikidataQid: null,
+        wikidataUrl: null,
+        itemLabel: null,
+        itemDescription: null,
+        imageUrl: null,
+        traits: [],
+        externalIds: [],
+        attribution: { source: "Wikidata", url: "https://www.wikidata.org", license: "CC0 1.0" },
+        staticSources,
+        wikidataAvailable: false,
+      };
+
+  setTraitsCache(cdNom, payload);
+  return payload;
+}
+
+async function fetchWikidataTraits(
+  rawName: string,
+  staticSources: StaticTraitSource[],
+  log?: MinimalLogger,
+): Promise<TraitsPayload> {
+  const scientificName = escapeSparqlLiteral(rawName);
   const sparql = `
 SELECT ?item ?itemLabel ?itemDescription
   (SAMPLE(?image_) AS ?image)
@@ -1034,7 +1077,7 @@ LIMIT 1`.trim();
   try {
     const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
+    const timer = setTimeout(() => controller.abort(), 5_000);
     const r = await fetch(url, {
       headers: {
         "Accept": "application/sparql-results+json",
@@ -1079,7 +1122,6 @@ LIMIT 1`.trim();
         staticSources,
         wikidataAvailable: true,
       };
-      setTraitsCache(cdNom, empty);
       return empty;
     }
 
@@ -1188,7 +1230,6 @@ LIMIT 1`.trim();
       wikidataAvailable: true,
     };
 
-    setTraitsCache(cdNom, payload);
     return payload;
   } catch (err) {
     log?.warn({ err: err instanceof Error ? err.message : String(err), scientificName }, "Wikidata traits fetch failed");
