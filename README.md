@@ -32,6 +32,25 @@ Monorepo organized into `artifacts/` (deployable apps) and `lib/` (shared librar
 
 ---
 
+## Caching strategy
+
+External sources (Wikidata, Wikipedia, GBIF, EUNIS…) are slow, so every enrichment is fetched once and then served from progressively closer layers:
+
+1. **In-memory (L1)** — a per-process `Map`, ~ms latency. Fast but **wiped on every restart** (deploy, sleep, autoscale), so in production it is often cold.
+2. **Database (L2)** — persisted in the `external_cache` table (PostgreSQL). Survives restarts, so once a species is looked up, everyone benefits afterwards. Typical warm read ~15–20 ms vs ~1.7 s hitting the upstream. This is the layer that matters in autoscale prod.
+3. **Upstream source** — only called when both caches are empty or expired, with a short timeout (e.g. 5 s for Wikidata) so a slow source never blocks the user.
+
+Key policies:
+
+- **Split TTLs** — successful responses are kept long (e.g. 7 days for traits); network errors are negatively cached only briefly (5 min) so a transient outage is retried quickly.
+- **Negative caching** — "no Wikidata item for this species" is remembered too, to avoid re-asking on every visit.
+- **Stale-on-error** — if an upstream is down but a stale row exists, the stale value is served instead of an error.
+- **Fresh local data** — static traits (PanTHERIA, AVONET…) come from our own tables and are re-attached on each response rather than frozen in the cache.
+
+The unified profile (`taxon_profile_summary`, 7-day TTL, write-through) and the traits endpoint both follow this L1 → L2 → upstream model. See [`docs/API.md`](docs/API.md#caching-strategy) for provider-by-provider details.
+
+---
+
 ## Quick start
 
 Prerequisites: Node 24, pnpm, a PostgreSQL database (`DATABASE_URL`).

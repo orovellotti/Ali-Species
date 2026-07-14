@@ -15,7 +15,7 @@
 - `GET /api/taxons/stats` — Get database statistics
 - `GET /api/taxons/taxonomy-tree` — Get 5-level taxonomy tree (règnes→phyla→classes→ordres→familles) for treemap visualization
 - `GET /api/taxons/random` — Get a random species taxon
-- `GET /api/taxons/:cdNom/traits` — Merged trait payload (DB-cached static sources + live Wikidata)
+- `GET /api/taxons/:cdNom/traits` — Merged trait payload. Static sources (PanTHERIA/AVONET/AmphiBIO/SquamBase) viennent des tables locales et sont **rattachés frais à chaque réponse** ; les traits Wikidata passent par le cache **L1 mémoire → L2 base (`external_cache`, provider `wikidata-traits`, TTL 7 j)** puis fetch live (timeout 5 s). Voir [Caching strategy](#caching-strategy).
 - `GET /api/taxons/:cdNom/interactions` — GloBI biotic interactions (eats / eaten by / parasite of / etc.)
 - `POST /api/ask` — Natural-language agent (LLM-backed) that composes queries against `query_taxons`, `query_traits`, `get_taxon`, `get_statuts`, `get_interactions`, `get_traits`, `get_wikipedia`, `get_gbif` tools. Cache LRU in-memory 256 entrées TTL 1 h sur questions sans historique (header `X-Ask-Cache: hit|miss`).
 - `GET /api/mcp` — MCP server endpoint (v1.4.0) exposing **24 tools** to AI assistants (Claude, Cursor, ChatGPT…), grouped in 5 families: search/navigation (search_taxons, query_taxa, get_taxon, get_classification, get_children, get_parent, get_synonyms, get_random_species, list_taxonomic_facets), statuses (get_statuts, status_breakdown, list_status_types, list_territoires), stats & traits (get_global_stats, query_traits, get_trait_keys, get_traits), external enrichments (get_interactions, get_wikipedia, get_gbif, get_bhl, get_eunis_habitats, get_habref_habitats), and SPARQL (run_sparql proxied to Oxigraph upstream — the graph includes EUNIS habitat triples `alivocab:eunisHabitat`/`eunisPreferredHabitat`/`eunisBreedingHabitat`/`eunisWinteringHabitat`/`eunisFactsheet`; clear degradation message when the triplestore is unavailable in autoscale prod).
@@ -32,6 +32,23 @@
 - **Anthropic resilience**: 1 transparent retry with 400 ms backoff on transient errors (HTTP 5xx, 429, `APIConnectionError`, `ECONNRESET`/`ETIMEDOUT`/`fetch failed`). Worst-case latency bounded by `ANTHROPIC_TIMEOUT_MS * 2` (= 60 s). Non-retryable errors still return 502/504 with friendly message + last partial result.
 - **System prompt rules** : "rapaces (diurnes)" → DEUX appels (Accipitriformes + Falconiformes) ; "rapaces nocturnes" / "chouettes" / "hiboux" → Strigiformes ; toute question superlative ("le plus grand/lourd/long", "trié par", "top N") DOIT utiliser `query_traits` avec `traitKey` ET `sortBy=value_desc|value_asc` (jamais `query_taxa` qui ne renvoie pas d'ordre). Mappings: envergure→avonet/wingLen, masse→pantheria/adultBodyMass, longévité→pantheria/maxLongevity ou avonet/longevity.
 - **Cache LRU** in-memory (256 entrées, TTL 1 h, key = question normalisée), uniquement quand `history` est vide. Header `X-Ask-Cache: hit|miss`.
+
+## Caching strategy
+
+Les sources externes sont lentes, donc chaque enrichissement est cherché une fois puis resservi depuis des couches de plus en plus proches :
+
+1. **L1 — mémoire** : `Map` par process (~ms). Rapide mais **vidée à chaque redémarrage** (déploiement, veille, autoscale) → souvent froide en prod.
+2. **L2 — base** : table `external_cache` (PostgreSQL), clé `(provider, cache_key)`. **Survit aux redémarrages** : ~15–20 ms à chaud contre ~1,7 s en tapant l'upstream. C'est la couche qui compte en prod autoscale.
+3. **Upstream** : appelé seulement si L1 et L2 sont vides/périmés, avec timeout court (5 s Wikidata) pour ne jamais bloquer l'utilisateur.
+
+Helper commun : `getCachedOrFetch()` (`artifacts/api-server/src/lib/externalCache.ts`), qui gère l'upsert, les TTL et la dégradation. Politiques :
+
+- **TTL différenciés** : réponses OK gardées longtemps (7 j traits/Wikipedia/EUNIS, 24 h GBIF) ; erreurs réseau en **cache négatif court** (5 min par défaut) pour retenter vite.
+- **Cache négatif** : une absence (pas d'item Wikidata pour l'espèce) est aussi mémorisée pour ne pas reposer la question à chaque visite.
+- **Stale-on-error** (`allowStaleOnError`) : si l'upstream tombe mais qu'une vieille row existe, on ressert la version périmée plutôt qu'une erreur.
+- **Données locales fraîches** : les traits statiques (tables internes) sont rattachés à chaque réponse, jamais figés dans le cache.
+
+Providers stockés dans `external_cache` : `wikidata-traits`, `wikipedia`, `gbif`, `eunis_habitats`, `commons`… Deux caches spécialisés vivent à côté : `bhl_cache` (BHL, 30 j) et `taxon_profile_summary` (profil unifié, TTL 7 j, write-through). Le cache LRU mémoire de `/api/ask` (256 entrées, TTL 1 h) est distinct et non persistant. Purge : `POST /api/admin/cache/clear` (voir Admin / Ops).
 
 ## External APIs
 
