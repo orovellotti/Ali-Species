@@ -264,6 +264,7 @@ export const en = {
     pagingPost: " results",
     alsoSee: "See also:",
     citedSpecies: "Species mentioned",
+    directSearchReply: "Results for \"{{query}}\":",
     suggestionLevelsLabel: "Query type:",
     suggestionLevels: {
       simple: "Child",

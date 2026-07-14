@@ -24,6 +24,33 @@ type Turn = {
   totalCount: number;
 };
 
+// Words that signal a real question/command (FR + EN), matched accent-insensitively
+// on whole tokens. Their presence routes the query to the LLM agent.
+const QUESTION_WORDS = new Set<string>([
+  "qui", "que", "quel", "quelle", "quels", "quelles", "combien", "comment",
+  "pourquoi", "quand", "ou", "liste", "lister", "montre", "montrer", "affiche",
+  "afficher", "donne", "donner", "cite", "citer", "compare", "comparer",
+  "trie", "trier", "classe", "classer", "trouve", "trouver",
+  "which", "what", "who", "whom", "whose", "how", "why", "when", "where",
+  "list", "show", "display", "give", "find", "compare", "sort", "rank", "top",
+  "most", "least", "best", "biggest", "largest", "smallest", "longest",
+]);
+
+// Heuristic: is this a natural-language question (→ AI) or a plain name lookup
+// (→ fast search index)? Conservative — only clear name lookups skip the LLM.
+function looksLikeQuestion(raw: string): boolean {
+  const s = raw.trim().toLowerCase();
+  if (!s) return false;
+  if (s.includes("?")) return true;
+  const words = s
+    .replace(/[«»"'`,.;:!()]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length > 4) return true;
+  const norm = words.map((w) => w.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+  return norm.some((w) => QUESTION_WORDS.has(w));
+}
+
 export function ConversationalBar() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,31 +96,79 @@ export function ConversationalBar() {
     }
   }, [turns.length]);
 
-  async function ask(question: string) {
-    if (!question.trim() || loading) return;
-    setLoading(true);
-    setError(null);
-    const history = turns.flatMap((t) => [
-      { role: "user", content: t.question },
-      { role: "assistant", content: t.reply },
-    ]);
+  // Fast, LLM-free path: hit the search index directly. Returns true when it
+  // produced results (so the caller skips the AI agent), false otherwise.
+  async function runDirectSearch(question: string): Promise<boolean> {
     try {
-      const res = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history, lang }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const res = await fetch(
+        `/api/taxons/search?q=${encodeURIComponent(question.trim())}&limit=20`,
+      );
+      if (!res.ok) return false;
+      const list = await res.json();
+      if (!Array.isArray(list) || list.length === 0) return false;
+      const results: ResultItem[] = list.map((r: any) => ({
+        cdNom: r.cdNom,
+        lbNom: r.lbNom,
+        nomVern: r.nomVern ?? null,
+        rang: r.rang,
+        classe: r.classe ?? null,
+        ordre: r.ordre ?? null,
+        famille: r.famille ?? null,
+      }));
       setTurns((prev) => [
         ...prev,
         {
           question,
-          reply: data.reply ?? "",
-          results: Array.isArray(data.results) ? data.results : [],
-          totalCount: data.totalCount ?? 0,
+          reply: t("conversational.directSearchReply", { query: question.trim() }),
+          results,
+          totalCount: results.length,
         },
       ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function runAskAI(question: string): Promise<void> {
+    const history = turns.flatMap((t) => [
+      { role: "user", content: t.question },
+      { role: "assistant", content: t.reply },
+    ]);
+    const res = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, history, lang }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setTurns((prev) => [
+      ...prev,
+      {
+        question,
+        reply: data.reply ?? "",
+        results: Array.isArray(data.results) ? data.results : [],
+        totalCount: data.totalCount ?? 0,
+      },
+    ]);
+  }
+
+  async function ask(question: string) {
+    if (!question.trim() || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Plain name lookups skip the LLM and use the fast search index. The AI
+      // agent is reserved for real questions, or when a direct search finds
+      // nothing (e.g. a concept like "rapaces" the agent can resolve).
+      if (!looksLikeQuestion(question)) {
+        const handled = await runDirectSearch(question);
+        if (handled) {
+          setInput("");
+          return;
+        }
+      }
+      await runAskAI(question);
       setInput("");
     } catch (e: any) {
       setError(e.message ?? "Error");
