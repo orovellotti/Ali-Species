@@ -11,11 +11,13 @@ import bhlRouter from "./bhl";
 import sitemapRouter from "./sitemap";
 import profileRouter from "./profile";
 import adminRouter from "./admin";
+import docsRouter from "./docs";
 import shareRouter, { registerOgRoute } from "./share";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(docsRouter);
 router.use(mcpRouter);
 router.use(askRouter);
 router.use(interactionsRouter);

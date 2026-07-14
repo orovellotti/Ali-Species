@@ -172,6 +172,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@3.25.76)
+      '@workspace/api-spec':
+        specifier: workspace:*
+        version: link:../../lib/api-spec
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
