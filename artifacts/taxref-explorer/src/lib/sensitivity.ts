@@ -33,7 +33,32 @@ export interface SensitivityResult {
   missingData: string[];
 }
 
-export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
+// Territoire pris en compte pour l'axe écologique (Liste rouge).
+// - "national" (défaut, interface) : uniquement la Liste rouge nationale (LRN).
+// - { region } (API) : Liste rouge nationale (socle) + Liste rouge régionale
+//   (LRR) du territoire demandé.
+// La Liste rouge mondiale (LRM) et européenne (LRE) n'entrent jamais dans le
+// score de patrimonialité (valeur de conservation en France).
+export type SensitivityScope = { kind: "national" } | { kind: "region"; region: string };
+
+const NATIONAL_SCOPE: SensitivityScope = { kind: "national" };
+
+function normalizeRegion(s: string): string {
+  return s.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function redListInScope(type: string, territory: string, scope: SensitivityScope): boolean {
+  if (type === "LRN") return true;
+  if (type === "LRR") {
+    return scope.kind === "region" && normalizeRegion(territory) === normalizeRegion(scope.region);
+  }
+  return false;
+}
+
+export function computeSensitivity(
+  statuts: BdcStatut[],
+  scope: SensitivityScope = NATIONAL_SCOPE,
+): SensitivityResult {
   let bestRedList = 0;
   let bestRedListCode = "";
   let protectionScore = 0;
@@ -68,6 +93,7 @@ export function computeSensitivity(statuts: BdcStatut[]): SensitivityResult {
     const territory = s.lbAdmTr || "";
 
     if (group === "Liste rouge") {
+      if (!redListInScope(type, territory, scope)) continue;
       hasRedList = true;
       const score = RED_LIST_SCORES[code] ?? 0;
       if (score > bestRedList) {

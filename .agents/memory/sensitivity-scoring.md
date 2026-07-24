@@ -24,6 +24,22 @@ Agave vivipara sortait "Modérée" à cause de sa Liste rouge MONDIALE VU alors
 qu'elle est EEE. **How to apply:** le plafond est dans le calcul du `score`
 (ternaire `invasiveScore > 0 ? 0 : …`), à répliquer dans les DEUX fichiers.
 
+## Scope territorial de l'axe écologique (Liste rouge)
+
+`computeSensitivity(statuts, scope)` prend un scope :
+- **national** (défaut, interface + profile + share) : SEULE la Liste rouge
+  nationale (LRN) alimente l'axe écologique. La mondiale (LRM) et l'européenne
+  (LRE) sont TOUJOURS exclues du score de patrimonialité.
+- **{ region }** (API MCP `get_statuts`, param `region`) : LRN (socle) + Liste
+  rouge régionale (LRR) dont `lb_adm_tr` correspond à la région demandée.
+**Why:** l'utilisateur veut que l'interface reflète le niveau France (national),
+et que le régional soit accessible uniquement via l'API en passant une région.
+Une menace régionale (ex. Lutra CR en Alsace) ne doit plus gonfler le score
+national. Les drivers Liste rouge sont eux aussi filtrés par scope (on n'affiche
+pas un badge LRM/LRR hors scope à côté d'un score qui l'ignore).
+**How to apply:** régions dans `lb_adm_tr` (ex. "Alsace", "Corse", "Occitanie").
+Match insensible à la casse/espaces. À répliquer client + serveur.
+
 ## Duplication client ↔ serveur (gotcha durable)
 
 L'algo existe en DOUBLE, non partagé :

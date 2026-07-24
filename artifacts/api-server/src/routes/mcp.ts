@@ -220,10 +220,16 @@ function buildServer(): McpServer {
     {
       title: "Statuts de conservation d'un taxon",
       description:
-        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Le caractère envahissant (EEE) est signalé dans les drivers mais n'entre pas dans le score.",
-      inputSchema: { cdNom: z.number().int() },
+        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Par défaut le score écologique repose sur la Liste rouge NATIONALE uniquement (la mondiale et l'européenne sont exclues). Passer 'region' (ex: 'Alsace', 'Corse', 'Occitanie') pour calculer le score au niveau régional (Liste rouge régionale de ce territoire, avec le national comme socle). Le caractère envahissant (EEE) est signalé dans les drivers mais n'entre pas dans le score.",
+      inputSchema: {
+        cdNom: z.number().int(),
+        region: z
+          .string()
+          .describe("Nom de la région administrative pour un score régional (ex: 'Alsace', 'Corse', 'Occitanie'). Sans ce paramètre, le score est national.")
+          .optional(),
+      },
     },
-    async ({ cdNom }) => {
+    async ({ cdNom, region }) => {
       const rows = await db
         .select({
           cdTypeStatut: bdcStatutsTable.cdTypeStatut,
@@ -237,8 +243,9 @@ function buildServer(): McpServer {
         })
         .from(bdcStatutsTable)
         .where(eq(bdcStatutsTable.cdNom, cdNom));
-      const patrimonialite = computeSensitivityServer(rows);
-      return toJson({ patrimonialite, statuts: rows });
+      const scope = region ? { kind: "region" as const, region } : { kind: "national" as const };
+      const patrimonialite = computeSensitivityServer(rows, scope);
+      return toJson({ territoire: region ?? "France (national)", patrimonialite, statuts: rows });
     },
   );
 

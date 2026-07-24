@@ -28,6 +28,29 @@ export interface ServerSensitivity {
   drivers: ServerSensitivityDriver[];
 }
 
+// Territoire pris en compte pour l'axe écologique (Liste rouge).
+// - "national" (défaut, interface) : uniquement la Liste rouge nationale (LRN).
+// - { region } (API) : Liste rouge nationale (socle) + Liste rouge régionale
+//   (LRR) du territoire demandé.
+// La Liste rouge mondiale (LRM) et européenne (LRE) n'entrent jamais dans le
+// score de patrimonialité. Doit rester synchronisé avec le calcul client
+// (artifacts/taxref-explorer/src/lib/sensitivity.ts).
+export type SensitivityScope = { kind: "national" } | { kind: "region"; region: string };
+
+const NATIONAL_SCOPE: SensitivityScope = { kind: "national" };
+
+function normalizeRegion(s: string): string {
+  return s.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function redListInScope(type: string, territory: string, scope: SensitivityScope): boolean {
+  if (type === "LRN") return true;
+  if (type === "LRR") {
+    return scope.kind === "region" && normalizeRegion(territory) === normalizeRegion(scope.region);
+  }
+  return false;
+}
+
 const RED_LIST_SCORES: Record<string, number> = {
   EX: 1.0, EW: 1.0, RE: 1.0,
   CR: 0.95, "CR*": 0.95,
@@ -58,7 +81,10 @@ const DIR_LABEL: Record<string, string> = {
   DO: "Directive Oiseaux",
 };
 
-export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensitivity {
+export function computeSensitivityServer(
+  statuts: ServerStatut[],
+  scope: SensitivityScope = NATIONAL_SCOPE,
+): ServerSensitivity {
   let bestRedList = 0;
   let protectionScore = 0;
   let directiveScore = 0;
@@ -83,6 +109,7 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
     const territory = s.lbAdmTr || "";
 
     if (group === "Liste rouge") {
+      if (!redListInScope(type, territory, scope)) continue;
       const score = RED_LIST_SCORES[code] ?? 0;
       if (score > bestRedList) bestRedList = score;
       if (score >= 0.6) {
