@@ -12,7 +12,7 @@ import { STATUT_CODE_REAL_DOC } from "../lib/statutCodeAlias.js";
 import { runQuery } from "../lib/query.js";
 import { runTraitQuery, TRAIT_KEYS } from "../lib/traitsQuery.js";
 import { fetchEunis, fetchTaxonRow, fetchHabref } from "../lib/profileFetchers.js";
-import { computeSensitivityServer } from "../lib/sensitivityServer.js";
+import { computeSensitivityServer, computeInvasivenessServer } from "../lib/sensitivityServer.js";
 
 const SPARQL_UPSTREAM = process.env.OXIGRAPH_HTTP ?? "http://127.0.0.1:9000";
 
@@ -220,7 +220,7 @@ function buildServer(): McpServer {
     {
       title: "Statuts de conservation d'un taxon",
       description:
-        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Par défaut le score écologique repose sur la Liste rouge NATIONALE uniquement (la mondiale et l'européenne sont exclues). Passer 'region' (ex: 'Alsace', 'Corse', 'Occitanie') pour calculer le score au niveau régional (Liste rouge régionale de ce territoire, avec le national comme socle). Le caractère envahissant (EEE) est signalé dans les drivers mais n'entre pas dans le score.",
+        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Par défaut le score écologique repose sur la Liste rouge NATIONALE uniquement (la mondiale et l'européenne sont exclues). Passer 'region' (ex: 'Alsace', 'Corse', 'Occitanie') pour calculer le score au niveau régional (Liste rouge régionale de ce territoire, avec le national comme socle). Retourne aussi un score d'envahissement SÉPARÉ (0-100) pour les espèces exotiques envahissantes (basé sur la réglementation de lutte/interdiction et l'étendue territoriale) : il ne se mélange jamais à la patrimonialité.",
       inputSchema: {
         cdNom: z.number().int(),
         region: z
@@ -245,7 +245,8 @@ function buildServer(): McpServer {
         .where(eq(bdcStatutsTable.cdNom, cdNom));
       const scope = region ? { kind: "region" as const, region } : { kind: "national" as const };
       const patrimonialite = computeSensitivityServer(rows, scope);
-      return toJson({ territoire: region ?? "France (national)", patrimonialite, statuts: rows });
+      const envahissement = computeInvasivenessServer(rows);
+      return toJson({ territoire: region ?? "France (national)", patrimonialite, envahissement, statuts: rows });
     },
   );
 

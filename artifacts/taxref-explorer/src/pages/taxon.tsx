@@ -32,7 +32,7 @@ import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { proxyImg } from "@/lib/proxyImg";
-import { computeSensitivity } from "@/lib/sensitivity";
+import { computeSensitivity, computeInvasiveness } from "@/lib/sensitivity";
 import { buildTaxonSeo } from "@/lib/taxonSeo";
 import { ScoreRing } from "@/components/taxon/SensitivityWidgets";
 import { CollapsibleSection } from "@/components/taxon/CollapsibleSection";
@@ -141,6 +141,12 @@ export default function TaxonDetail() {
   const sensitivity = useMemo(() => {
     if (!statuts || statuts.length === 0) return null;
     return computeSensitivity(statuts);
+  }, [statuts]);
+
+  const invasiveness = useMemo(() => {
+    if (!statuts || statuts.length === 0) return null;
+    const r = computeInvasiveness(statuts);
+    return r.isInvasive ? r : null;
   }, [statuts]);
 
   const shareData: ShareCardData | null = useMemo(() => {
@@ -357,6 +363,31 @@ export default function TaxonDetail() {
                   <div className={`text-sm font-semibold ${sensitivity.color}`}>{sensitivity.label}</div>
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {sensitivity.drivers.slice(0, 6).map((d, i) => (
+                      <span
+                        key={i}
+                        title={d.title || d.label}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${d.badgeClass}`}
+                      >
+                        {d.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {invasiveness && (
+              <div className={`flex items-center gap-4 p-4 rounded-xl border ${invasiveness.bgColor} ${invasiveness.borderColor}`}>
+                <div className="relative shrink-0 w-14 h-14">
+                  <ScoreRing score={invasiveness.score} ringColor={invasiveness.ringColor} size={56} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-lg font-bold ${invasiveness.color}`}>{invasiveness.score}</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-semibold ${invasiveness.color}`}>{invasiveness.label}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {invasiveness.drivers.map((d, i) => (
                       <span
                         key={i}
                         title={d.title || d.label}

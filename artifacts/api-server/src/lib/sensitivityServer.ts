@@ -28,6 +28,13 @@ export interface ServerSensitivity {
   drivers: ServerSensitivityDriver[];
 }
 
+export interface ServerInvasiveness {
+  score: number;
+  isInvasive: boolean;
+  label: string;
+  drivers: ServerSensitivityDriver[];
+}
+
 // Territoire pris en compte pour l'axe écologique (Liste rouge).
 // - "national" (défaut, interface) : uniquement la Liste rouge nationale (LRN).
 // - { region } (API) : Liste rouge nationale (socle) + Liste rouge régionale
@@ -91,7 +98,6 @@ export function computeSensitivityServer(
   let conventionScore = 0;
   let znieffScore = 0;
   let pnaScore = 0;
-  let invasiveScore = 0;
   let hasZnieff = false;
   let hasPna = false;
 
@@ -138,10 +144,6 @@ export function computeSensitivityServer(
       if (type === "PNA") pnaScore = Math.max(pnaScore, 0.8);
       else if (type === "exPNA") pnaScore = Math.max(pnaScore, 0.4);
       pnaEntries.push({ type });
-    } else if (group === "Réglementation") {
-      if (type === "REGLII" || type === "REGLLUTTE") {
-        invasiveScore = Math.max(invasiveScore, 0.7);
-      }
     }
   }
 
@@ -151,14 +153,12 @@ export function computeSensitivityServer(
     ? (znieffScore + pnaScore) / ((hasZnieff ? 1 : 0) + (hasPna ? 1 : 0))
     : 0;
 
-  // Patrimonialité (valeur de conservation) : la gestion/EEE n'est pas
-  // patrimoniale et reste hors du score. Doit rester synchronisé avec le calcul
-  // client dans artifacts/taxref-explorer/src/lib/sensitivity.ts.
-  // Une espèce exotique envahissante (EEE) n'est jamais une priorité de
-  // conservation en France, même si elle est menacée ailleurs (ex. Liste rouge
-  // mondiale) : on plafonne alors son score à "faible" (0).
+  // Patrimonialité (valeur de conservation) : la gestion/EEE n'est PAS
+  // patrimoniale et n'entre pas dans ce score. L'envahissement fait l'objet d'un
+  // score séparé (computeInvasivenessServer). Doit rester synchronisé avec le
+  // calcul client dans artifacts/taxref-explorer/src/lib/sensitivity.ts.
   const global = 0.5 * ecological + 0.3 * regulatory + 0.2 * territorial;
-  const score = invasiveScore > 0 ? 0 : Math.round(global * 100);
+  const score = Math.round(global * 100);
 
   const drivers: ServerSensitivityDriver[] = [];
 
@@ -214,14 +214,6 @@ export function computeSensitivityServer(
       kind: "pna",
     });
   }
-  if (invasiveScore > 0) {
-    drivers.push({
-      label: "EEE",
-      title: "Réglementation d'introduction ou de lutte (espèce exotique envahissante)",
-      kind: "invasive",
-    });
-  }
-
   let label: string;
   if (score >= 75) label = "Patrimonialité majeure";
   else if (score >= 50) label = "Patrimonialité forte";
@@ -229,4 +221,79 @@ export function computeSensitivityServer(
   else label = "Patrimonialité faible";
 
   return { score, label, ecological, regulatory, territorial, drivers };
+}
+
+// Score d'envahissement (0-100), SÉPARÉ de la patrimonialité (les deux ne se
+// mélangent pas). Basé sur la réglementation exotique envahissante :
+//  - REGLLUTTE (obligation de lutte) = signal le plus fort ; code EEEUE =
+//    espèce exotique envahissante de l'Union européenne (règlement 2016/1141).
+//  - REGLII (interdiction d'introduction) ; code FRnoEEE* = liste métropolitaine.
+//  - Bonus d'étendue : nombre de territoires distincts réglementés.
+// Doit rester synchronisé avec le calcul client (sensitivity.ts).
+export function computeInvasivenessServer(statuts: ServerStatut[]): ServerInvasiveness {
+  let hasFight = false;
+  let hasEuFight = false;
+  let hasBan = false;
+  let hasMetroBan = false;
+  const territories = new Set<string>();
+
+  for (const s of statuts) {
+    if ((s.regroupementType || "") !== "Réglementation") continue;
+    const type = s.cdTypeStatut || "";
+    const code = s.codeStatut || "";
+    const territory = s.lbAdmTr || "";
+    if (type === "REGLLUTTE") {
+      hasFight = true;
+      if (code === "EEEUE") hasEuFight = true;
+      if (territory) territories.add(territory);
+    } else if (type === "REGLII") {
+      hasBan = true;
+      if (code.startsWith("FRnoEEE")) hasMetroBan = true;
+      if (territory) territories.add(territory);
+    }
+  }
+
+  let base = 0;
+  if (hasFight) base = hasEuFight ? 0.9 : 0.8;
+  else if (hasBan) base = hasMetroBan ? 0.7 : 0.55;
+
+  const isInvasive = base > 0;
+  const spread = territories.size > 1 ? Math.min(0.3, 0.05 * (territories.size - 1)) : 0;
+  const score = isInvasive ? Math.round(Math.min(1, base + spread) * 100) : 0;
+
+  const drivers: ServerSensitivityDriver[] = [];
+  if (hasFight) {
+    drivers.push({
+      label: hasEuFight ? "EEE Union européenne" : "Lutte obligatoire",
+      title: hasEuFight
+        ? "Espèce exotique envahissante de l'Union européenne (règlement 2016/1141) — obligation de lutte"
+        : "Obligation de lutte contre une espèce exotique envahissante",
+      kind: "invasive",
+    });
+  }
+  if (hasBan) {
+    drivers.push({
+      label: hasMetroBan ? "Interdite (métropole)" : "Introduction interdite",
+      title: hasMetroBan
+        ? "Interdiction d'introduction sur le territoire métropolitain (espèce exotique envahissante)"
+        : "Interdiction d'introduction (espèce exotique envahissante)",
+      kind: "invasive",
+    });
+  }
+  if (territories.size > 1) {
+    drivers.push({
+      label: `${territories.size} territoires`,
+      title: `Réglementée dans ${territories.size} territoires`,
+      kind: "invasive",
+    });
+  }
+
+  let label: string;
+  if (score >= 75) label = "Envahissement majeur";
+  else if (score >= 50) label = "Envahissement fort";
+  else if (score >= 25) label = "Envahissement modéré";
+  else if (score > 0) label = "Envahissement faible";
+  else label = "Non concernée";
+
+  return { score, isInvasive, label, drivers };
 }

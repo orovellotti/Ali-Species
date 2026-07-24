@@ -16,13 +16,12 @@ patrimoniale. Il reste exposé comme "driver"/badge informatif seulement.
 **Why:** l'utilisateur a explicitement refusé de mélanger menace écologique,
 réglementaire, territorial et gestion/EEE dans un seul score.
 
-**De plus, une EEE PLAFONNE le score à faible (0)** : si `invasiveScore > 0`
-(REGLII/REGLLUTTE), le score final est forcé à 0 quel que soit le reste.
-**Why:** une espèce exotique envahissante n'est jamais une priorité de
-conservation en France, même si elle est menacée ailleurs. Cas déclencheur :
-Agave vivipara sortait "Modérée" à cause de sa Liste rouge MONDIALE VU alors
-qu'elle est EEE. **How to apply:** le plafond est dans le calcul du `score`
-(ternaire `invasiveScore > 0 ? 0 : …`), à répliquer dans les DEUX fichiers.
+**OBSOLÈTE (ancien comportement, retiré)** : le score de patrimonialité
+plafonnait à 0 pour une EEE. Ce plafond a été SUPPRIMÉ — la patrimonialité ne
+prend plus du tout en compte l'EEE, et l'envahissement a son propre score
+séparé (voir section "Score d'envahissement SÉPARÉ (EEE)" plus bas). Le cas
+Agave vivipara sort désormais à 0 non pas par plafond mais parce qu'elle n'a
+aucun statut national de conservation (LRM/LRE exclues du scope).
 
 ## Scope territorial de l'axe écologique (Liste rouge)
 
@@ -39,6 +38,21 @@ national. Les drivers Liste rouge sont eux aussi filtrés par scope (on n'affich
 pas un badge LRM/LRR hors scope à côté d'un score qui l'ignore).
 **How to apply:** régions dans `lb_adm_tr` (ex. "Alsace", "Corse", "Occitanie").
 Match insensible à la casse/espaces. À répliquer client + serveur.
+
+## Score d'envahissement SÉPARÉ (EEE)
+
+L'ancien plafond EEE (patrimonialité forcée à 0 si REGLII/REGLLUTTE) a été
+RETIRÉ. La patrimonialité mesure la valeur de conservation, point. Les espèces
+exotiques envahissantes ont un score DISTINCT (`computeInvasiveness` client /
+`computeInvasivenessServer` serveur), 0-100, jamais mélangé au score de
+patrimonialité. **Why:** l'utilisateur veut deux axes séparés (valeur de
+conservation vs enjeu de gestion) qui ne se mélangent pas.
+Base : REGLLUTTE (lutte, code EEEUE = UE) = 0.8-0.9 ; REGLII (interdiction,
+FRnoEEE* = métropole) = 0.55-0.7 ; bonus étendue = nb de territoires réglementés.
+**How to apply:** exposé par MCP `get_statuts` (champ `envahissement`) et affiché
+en widget rose sous la patrimonialité (front calcule en local depuis statuts).
+Le profile/OpenAPI ne porte PAS l'envahissement (front local suffit). À répliquer
+client + serveur.
 
 ## Duplication client ↔ serveur (gotcha durable)
 
