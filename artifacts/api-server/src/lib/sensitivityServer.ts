@@ -127,8 +127,11 @@ export function computeSensitivityServer(statuts: ServerStatut[]): ServerSensiti
   // Patrimonialité (valeur de conservation) : la gestion/EEE n'est pas
   // patrimoniale et reste hors du score. Doit rester synchronisé avec le calcul
   // client dans artifacts/taxref-explorer/src/lib/sensitivity.ts.
+  // Une espèce exotique envahissante (EEE) n'est jamais une priorité de
+  // conservation en France, même si elle est menacée ailleurs (ex. Liste rouge
+  // mondiale) : on plafonne alors son score à "faible" (0).
   const global = 0.5 * ecological + 0.3 * regulatory + 0.2 * territorial;
-  const score = Math.round(global * 100);
+  const score = invasiveScore > 0 ? 0 : Math.round(global * 100);
 
   const drivers: ServerSensitivityDriver[] = [];
 

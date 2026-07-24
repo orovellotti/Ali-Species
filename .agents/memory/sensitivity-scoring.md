@@ -16,6 +16,14 @@ patrimoniale. Il reste exposé comme "driver"/badge informatif seulement.
 **Why:** l'utilisateur a explicitement refusé de mélanger menace écologique,
 réglementaire, territorial et gestion/EEE dans un seul score.
 
+**De plus, une EEE PLAFONNE le score à faible (0)** : si `invasiveScore > 0`
+(REGLII/REGLLUTTE), le score final est forcé à 0 quel que soit le reste.
+**Why:** une espèce exotique envahissante n'est jamais une priorité de
+conservation en France, même si elle est menacée ailleurs. Cas déclencheur :
+Agave vivipara sortait "Modérée" à cause de sa Liste rouge MONDIALE VU alors
+qu'elle est EEE. **How to apply:** le plafond est dans le calcul du `score`
+(ternaire `invasiveScore > 0 ? 0 : …`), à répliquer dans les DEUX fichiers.
+
 ## Duplication client ↔ serveur (gotcha durable)
 
 L'algo existe en DOUBLE, non partagé :
