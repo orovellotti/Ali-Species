@@ -37,11 +37,7 @@ export const GET_STATUTS_INPUT_SCHEMA = z.object({
     .string()
     .describe("Nom de la région administrative pour un score régional (ex: 'Alsace', 'Corse', 'Occitanie'). Sans ce paramètre, le score est national.")
     .optional(),
-}).refine(
-  ({ cd_nom, cdNom, scientificName }) =>
-    cd_nom !== undefined || cdNom !== undefined || scientificName !== undefined,
-  { message: "cd_nom ou scientificName est requis" },
-);
+});
 
 const GET_STATUTS_IDENTIFIER_ALTERNATIVES = [
   { required: ["cd_nom"] },
@@ -55,9 +51,9 @@ type InternalRequestHandler = (
 ) => unknown | Promise<unknown>;
 
 function publishGetStatutsAlternatives(server: McpServer): void {
-  // McpServer 1.29 validates object refinements but does not expose them in the
-  // generated JSON Schema. Decorate tools/list so external clients see the
-  // identifier alternatives while calls keep using the SDK's Zod validation.
+  // McpServer 1.29 cannot derive required alternatives from an object schema.
+  // Decorate tools/list so external clients see the same identifier requirement
+  // that the handler enforces.
   const protocol = server.server as unknown as {
     _requestHandlers: Map<string, InternalRequestHandler>;
   };
