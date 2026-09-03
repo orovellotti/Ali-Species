@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { sql, eq, and, ilike, or, desc, asc, ne, type SQL } from "drizzle-orm";
 import { db, taxonsTable, bdcStatutsTable, TAXREF_RANK } from "@workspace/db";
@@ -28,6 +29,62 @@ const REGNE_ENUM = z.enum([
   "Bacteria", "Archaea", "Protozoa",
 ]);
 
+export const GET_STATUTS_INPUT_SCHEMA = z.object({
+  cd_nom: z.number().int().optional().describe("Identifiant TAXREF cd_nom"),
+  cdNom: z.number().int().optional().describe("Alias historique de cd_nom"),
+  scientificName: z.string().trim().min(1).optional().describe("Nom scientifique exact du taxon"),
+  region: z
+    .string()
+    .describe("Nom de la région administrative pour un score régional (ex: 'Alsace', 'Corse', 'Occitanie'). Sans ce paramètre, le score est national.")
+    .optional(),
+}).refine(
+  ({ cd_nom, cdNom, scientificName }) =>
+    cd_nom !== undefined || cdNom !== undefined || scientificName !== undefined,
+  { message: "cd_nom ou scientificName est requis" },
+);
+
+const GET_STATUTS_IDENTIFIER_ALTERNATIVES = [
+  { required: ["cd_nom"] },
+  { required: ["scientificName"] },
+  { required: ["cdNom"], description: "Alias historique de cd_nom" },
+];
+
+type InternalRequestHandler = (
+  request: unknown,
+  extra: unknown,
+) => unknown | Promise<unknown>;
+
+function publishGetStatutsAlternatives(server: McpServer): void {
+  // McpServer 1.29 validates object refinements but does not expose them in the
+  // generated JSON Schema. Decorate tools/list so external clients see the
+  // identifier alternatives while calls keep using the SDK's Zod validation.
+  const protocol = server.server as unknown as {
+    _requestHandlers: Map<string, InternalRequestHandler>;
+  };
+  const listToolsHandler = protocol._requestHandlers.get("tools/list");
+  if (!listToolsHandler) throw new Error("MCP tools/list handler is not initialized");
+
+  server.server.setRequestHandler(ListToolsRequestSchema, async (request, extra) => {
+    const result = await listToolsHandler(request, extra) as {
+      tools: Array<{ name: string; inputSchema: Record<string, unknown> }>;
+    };
+    return {
+      ...result,
+      tools: result.tools.map((tool) =>
+        tool.name === "get_statuts"
+          ? {
+              ...tool,
+              inputSchema: {
+                ...tool.inputSchema,
+                anyOf: GET_STATUTS_IDENTIFIER_ALTERNATIVES,
+              },
+            }
+          : tool,
+      ),
+    };
+  });
+}
+
 function toJson(payload: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }] };
 }
@@ -36,7 +93,7 @@ function notFound(message: string) {
   return { isError: true, content: [{ type: "text" as const, text: message }] };
 }
 
-function buildServer(): McpServer {
+export function buildServer(): McpServer {
   const server = new McpServer(
     { name: "ali-species-mcp", version: "1.6.0" },
     { capabilities: { tools: {} } },
@@ -220,16 +277,23 @@ function buildServer(): McpServer {
     {
       title: "Statuts de conservation d'un taxon",
       description:
-        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon, ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Par défaut le score écologique repose sur la Liste rouge NATIONALE uniquement (la mondiale et l'européenne sont exclues). Passer 'region' (ex: 'Alsace', 'Corse', 'Occitanie') pour calculer le score au niveau régional (Liste rouge régionale de ce territoire, avec le national comme socle). Retourne aussi un score d'envahissement SÉPARÉ (0-100) pour les espèces exotiques envahissantes (basé sur la réglementation de lutte/interdiction et l'étendue territoriale) : il ne se mélange jamais à la patrimonialité.",
-      inputSchema: {
-        cdNom: z.number().int(),
-        region: z
-          .string()
-          .describe("Nom de la région administrative pour un score régional (ex: 'Alsace', 'Corse', 'Occitanie'). Sans ce paramètre, le score est national.")
-          .optional(),
-      },
+        "Retourne les statuts BdC (listes rouges, protections réglementaires, directives, conventions) d'un taxon identifié par cd_nom ou par son nom scientifique exact (scientificName), ainsi que son score de patrimonialité (valeur de conservation, 0-100) synthétisé à partir de ces statuts. Par défaut le score écologique repose sur la Liste rouge NATIONALE uniquement (la mondiale et l'européenne sont exclues). Passer 'region' (ex: 'Alsace', 'Corse', 'Occitanie') pour calculer le score au niveau régional (Liste rouge régionale de ce territoire, avec le national comme socle). Retourne aussi un score d'envahissement SÉPARÉ (0-100) pour les espèces exotiques envahissantes (basé sur la réglementation de lutte/interdiction et l'étendue territoriale) : il ne se mélange jamais à la patrimonialité.",
+      inputSchema: GET_STATUTS_INPUT_SCHEMA,
     },
-    async ({ cdNom, region }) => {
+    async (input) => {
+      let cdNom = input.cd_nom ?? input.cdNom;
+      const region = input.region;
+      if (cdNom === undefined && input.scientificName) {
+        const [taxon] = await db
+          .select({ cdNom: taxonsTable.cdNom })
+          .from(taxonsTable)
+          .where(ilike(taxonsTable.lbNom, input.scientificName.trim()))
+          .orderBy(desc(sql`CASE WHEN ${taxonsTable.cdNom} = ${taxonsTable.cdRef} THEN 1 ELSE 0 END`))
+          .limit(1);
+        if (!taxon) return notFound(`Aucun taxon trouvé pour scientificName=${input.scientificName}`);
+        cdNom = taxon.cdNom;
+      }
+      if (cdNom === undefined) return notFound("cd_nom ou scientificName est requis");
       const rows = await db
         .select({
           cdTypeStatut: bdcStatutsTable.cdTypeStatut,
@@ -765,6 +829,7 @@ function buildServer(): McpServer {
     },
   );
 
+  publishGetStatutsAlternatives(server);
   return server;
 }
 
