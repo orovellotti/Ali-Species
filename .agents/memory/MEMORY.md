@@ -5,4 +5,3 @@
 - [Search trigram index](search-index-trigram.md) — /api/taxons/search needs a GIN gin_trgm_ops index or it seq-scans 708k rows (8-21s); prod gets it only via republish.
 - [HABREF source espèce↔habitat](habref-source.md) — source bulk offline PatriNat : jointe cd_nom TAXREF, couvre flore + partiellement vertébrés, sémantique ≠ EUNIS.
 - [Vite react-babel + JSX generics](vite-babel-jsx-generics.md) — génériques sur un élément JSX (`<Comp<T>>`) crashent le parser react-babel (HTTP 500) même si tsc passe ; retirer les args de type du JSX.
-- [MCP alternative input schemas](mcp-alternative-input-schemas.md) — SDK 1.29 drops top-level Zod unions from tools/list; publish object-root anyOf explicitly.
